@@ -1,6 +1,6 @@
 streamlit
-pandas
-matplotlib
 pillow
-pymupdf
+pandas
 numpy
+PyMuPDF
+opencv-python-headless
