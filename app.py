@@ -78,10 +78,10 @@ for key, value in DEFAULT_STATES.items():
 # =====================================================
 
 POINT_COLORS = [
-    ("左上", "red"),
-    ("左下", "blue"),
-    ("右上", "orange"),
-    ("右下", "lime")
+    ("第一點", "red"),
+    ("第二點", "blue"),
+    ("第三點", "orange"),
+    ("第四點", "lime")
 ]
 
 COLOR_TEXT = {
