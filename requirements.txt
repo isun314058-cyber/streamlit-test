@@ -4,5 +4,6 @@ opencv-python-headless
 numpy
 pandas
 Pillow
-pdf2image
 PyMuPDF
+pdf2image
+matplotlib
