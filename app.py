@@ -6,7 +6,6 @@ import random
 import io
 import cv2
 
-from math import sqrt
 from streamlit_image_coordinates import streamlit_image_coordinates
 
 # =====================================================
@@ -176,45 +175,24 @@ def detect_piles(pil_image, roi=None):
     return positions
 
 # =====================================================
-# 安全距離判定
-# =====================================================
-
-def is_safe_distance(
-    pile1,
-    pile2,
-    min_distance
-):
-
-    x1, y1, _ = pile1
-    x2, y2, _ = pile2
-
-    dist = sqrt(
-        (x1 - x2) ** 2 +
-        (y1 - y2) ** 2
-    )
-
-    return dist >= min_distance
-
-# =====================================================
-# AI智慧避碰排程
+# 排程邏輯（上一版）
 # =====================================================
 
 def create_schedule(
-    pile_positions,
+    total_piles,
     start_no,
     daily_count,
-    min_distance,
+    cycle,
     start_date
 ):
 
-    remaining = []
+    pile_numbers = list(range(start_no, start_no + total_piles))
 
-    for idx, pile in enumerate(pile_positions):
+    groups = [[] for _ in range(cycle)]
 
-        remaining.append({
-            "pile_no": start_no + idx,
-            "position": pile
-        })
+    for idx, pile in enumerate(pile_numbers):
+
+        groups[idx % cycle].append(pile)
 
     result = []
 
@@ -222,64 +200,25 @@ def create_schedule(
 
     colors = generate_unique_colors(300)
 
-    while remaining:
+    for group in groups:
 
-        today_piles = []
+        for i in range(0, len(group), daily_count):
 
-        used = []
+            current_date = pd.to_datetime(start_date) + pd.Timedelta(days=day - 1)
 
-        for pile_data in remaining:
+            color = colors[day - 1]
 
-            current_pos = pile_data["position"]
+            hex_color = '#%02x%02x%02x' % color
 
-            safe = True
+            result.append({
+                "施工日": f"Day {day}",
+                "日期": current_date.strftime("%Y-%m-%d"),
+                "日期顏色": hex_color,
+                "RGB": color,
+                "施工樁號": group[i:i + daily_count]
+            })
 
-            for selected in today_piles:
-
-                selected_pos = selected["position"]
-
-                if not is_safe_distance(
-                    current_pos,
-                    selected_pos,
-                    min_distance
-                ):
-
-                    safe = False
-                    break
-
-            if safe:
-
-                today_piles.append(pile_data)
-
-                used.append(pile_data)
-
-            if len(today_piles) >= daily_count:
-                break
-
-        for u in used:
-            remaining.remove(u)
-
-        current_date = (
-            pd.to_datetime(start_date)
-            + pd.Timedelta(days=day - 1)
-        )
-
-        color = colors[day - 1]
-
-        hex_color = '#%02x%02x%02x' % color
-
-        result.append({
-            "施工日": f"Day {day}",
-            "日期": current_date.strftime("%Y-%m-%d"),
-            "日期顏色": hex_color,
-            "RGB": color,
-            "施工樁號": [
-                p["pile_no"]
-                for p in today_piles
-            ]
-        })
-
-        day += 1
+            day += 1
 
     return result
 
@@ -542,10 +481,6 @@ if uploaded_file:
 
         ai_col, setting_col = st.columns([4, 1.2])
 
-        # =====================================================
-        # AI辨識圖
-        # =====================================================
-
         with ai_col:
 
             st.subheader("🔍 AI辨識結果")
@@ -554,10 +489,6 @@ if uploaded_file:
                 preview_display,
                 use_container_width=False
             )
-
-        # =====================================================
-        # 施工條件
-        # =====================================================
 
         with setting_col:
 
@@ -577,21 +508,32 @@ if uploaded_file:
                 value=1
             )
 
-            min_distance = st.slider(
-                "安全距離 (像素)",
-                min_value=30,
-                max_value=300,
-                value=120,
-                step=10
+            cycle = st.selectbox(
+                "循環間隔",
+                [3, 4, 5, 6, 7, 8]
             )
 
             # =====================================================
-            # 預估工期
+            # 真實排程工期計算
             # =====================================================
 
-            estimated_days = int(
-                np.ceil(total_piles / daily_count)
-            )
+            pile_numbers = list(range(total_piles))
+
+            groups = [[] for _ in range(cycle)]
+
+            for idx, pile in enumerate(pile_numbers):
+
+                groups[idx % cycle].append(pile)
+
+            estimated_days = 0
+
+            for group in groups:
+
+                group_days = int(
+                    np.ceil(len(group) / daily_count)
+                )
+
+                estimated_days += group_days
 
             estimated_finish = (
                 pd.to_datetime(start_date)
@@ -640,10 +582,10 @@ if uploaded_file:
         if execute:
 
             schedule = create_schedule(
-                pile_positions=piles,
+                total_piles=total_piles,
                 start_no=start_no,
                 daily_count=daily_count,
-                min_distance=min_distance,
+                cycle=cycle,
                 start_date=start_date
             )
 
@@ -655,6 +597,8 @@ if uploaded_file:
 
             draw = ImageDraw.Draw(result_img)
 
+            pile_positions = piles
+
             for i, row in df.iterrows():
 
                 color = row["RGB"]
@@ -663,10 +607,10 @@ if uploaded_file:
 
                     idx = pile_no - start_no
 
-                    if idx >= len(piles):
+                    if idx >= len(pile_positions):
                         continue
 
-                    x, y, r = piles[idx]
+                    x, y, r = pile_positions[idx]
 
                     rr = int(r * 0.85)
 
