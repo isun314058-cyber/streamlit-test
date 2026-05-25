@@ -61,7 +61,7 @@ COLOR_TEXT = {
 }
 
 # =====================================================
-# 顏色生成
+# 隨機顏色
 # =====================================================
 
 def generate_unique_colors(n):
@@ -251,12 +251,6 @@ if uploaded_file:
     left_col, right_col = st.columns([5, 1.3])
 
     # =====================================================
-    # 動態圖片容器（重點）
-    # =====================================================
-
-    image_container = left_col.empty()
-
-    # =====================================================
     # 建立畫布
     # =====================================================
 
@@ -331,7 +325,7 @@ if uploaded_file:
     # 顯示可點擊圖片
     # =====================================================
 
-    with image_container:
+    with left_col:
 
         coords = streamlit_image_coordinates(
             preview_canvas,
@@ -339,7 +333,7 @@ if uploaded_file:
         )
 
     # =====================================================
-    # 點擊事件（重要修正）
+    # 點擊事件
     # =====================================================
 
     if coords is not None:
@@ -592,13 +586,52 @@ if st.session_state.schedule_df is not None:
 
     show_df = st.session_state.schedule_df.copy()
 
+    # =====================================================
+    # 日期顏色改成圓形色塊
+    # =====================================================
+
+    def color_circle(hex_color):
+
+        return f"""
+        <div style="
+            width:25px;
+            height:25px;
+            border-radius:50%;
+            background:{hex_color};
+            margin:auto;
+            border:1px solid #999;
+        "></div>
+        """
+
+    show_df["日期顏色"] = show_df["日期顏色"].apply(
+        color_circle
+    )
+
+    # =====================================================
+    # 樁號格式化
+    # =====================================================
+
     show_df["施工樁號"] = show_df["施工樁號"].apply(
         lambda x: ", ".join(map(str, x))
     )
 
-    st.dataframe(
-        show_df,
-        use_container_width=True
+    # =====================================================
+    # 刪除RGB欄位
+    # =====================================================
+
+    if "RGB" in show_df.columns:
+        show_df = show_df.drop(columns=["RGB"])
+
+    # =====================================================
+    # 顯示HTML表格
+    # =====================================================
+
+    st.markdown(
+        show_df.to_html(
+            escape=False,
+            index=False
+        ),
+        unsafe_allow_html=True
     )
 
 # =====================================================
@@ -607,29 +640,52 @@ if st.session_state.schedule_df is not None:
 
 if st.session_state.result_image is not None:
 
-    st.subheader("🗺️ 排樁施工圖")
-
-    st.image(
-        st.session_state.result_image,
-        use_container_width=True
-    )
+    result_col, download_col = st.columns([4, 1])
 
     # =====================================================
-    # 下載
+    # 左側成果圖
     # =====================================================
 
-    st.subheader("📥 下載圖面")
+    with result_col:
 
-    img_buffer = io.BytesIO()
+        st.subheader("🗺️ 排樁施工圖")
 
-    st.session_state.result_image.save(
-        img_buffer,
-        format="PNG"
-    )
+        RESULT_WIDTH = 900
 
-    st.download_button(
-        label="下載排程圖面",
-        data=img_buffer.getvalue(),
-        file_name="排樁施工圖.png",
-        mime="image/png"
-    )
+        result_img = st.session_state.result_image
+
+        scale_ratio = RESULT_WIDTH / result_img.width
+
+        result_height = int(result_img.height * scale_ratio)
+
+        result_display = result_img.resize(
+            (RESULT_WIDTH, result_height)
+        )
+
+        st.image(
+            result_display,
+            use_container_width=False
+        )
+
+    # =====================================================
+    # 右側下載
+    # =====================================================
+
+    with download_col:
+
+        st.subheader("📥 下載圖面")
+
+        img_buffer = io.BytesIO()
+
+        st.session_state.result_image.save(
+            img_buffer,
+            format="PNG"
+        )
+
+        st.download_button(
+            label="下載排程圖面",
+            data=img_buffer.getvalue(),
+            file_name="排樁施工圖.png",
+            mime="image/png",
+            use_container_width=True
+        )
