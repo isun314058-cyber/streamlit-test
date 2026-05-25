@@ -191,7 +191,7 @@ if uploaded_file:
     # 固定顯示尺寸
     # =====================================================
 
-    MAX_WIDTH = 1400
+    MAX_WIDTH = 900
 
     scale = MAX_WIDTH / image.width
 
