@@ -18,7 +18,7 @@ st.set_page_config(
 )
 
 # =====================================================
-# 深色模式CSS
+# 深色模式 CSS
 # =====================================================
 
 st.markdown("""
@@ -35,25 +35,7 @@ h1, h2, h3, h4, h5, h6, p, div, label {
 
 [data-testid="stDataFrame"] {
     background-color: #111827;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-thead tr th {
-    background-color: #111827 !important;
-    color: white !important;
-    padding: 12px !important;
-    font-size: 15px !important;
-}
-
-tbody tr td {
-    background-color: #1f2937 !important;
-    color: white !important;
-    padding: 10px !important;
-    border-bottom: 1px solid #374151 !important;
+    border-radius: 10px;
 }
 
 .stButton button {
@@ -295,6 +277,10 @@ if uploaded_file:
 
     draw_preview = ImageDraw.Draw(preview_canvas)
 
+    # =====================================================
+    # 畫點位
+    # =====================================================
+
     for idx, point in enumerate(st.session_state.points):
 
         px, py = point
@@ -318,6 +304,10 @@ if uploaded_file:
             label,
             fill=color
         )
+
+    # =====================================================
+    # ROI框
+    # =====================================================
 
     roi = None
 
@@ -350,12 +340,20 @@ if uploaded_file:
             int(y2 * scale_y)
         )
 
+    # =====================================================
+    # 顯示可點擊圖片
+    # =====================================================
+
     with left_col:
 
         coords = streamlit_image_coordinates(
             preview_canvas,
             key=f"pile_roi_selector_{len(st.session_state.points)}"
         )
+
+    # =====================================================
+    # 點擊事件
+    # =====================================================
 
     if coords is not None:
 
@@ -390,6 +388,10 @@ if uploaded_file:
                 st.session_state.points.append(clicked_point)
 
                 st.rerun()
+
+    # =====================================================
+    # 右側資訊
+    # =====================================================
 
     with right_col:
 
@@ -440,6 +442,10 @@ if uploaded_file:
 
         st.success(f"✅ AI 辨識到 {total_piles} 支樁體")
 
+        # =====================================================
+        # 建立辨識圖
+        # =====================================================
+
         preview_img = image.copy()
 
         preview_draw = ImageDraw.Draw(preview_img)
@@ -463,6 +469,10 @@ if uploaded_file:
                 fill="red"
             )
 
+        # =====================================================
+        # 固定大小
+        # =====================================================
+
         AI_PREVIEW_WIDTH = 900
 
         scale_ratio = AI_PREVIEW_WIDTH / preview_img.width
@@ -473,7 +483,15 @@ if uploaded_file:
             (AI_PREVIEW_WIDTH, ai_height)
         )
 
+        # =====================================================
+        # 左右欄位
+        # =====================================================
+
         ai_col, setting_col = st.columns([4, 1.2])
+
+        # =====================================================
+        # AI辨識圖
+        # =====================================================
 
         with ai_col:
 
@@ -483,6 +501,10 @@ if uploaded_file:
                 preview_display,
                 use_container_width=False
             )
+
+        # =====================================================
+        # 施工條件
+        # =====================================================
 
         with setting_col:
 
@@ -624,49 +646,43 @@ if st.session_state.schedule_df is not None:
     show_df = st.session_state.schedule_df.copy()
 
     # =====================================================
-    # 日期顏色
+    # 樁號格式化
     # =====================================================
-
-    def color_dot(hex_color):
-
-        return f"""
-<div style="
-    display:flex;
-    align-items:center;
-">
-    <div style="
-        width:18px;
-        height:18px;
-        border-radius:50%;
-        background:{hex_color};
-        border:1px solid white;
-    ">
-    </div>
-</div>
-"""
-
-    show_df["日期顏色"] = show_df["日期顏色"].apply(
-        color_dot
-    )
 
     show_df["施工樁號"] = show_df["施工樁號"].apply(
         lambda x: ", ".join(map(str, x))
     )
 
-    if "RGB" in show_df.columns:
-
-        show_df = show_df.drop(columns=["RGB"])
-
     # =====================================================
-    # 顯示 dataframe
+    # 日期顏色欄位上色
     # =====================================================
 
-    st.markdown(
-        show_df.to_html(
-            escape=False,
-            index=False
-        ),
-        unsafe_allow_html=True
+    def color_cell(val):
+
+        return f"""
+        background-color: {val};
+        color: white;
+        text-align: center;
+        font-weight: bold;
+        """
+
+    styled_df = (
+        show_df
+        .style
+        .applymap(
+            color_cell,
+            subset=["日期顏色"]
+        )
+    )
+
+    # =====================================================
+    # 顯示 DataFrame
+    # =====================================================
+
+    st.dataframe(
+        styled_df,
+        use_container_width=True,
+        hide_index=True
     )
 
     # =====================================================
@@ -702,6 +718,10 @@ if st.session_state.result_image is not None:
 
     result_col, download_col = st.columns([4, 1])
 
+    # =====================================================
+    # 左側成果圖
+    # =====================================================
+
     with result_col:
 
         st.subheader("🗺️ 排樁施工圖")
@@ -722,6 +742,10 @@ if st.session_state.result_image is not None:
             result_display,
             use_container_width=False
         )
+
+    # =====================================================
+    # 右側下載
+    # =====================================================
 
     with download_col:
 
