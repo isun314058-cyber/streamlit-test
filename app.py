@@ -1,3 +1,7 @@
+# =====================================================
+# AI 排樁施工系統 完整版
+# =====================================================
+
 import streamlit as st
 from PIL import Image, ImageDraw
 import pandas as pd
@@ -18,7 +22,7 @@ st.set_page_config(
 )
 
 # =====================================================
-# 深色模式 CSS
+# 深色模式
 # =====================================================
 
 st.markdown("""
@@ -29,12 +33,12 @@ st.markdown("""
     color: white;
 }
 
-h1, h2, h3, h4, h5, h6, p, div, label {
+h1,h2,h3,h4,h5,h6,p,div,label {
     color: white !important;
 }
 
 .stButton button {
-    border-radius: 10px;
+    border-radius: 12px;
     height: 45px;
     font-size: 16px;
     font-weight: bold;
@@ -79,10 +83,6 @@ POINT_COLORS = [
     ("右上", "orange"),
     ("右下", "lime")
 ]
-
-# =====================================================
-# 中文顏色
-# =====================================================
 
 COLOR_TEXT = {
     "red": "紅色",
@@ -175,7 +175,7 @@ def detect_piles(pil_image, roi=None):
     return positions
 
 # =====================================================
-# 排程邏輯（上一版）
+# 排程邏輯
 # =====================================================
 
 def create_schedule(
@@ -204,7 +204,10 @@ def create_schedule(
 
         for i in range(0, len(group), daily_count):
 
-            current_date = pd.to_datetime(start_date) + pd.Timedelta(days=day - 1)
+            current_date = (
+                pd.to_datetime(start_date)
+                + pd.Timedelta(days=day - 1)
+            )
 
             color = colors[day - 1]
 
@@ -302,7 +305,7 @@ if uploaded_file:
         )
 
     # =====================================================
-    # ROI框
+    # ROI
     # =====================================================
 
     roi = None
@@ -337,7 +340,7 @@ if uploaded_file:
         )
 
     # =====================================================
-    # 點擊圖片
+    # 點擊
     # =====================================================
 
     with left_col:
@@ -346,10 +349,6 @@ if uploaded_file:
             preview_canvas,
             key=f"pile_roi_selector_{len(st.session_state.points)}"
         )
-
-    # =====================================================
-    # 點擊事件
-    # =====================================================
 
     if coords is not None:
 
@@ -481,6 +480,10 @@ if uploaded_file:
 
         ai_col, setting_col = st.columns([4, 1.2])
 
+        # =====================================================
+        # AI辨識結果
+        # =====================================================
+
         with ai_col:
 
             st.subheader("🔍 AI辨識結果")
@@ -489,6 +492,10 @@ if uploaded_file:
                 preview_display,
                 use_container_width=False
             )
+
+        # =====================================================
+        # 施工條件
+        # =====================================================
 
         with setting_col:
 
@@ -514,7 +521,7 @@ if uploaded_file:
             )
 
             # =====================================================
-            # 真實排程工期計算
+            # 真實工期
             # =====================================================
 
             pile_numbers = list(range(total_piles))
@@ -593,15 +600,25 @@ if uploaded_file:
 
             st.session_state.schedule_df = df
 
+            # =====================================================
+            # 建立成果圖
+            # =====================================================
+
             result_img = image.copy()
 
             draw = ImageDraw.Draw(result_img)
 
             pile_positions = piles
 
+            # =====================================================
+            # 畫樁體 + Day文字
+            # =====================================================
+
             for i, row in df.iterrows():
 
                 color = row["RGB"]
+
+                day_text = row["施工日"].replace("Day ", "D")
 
                 for pile_no in row["施工樁號"]:
 
@@ -626,6 +643,76 @@ if uploaded_file:
                         width=1
                     )
 
+                    # Day文字
+                    draw.text(
+                        (
+                            x - 8,
+                            y + rr + 5
+                        ),
+                        day_text,
+                        fill="black"
+                    )
+
+            # =====================================================
+            # 右側施工圖例
+            # =====================================================
+
+            legend_x = result_img.width - 180
+            legend_y = 80
+
+            legend_height = (len(df) * 28) + 50
+
+            draw.rectangle(
+                (
+                    legend_x - 20,
+                    legend_y - 20,
+                    legend_x + 140,
+                    legend_y + legend_height
+                ),
+                fill=(255, 255, 255),
+                outline="black",
+                width=2
+            )
+
+            draw.text(
+                (
+                    legend_x,
+                    legend_y - 8
+                ),
+                "施工圖例",
+                fill="black"
+            )
+
+            for i, row in df.iterrows():
+
+                color = row["RGB"]
+
+                yy = legend_y + 25 + (i * 26)
+
+                # 顏色方塊
+                draw.rectangle(
+                    (
+                        legend_x,
+                        yy,
+                        legend_x + 18,
+                        yy + 18
+                    ),
+                    fill=color,
+                    outline="black"
+                )
+
+                # D1 D2 D3
+                day_no = row["施工日"].replace("Day ", "D")
+
+                draw.text(
+                    (
+                        legend_x + 28,
+                        yy - 1
+                    ),
+                    day_no,
+                    fill="black"
+                )
+
             st.session_state.result_image = result_img
 
             st.session_state.processed = True
@@ -647,12 +734,7 @@ if st.session_state.schedule_df is not None:
     )
 
     if "RGB" in show_df.columns:
-
         show_df = show_df.drop(columns=["RGB"])
-
-    # =====================================================
-    # 日期顏色欄位上色
-    # =====================================================
 
     def color_date_column(val):
 
@@ -684,7 +766,6 @@ if st.session_state.schedule_df is not None:
     )
 
     if "RGB" in csv_export_df.columns:
-
         csv_export_df = csv_export_df.drop(columns=["RGB"])
 
     csv = csv_export_df.to_csv(
