@@ -29,8 +29,7 @@ DEFAULT_STATES = {
     "pile_positions": [],
     "processed": False,
     "original_image": None,
-    "points": [],
-    "last_click": None
+    "points": []
 }
 
 for key, value in DEFAULT_STATES.items():
@@ -251,63 +250,7 @@ if uploaded_file:
     left_col, right_col = st.columns([5, 1.3])
 
     # =====================================================
-    # 先建立畫布
-    # =====================================================
-
-    preview_canvas = canvas_bg.copy()
-
-    # =====================================================
-    # 點擊事件（重要修正）
-    # =====================================================
-
-    with left_col:
-
-        coords = streamlit_image_coordinates(
-            preview_canvas,
-            key="pile_roi_selector"
-        )
-
-    # =====================================================
-    # 處理點擊
-    # =====================================================
-
-    if coords is not None:
-
-        clicked_point = (
-            coords["x"],
-            coords["y"]
-        )
-
-        # 避免同一點重複觸發
-        if st.session_state.last_click != clicked_point:
-
-            st.session_state.last_click = clicked_point
-
-            duplicated = False
-
-            for old_point in st.session_state.points:
-
-                dist = (
-                    (clicked_point[0] - old_point[0]) ** 2
-                    +
-                    (clicked_point[1] - old_point[1]) ** 2
-                ) ** 0.5
-
-                if dist < 10:
-                    duplicated = True
-                    break
-
-            if (
-                not duplicated
-                and len(st.session_state.points) < 4
-            ):
-
-                st.session_state.points.append(clicked_point)
-
-                st.rerun()
-
-    # =====================================================
-    # 重新建立畫布
+    # 建立畫布
     # =====================================================
 
     preview_canvas = canvas_bg.copy()
@@ -378,15 +321,49 @@ if uploaded_file:
         )
 
     # =====================================================
-    # 顯示真正畫好的圖
+    # 顯示可點擊圖片
     # =====================================================
 
     with left_col:
 
-        st.image(
+        coords = streamlit_image_coordinates(
             preview_canvas,
-            use_container_width=False
+            key=f"pile_roi_selector_{len(st.session_state.points)}"
         )
+
+    # =====================================================
+    # 點擊事件
+    # =====================================================
+
+    if coords is not None:
+
+        clicked_point = (
+            coords["x"],
+            coords["y"]
+        )
+
+        duplicated = False
+
+        for old_point in st.session_state.points:
+
+            dist = (
+                (clicked_point[0] - old_point[0]) ** 2
+                +
+                (clicked_point[1] - old_point[1]) ** 2
+            ) ** 0.5
+
+            if dist < 10:
+                duplicated = True
+                break
+
+        if (
+            not duplicated
+            and len(st.session_state.points) < 4
+        ):
+
+            st.session_state.points.append(clicked_point)
+
+            st.rerun()
 
     # =====================================================
     # 右側資訊
@@ -423,7 +400,6 @@ if uploaded_file:
         if st.button("🔄 重新選取"):
 
             st.session_state.points = []
-            st.session_state.last_click = None
 
             st.rerun()
 
