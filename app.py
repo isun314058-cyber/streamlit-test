@@ -5,6 +5,7 @@ import numpy as np
 import random
 import io
 import cv2
+
 from streamlit_image_coordinates import streamlit_image_coordinates
 
 # =====================================================
@@ -29,8 +30,8 @@ DEFAULT_STATES = {
     "uploaded": False,
     "roi": None,
     "processed": False,
-    "canvas_key": "canvas_main",
     "original_image": None,
+    "points": []
 }
 
 for key, value in DEFAULT_STATES.items():
@@ -59,7 +60,7 @@ def generate_unique_colors(n):
     return colors
 
 # =====================================================
-# AI 辨識樁體
+# AI辨識樁體
 # =====================================================
 
 def detect_piles(pil_image, roi=None):
@@ -68,25 +69,13 @@ def detect_piles(pil_image, roi=None):
 
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
-    # ROI 裁切
     if roi:
 
         x1, y1, x2, y2 = roi
 
         gray = gray[y1:y2, x1:x2]
 
-    # 降噪
     gray = cv2.GaussianBlur(gray, (5, 5), 1.5)
-
-    # 自適應二值化
-    gray = cv2.adaptiveThreshold(
-        gray,
-        255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY,
-        11,
-        2
-    )
 
     circles = cv2.HoughCircles(
         gray,
@@ -194,7 +183,6 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file:
 
-    # 修正 RGBA 問題
     image = Image.open(uploaded_file).convert("RGB")
 
     st.session_state.original_image = image
@@ -219,62 +207,63 @@ if uploaded_file:
 
     st.subheader("✏️ 框選施工區域")
 
-    st.info("請直接在圖面上框選要施工的樁區域")
+    st.info("請依序點選：左上角 → 右下角")
 
     # =====================================================
-    # Canvas
+    # 顯示圖片
     # =====================================================
 
-    canvas_result = st_canvas(
-        fill_color="rgba(255,0,0,0.08)",
-        stroke_width=3,
-        stroke_color="#ff0000",
-        background_image=canvas_bg,
-        update_streamlit=False,
-        drawing_mode="rect",
-        height=display_height,
-        width=display_width,
-        key=st.session_state.canvas_key
-    )
+    coords = streamlit_image_coordinates(canvas_bg)
+
+    # =====================================================
+    # 點擊座標
+    # =====================================================
+
+    if coords is not None:
+
+        st.session_state.points.append(
+            (coords["x"], coords["y"])
+        )
+
+    # =====================================================
+    # 顯示點位
+    # =====================================================
+
+    if len(st.session_state.points) > 0:
+
+        st.write("已選點位：", st.session_state.points)
+
+    # =====================================================
+    # 兩點完成ROI
+    # =====================================================
 
     roi = None
 
-    # =====================================================
-    # ROI
-    # =====================================================
+    if len(st.session_state.points) >= 2:
 
-    if (
-        canvas_result.json_data is not None
-        and len(canvas_result.json_data["objects"]) > 0
-    ):
+        p1 = st.session_state.points[0]
+        p2 = st.session_state.points[1]
 
-        rect = canvas_result.json_data["objects"][-1]
+        x1 = min(p1[0], p2[0])
+        y1 = min(p1[1], p2[1])
 
-        # Canvas 座標
-        left = rect["left"]
-        top = rect["top"]
+        x2 = max(p1[0], p2[0])
+        y2 = max(p1[1], p2[1])
 
-        width = rect["width"] * rect["scaleX"]
-        height = rect["height"] * rect["scaleY"]
+        roi = (
+            int(x1 * scale_x),
+            int(y1 * scale_y),
+            int(x2 * scale_x),
+            int(y2 * scale_y)
+        )
 
-        # 換算回原圖座標
-        x1 = int(left * scale_x)
-        y1 = int(top * scale_y)
-
-        x2 = int((left + width) * scale_x)
-        y2 = int((top + height) * scale_y)
-
-        roi = (x1, y1, x2, y2)
-
-        st.session_state.roi = roi
+        st.success(f"框選完成 ROI：{roi}")
 
     # =====================================================
-    # 有框選才辨識
+    # AI辨識
     # =====================================================
 
     if roi:
-
-        st.success("已完成施工區域框選")
 
         piles = detect_piles(image, roi)
 
@@ -283,10 +272,6 @@ if uploaded_file:
         total_piles = len(piles)
 
         st.success(f"AI 辨識到 {total_piles} 支樁體")
-
-        # =====================================================
-        # 預覽辨識結果
-        # =====================================================
 
         preview_img = image.copy()
 
@@ -310,8 +295,6 @@ if uploaded_file:
                 str(idx + 1),
                 fill="red"
             )
-
-        st.subheader("🔍 AI 樁位辨識結果")
 
         st.image(
             preview_img,
