@@ -35,6 +35,7 @@ DEFAULT_STATES = {
 }
 
 for key, value in DEFAULT_STATES.items():
+
     if key not in st.session_state:
         st.session_state[key] = value
 
@@ -138,6 +139,7 @@ def create_schedule(
     groups = [[] for _ in range(cycle)]
 
     for idx, pile in enumerate(pile_numbers):
+
         groups[idx % cycle].append(pile)
 
     result = []
@@ -191,9 +193,13 @@ if uploaded_file:
     # 固定顯示尺寸
     # =====================================================
 
-    MAX_WIDTH = 900
+    MAX_WIDTH = 1000
+    MAX_HEIGHT = 700
 
-    scale = MAX_WIDTH / image.width
+    scale_w = MAX_WIDTH / image.width
+    scale_h = MAX_HEIGHT / image.height
+
+    scale = min(scale_w, scale_h)
 
     display_width = int(image.width * scale)
     display_height = int(image.height * scale)
@@ -205,50 +211,84 @@ if uploaded_file:
         (display_width, display_height)
     )
 
+    # =====================================================
+    # 框選施工區域
+    # =====================================================
+
     st.subheader("✏️ 框選施工區域")
 
-    st.info("請依序點選：左上角 → 右下角")
+    st.info("請自由點選施工區域，可任意點選多個位置")
 
     # =====================================================
-    # 顯示圖片
+    # 左右版面
     # =====================================================
 
-    coords = streamlit_image_coordinates(canvas_bg)
+    left_col, right_col = st.columns([4, 1])
 
     # =====================================================
-    # 點擊座標
+    # 建立預覽圖
     # =====================================================
 
-    if coords is not None:
+    preview_canvas = canvas_bg.copy()
 
-        st.session_state.points.append(
-            (coords["x"], coords["y"])
+    draw_preview = ImageDraw.Draw(preview_canvas)
+
+    # =====================================================
+    # 畫已選點位
+    # =====================================================
+
+    for idx, point in enumerate(st.session_state.points):
+
+        px, py = point
+
+        # 紅色點
+        draw_preview.ellipse(
+            (
+                px - 8,
+                py - 8,
+                px + 8,
+                py + 8
+            ),
+            fill="red",
+            outline="yellow",
+            width=3
+        )
+
+        # 點位編號
+        draw_preview.text(
+            (px + 12, py - 12),
+            str(idx + 1),
+            fill="yellow"
         )
 
     # =====================================================
-    # 顯示點位
-    # =====================================================
-
-    if len(st.session_state.points) > 0:
-
-        st.write("已選點位：", st.session_state.points)
-
-    # =====================================================
-    # 兩點完成ROI
+    # ROI框
     # =====================================================
 
     roi = None
 
     if len(st.session_state.points) >= 2:
 
-        p1 = st.session_state.points[0]
-        p2 = st.session_state.points[1]
+        xs = [p[0] for p in st.session_state.points]
+        ys = [p[1] for p in st.session_state.points]
 
-        x1 = min(p1[0], p2[0])
-        y1 = min(p1[1], p2[1])
+        x1 = min(xs)
+        y1 = min(ys)
 
-        x2 = max(p1[0], p2[0])
-        y2 = max(p1[1], p2[1])
+        x2 = max(xs)
+        y2 = max(ys)
+
+        # 綠色矩形框
+        draw_preview.rectangle(
+            (
+                x1,
+                y1,
+                x2,
+                y2
+            ),
+            outline="lime",
+            width=4
+        )
 
         roi = (
             int(x1 * scale_x),
@@ -257,7 +297,94 @@ if uploaded_file:
             int(y2 * scale_y)
         )
 
-        st.success(f"框選完成 ROI：{roi}")
+    # =====================================================
+    # 左邊圖片
+    # =====================================================
+
+    with left_col:
+
+        coords = streamlit_image_coordinates(
+            preview_canvas,
+            key="pile_roi_selector"
+        )
+
+    # =====================================================
+    # 右邊資訊
+    # =====================================================
+
+    with right_col:
+
+        st.markdown("## 📍 點位資訊")
+
+        if len(st.session_state.points) == 0:
+
+            st.info("尚未點選")
+
+        else:
+
+            for idx, point in enumerate(st.session_state.points):
+
+                st.success(
+                    f"""
+Point {idx+1}
+
+X = {point[0]}
+Y = {point[1]}
+"""
+                )
+
+        st.markdown("---")
+
+        # =====================================================
+        # ROI資訊
+        # =====================================================
+
+        if roi:
+
+            st.success("✅ 已完成施工區域")
+
+            st.code(f"ROI = {roi}")
+
+        # =====================================================
+        # 重新選取
+        # =====================================================
+
+        if st.button("🔄 重新選取"):
+
+            st.session_state.points = []
+
+            st.rerun()
+
+    # =====================================================
+    # 點擊事件
+    # =====================================================
+
+    if coords is not None:
+
+        new_point = (
+            coords["x"],
+            coords["y"]
+        )
+
+        duplicated = False
+
+        for old_point in st.session_state.points:
+
+            dist = (
+                (new_point[0] - old_point[0]) ** 2
+                +
+                (new_point[1] - old_point[1]) ** 2
+            ) ** 0.5
+
+            if dist < 10:
+                duplicated = True
+                break
+
+        if not duplicated:
+
+            st.session_state.points.append(new_point)
+
+            st.rerun()
 
     # =====================================================
     # AI辨識
@@ -272,6 +399,10 @@ if uploaded_file:
         total_piles = len(piles)
 
         st.success(f"AI 辨識到 {total_piles} 支樁體")
+
+        # =====================================================
+        # 樁位預覽
+        # =====================================================
 
         preview_img = image.copy()
 
@@ -295,6 +426,8 @@ if uploaded_file:
                 str(idx + 1),
                 fill="red"
             )
+
+        st.subheader("🔍 AI辨識結果")
 
         st.image(
             preview_img,
