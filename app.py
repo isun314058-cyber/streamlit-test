@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from streamlit_image_coordinates import streamlit_image_coordinates
 
 # =========================
-# Streamlit 基本設定
+# 頁面設定
 # =========================
 
 st.set_page_config(
@@ -45,22 +45,17 @@ h1,h2,h3,h4,h5,h6,p,span,label,div {
 
 .stButton>button {
     width: 100%;
-    border-radius: 12px;
-    height: 50px;
+    height: 52px;
+    border-radius: 14px;
     font-size: 20px;
     font-weight: bold;
-}
-
-[data-testid="stDataFrame"] {
-    border-radius: 12px;
-    overflow: hidden;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 # =========================
-# Functions
+# 顏色
 # =========================
 
 def generate_unique_colors(n):
@@ -79,6 +74,9 @@ def generate_unique_colors(n):
 
     return colors
 
+# =========================
+# AI辨識
+# =========================
 
 def detect_piles(img):
 
@@ -119,11 +117,13 @@ def detect_piles(img):
 
     return pile_data
 
+# =========================
+# 排程
+# =========================
 
 def create_schedule(
     pile_data,
     piles_per_day,
-    start_no,
     spacing
 ):
 
@@ -177,15 +177,18 @@ def create_schedule(
 
     return schedule
 
-
 # =========================
 # Upload
 # =========================
 
 uploaded_file = st.file_uploader(
     "請上傳 JPG / PNG / PDF",
-    type=["jpg","jpeg","png","pdf"]
+    type=["jpg", "jpeg", "png", "pdf"]
 )
+
+# =========================
+# 有上傳
+# =========================
 
 if uploaded_file is not None:
 
@@ -220,12 +223,18 @@ if uploaded_file is not None:
     st.success(f"✅ AI辨識到 {len(pile_data)} 支樁體")
 
     # =========================
-    # 顯示圖
+    # 左右版面
     # =========================
 
     col1, col2 = st.columns([3,1])
 
+    # =========================
+    # 左側 AI圖
+    # =========================
+
     with col1:
+
+        st.markdown("## 🔎 AI辨識結果")
 
         draw_img = img.copy()
 
@@ -248,9 +257,8 @@ if uploaded_file is not None:
                 width=3
             )
 
-            # 編號放大
             draw.text(
-                (x + r + 5, y - r),
+                (x+r+5, y-r),
                 str(p["pile_no"]),
                 fill="red",
                 font=font
@@ -259,7 +267,7 @@ if uploaded_file is not None:
         st.image(draw_img, width=900)
 
     # =========================
-    # 施工條件
+    # 右側條件
     # =========================
 
     with col2:
@@ -275,12 +283,6 @@ if uploaded_file is not None:
             "每日施工支數",
             min_value=1,
             value=15
-        )
-
-        start_no = st.number_input(
-            "起始樁號",
-            min_value=1,
-            value=1
         )
 
         spacing = st.selectbox(
@@ -309,13 +311,14 @@ if uploaded_file is not None:
         schedule = create_schedule(
             pile_data,
             piles_per_day,
-            start_no,
             spacing
         )
 
         # =========================
-        # Table
+        # 排程表
         # =========================
+
+        st.markdown("## 📋 施工排程結果")
 
         table_data = []
 
@@ -350,12 +353,10 @@ if uploaded_file is not None:
             subset=["日期顏色"]
         )
 
-        st.markdown("## 📋 施工排程結果")
-
         st.dataframe(
             styled_df,
             hide_index=True,
-            width="stretch",
+            width=1800,
             height=600
         )
 
@@ -382,7 +383,6 @@ if uploaded_file is not None:
 
         w, h = output.size
 
-        # 右方延伸空白區
         new_w = w + 500
 
         canvas = Image.new(
@@ -426,7 +426,7 @@ if uploaded_file is not None:
                     width=2
                 )
 
-                # Day文字
+                # D1 D2
                 draw.text(
                     (x-10, y+r+5),
                     f"D{idx+1}",
@@ -443,7 +443,7 @@ if uploaded_file is not None:
                 )
 
         # =========================
-        # Legend
+        # 圖例
         # =========================
 
         legend_x = w + 80
@@ -495,7 +495,7 @@ if uploaded_file is not None:
         st.image(canvas, width=1200)
 
         # =========================
-        # 匯出圖片
+        # 下載圖面
         # =========================
 
         img_bytes = io.BytesIO()
