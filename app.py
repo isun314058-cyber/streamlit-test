@@ -1,513 +1,847 @@
 import streamlit as st
-import cv2
-import numpy as np
-import pandas as pd
-import fitz
-import io
-import random
-
 from PIL import Image, ImageDraw, ImageFont
-from datetime import datetime, timedelta
+from pdf2image import convert_from_bytes
+
+import pandas as pd
+import numpy as np
+import random
+import io
+import cv2
+
 from streamlit_image_coordinates import streamlit_image_coordinates
 
-# =========================
+# =====================================================
 # 頁面設定
-# =========================
+# =====================================================
 
 st.set_page_config(
-    page_title="AI排樁施工系統",
+    page_title="AI 排樁施工系統",
     layout="wide"
 )
 
-# =========================
-# CSS
-# =========================
+# =====================================================
+# 深色模式
+# =====================================================
 
 st.markdown("""
 <style>
 
-body {
-    background-color: #020617;
-    color: white;
+.stApp{
+    background-color:#020617;
+    color:white;
 }
 
-.stApp {
-    background-color: #020617;
+h1,h2,h3,h4,h5,h6,p,span,label{
+    color:white;
 }
 
-h1,h2,h3,h4,h5,h6,p,span,label,div {
-    color: white;
-}
-
-.block-container {
-    padding-top: 1rem;
-}
-
-.stButton>button {
-    width: 100%;
-    height: 52px;
-    border-radius: 14px;
-    font-size: 20px;
-    font-weight: bold;
+.stButton>button{
+    border-radius:12px;
+    height:50px;
+    font-size:20px;
+    font-weight:bold;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
-# =========================
-# 顏色
-# =========================
+# =====================================================
+# Title
+# =====================================================
+
+st.title("🏗️ AI 排樁施工系統")
+
+# =====================================================
+# Session State
+# =====================================================
+
+DEFAULT_STATES = {
+    "result_image": None,
+    "schedule_df": None,
+    "pile_positions": [],
+    "processed": False,
+    "original_image": None,
+    "points": [],
+    "last_clicked": None
+}
+
+for key, value in DEFAULT_STATES.items():
+
+    if key not in st.session_state:
+        st.session_state[key] = value
+
+# =====================================================
+# 點位顏色
+# =====================================================
+
+POINT_COLORS = [
+    ("左上", "red"),
+    ("左下", "blue"),
+    ("右上", "orange"),
+    ("右下", "lime")
+]
+
+COLOR_TEXT = {
+    "red": "紅色",
+    "blue": "藍色",
+    "orange": "橘色",
+    "lime": "綠色"
+}
+
+# =====================================================
+# 隨機顏色
+# =====================================================
 
 def generate_unique_colors(n):
 
     colors = []
 
-    for i in range(n):
+    while len(colors) < n:
 
-        colors.append(
-            (
-                random.randint(80,255),
-                random.randint(80,255),
-                random.randint(80,255)
-            )
+        color = (
+            random.randint(50, 255),
+            random.randint(50, 255),
+            random.randint(50, 255)
         )
+
+        if color not in colors:
+            colors.append(color)
 
     return colors
 
-# =========================
-# AI辨識
-# =========================
+# =====================================================
+# AI辨識樁位
+# =====================================================
 
-def detect_piles(img):
+def detect_piles(pil_image, roi=None):
 
-    img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+    img = np.array(pil_image.convert("RGB"))
 
-    gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+
+    if roi:
+
+        x1, y1, x2, y2 = roi
+
+        gray = gray[y1:y2, x1:x2]
+
+    gray = cv2.GaussianBlur(gray, (5, 5), 1.5)
 
     circles = cv2.HoughCircles(
         gray,
         cv2.HOUGH_GRADIENT,
         dp=1.2,
-        minDist=40,
-        param1=100,
-        param2=20,
+        minDist=25,
+        param1=80,
+        param2=18,
         minRadius=8,
-        maxRadius=30
+        maxRadius=22
     )
 
-    pile_data = []
+    positions = []
 
     if circles is not None:
 
         circles = np.round(circles[0, :]).astype("int")
 
-        # 左上 → 右上 → 下一排
-        circles = sorted(circles, key=lambda c: (c[1], c[0]))
+        filtered = []
 
-        for idx, c in enumerate(circles, start=1):
+        for (x, y, r) in circles:
 
-            x, y, r = c
+            if roi:
+                x += x1
+                y += y1
 
-            pile_data.append({
-                "pile_no": idx,
-                "x": int(x),
-                "y": int(y),
-                "r": int(r)
-            })
+            duplicated = False
 
-    return pile_data
+            for fx, fy, fr in filtered:
 
-# =========================
-# 排程
-# =========================
+                dist = ((x - fx) ** 2 + (y - fy) ** 2) ** 0.5
 
-def create_schedule(
-    pile_data,
-    piles_per_day,
-    spacing
-):
-
-    remaining = pile_data.copy()
-
-    schedule = []
-
-    day_idx = 1
-
-    min_spacing = spacing * 40
-
-    while remaining:
-
-        today_piles = []
-
-        while remaining and len(today_piles) < piles_per_day:
-
-            added = False
-
-            for p in remaining[:]:
-
-                conflict = False
-
-                for t in today_piles:
-
-                    dx = abs(p["x"] - t["x"])
-                    dy = abs(p["y"] - t["y"])
-
-                    if dx < min_spacing and dy < min_spacing:
-                        conflict = True
-                        break
-
-                if not conflict:
-
-                    today_piles.append(p)
-                    remaining.remove(p)
-                    added = True
-
-                if len(today_piles) >= piles_per_day:
+                if dist < 12:
+                    duplicated = True
                     break
 
-            if not added:
-                break
+            if not duplicated:
+                filtered.append((x, y, r))
 
-        schedule.append({
-            "day": day_idx,
-            "piles": today_piles
-        })
+        filtered = sorted(filtered, key=lambda k: (k[1], k[0]))
 
-        day_idx += 1
+        positions = filtered
 
-    return schedule
+    return positions
 
-# =========================
-# Upload
-# =========================
+# =====================================================
+# 排程
+# =====================================================
+
+def create_schedule(
+    total_piles,
+    start_no,
+    daily_count,
+    cycle,
+    start_date
+):
+
+    pile_numbers = list(range(start_no, start_no + total_piles))
+
+    groups = [[] for _ in range(cycle)]
+
+    for idx, pile in enumerate(pile_numbers):
+
+        groups[idx % cycle].append(pile)
+
+    result = []
+
+    day = 1
+
+    colors = generate_unique_colors(300)
+
+    for group in groups:
+
+        for i in range(0, len(group), daily_count):
+
+            current_date = (
+                pd.to_datetime(start_date)
+                + pd.Timedelta(days=day - 1)
+            )
+
+            color = colors[day - 1]
+
+            hex_color = '#%02x%02x%02x' % color
+
+            result.append({
+                "施工日": f"Day {day}",
+                "日期": current_date.strftime("%Y-%m-%d"),
+                "日期顏色": hex_color,
+                "RGB": color,
+                "施工樁號": group[i:i + daily_count]
+            })
+
+            day += 1
+
+    return result
+
+# =====================================================
+# 上傳
+# =====================================================
 
 uploaded_file = st.file_uploader(
-    "請上傳 JPG / PNG / PDF",
+    "上傳 JPG / PNG / PDF 圖面",
     type=["jpg", "jpeg", "png", "pdf"]
 )
 
-# =========================
-# 有上傳
-# =========================
+# =====================================================
+# 主流程
+# =====================================================
 
-if uploaded_file is not None:
+if uploaded_file:
 
+    # =====================================================
     # PDF
+    # =====================================================
+
     if uploaded_file.type == "application/pdf":
 
-        pdf = fitz.open(
-            stream=uploaded_file.read(),
-            filetype="pdf"
+        pdf_bytes = uploaded_file.read()
+
+        pdf_pages = convert_from_bytes(
+            pdf_bytes,
+            dpi=300
         )
 
-        page = pdf.load_page(0)
+        image = pdf_pages[0].convert("RGB")
 
-        pix = page.get_pixmap(matrix=fitz.Matrix(2,2))
-
-        img = Image.frombytes(
-            "RGB",
-            [pix.width, pix.height],
-            pix.samples
-        )
+    # =====================================================
+    # 圖片
+    # =====================================================
 
     else:
 
-        img = Image.open(uploaded_file).convert("RGB")
+        image = Image.open(uploaded_file).convert("RGB")
 
-    # =========================
+    st.session_state.original_image = image
+
+    MAX_WIDTH = 900
+    MAX_HEIGHT = 650
+
+    scale_w = MAX_WIDTH / image.width
+    scale_h = MAX_HEIGHT / image.height
+
+    scale = min(scale_w, scale_h)
+
+    display_width = int(image.width * scale)
+    display_height = int(image.height * scale)
+
+    scale_x = image.width / display_width
+    scale_y = image.height / display_height
+
+    canvas_bg = image.resize(
+        (display_width, display_height)
+    )
+
+    st.subheader("✏️ 框選施工區域")
+
+    st.markdown("""
+
+✏️ 點選順序
+
+🔴 左上　🔵 左下　🟠 右上　🟢 右下
+""")
+
+    left_col, right_col = st.columns([5, 1.3])
+
+    preview_canvas = canvas_bg.copy()
+
+    draw_preview = ImageDraw.Draw(preview_canvas)
+
+    # =====================================================
+    # 畫點位
+    # =====================================================
+
+    for idx, point in enumerate(st.session_state.points):
+
+        px, py = point
+
+        label, color = POINT_COLORS[idx]
+
+        draw_preview.ellipse(
+            (
+                px - 10,
+                py - 10,
+                px + 10,
+                py + 10
+            ),
+            fill=color,
+            outline="white",
+            width=3
+        )
+
+        draw_preview.text(
+            (px + 15, py - 15),
+            label,
+            fill=color
+        )
+
+    # =====================================================
+    # ROI
+    # =====================================================
+
+    roi = None
+
+    if len(st.session_state.points) == 4:
+
+        xs = [p[0] for p in st.session_state.points]
+        ys = [p[1] for p in st.session_state.points]
+
+        x1 = min(xs)
+        y1 = min(ys)
+
+        x2 = max(xs)
+        y2 = max(ys)
+
+        draw_preview.rectangle(
+            (
+                x1,
+                y1,
+                x2,
+                y2
+            ),
+            outline="lime",
+            width=5
+        )
+
+        roi = (
+            int(x1 * scale_x),
+            int(y1 * scale_y),
+            int(x2 * scale_x),
+            int(y2 * scale_y)
+        )
+
+    # =====================================================
+    # 點擊
+    # =====================================================
+
+    with left_col:
+
+        coords = streamlit_image_coordinates(
+            preview_canvas,
+            key=f"pile_roi_selector_{len(st.session_state.points)}"
+        )
+
+    if coords is not None:
+
+        clicked_point = (
+            coords["x"],
+            coords["y"]
+        )
+
+        if st.session_state.last_clicked != clicked_point:
+
+            st.session_state.last_clicked = clicked_point
+
+            duplicated = False
+
+            for old_point in st.session_state.points:
+
+                dist = (
+                    (clicked_point[0] - old_point[0]) ** 2
+                    +
+                    (clicked_point[1] - old_point[1]) ** 2
+                ) ** 0.5
+
+                if dist < 10:
+                    duplicated = True
+                    break
+
+            if (
+                not duplicated
+                and len(st.session_state.points) < 4
+            ):
+
+                st.session_state.points.append(clicked_point)
+
+                st.rerun()
+
+    # =====================================================
+    # 點位資訊
+    # =====================================================
+
+    with right_col:
+
+        st.subheader("📍 點位資訊")
+
+        if len(st.session_state.points) == 0:
+
+            st.info("尚未點選")
+
+        else:
+
+            for idx, point in enumerate(st.session_state.points):
+
+                label, color = POINT_COLORS[idx]
+
+                st.markdown(
+                    f"""
+{label}
+
+顏色：{COLOR_TEXT[color]}
+"""
+                )
+
+        st.markdown("---")
+
+        if roi:
+
+            st.success("✅ 已完成施工區域")
+
+        # =====================================================
+        # 重新選取
+        # =====================================================
+
+        if st.button("🔄 重新選取"):
+
+            st.session_state.points = []
+            st.session_state.last_clicked = None
+            st.session_state.pile_positions = []
+            st.session_state.schedule_df = None
+            st.session_state.result_image = None
+            st.session_state.processed = False
+
+            st.rerun()
+
+    # =====================================================
     # AI辨識
-    # =========================
+    # =====================================================
 
-    pile_data = detect_piles(img)
+    if roi:
 
-    st.success(f"✅ AI辨識到 {len(pile_data)} 支樁體")
+        piles = detect_piles(image, roi)
 
-    # =========================
-    # 左右版面
-    # =========================
+        st.session_state.pile_positions = piles
 
-    col1, col2 = st.columns([3,1])
+        total_piles = len(piles)
 
-    # =========================
-    # 左側 AI圖
-    # =========================
+        st.success(f"✅ AI 辨識到 {total_piles} 支樁體")
 
-    with col1:
+        # =====================================================
+        # AI預覽圖
+        # =====================================================
 
-        st.markdown("## 🔎 AI辨識結果")
+        preview_img = image.copy()
 
-        draw_img = img.copy()
-
-        draw = ImageDraw.Draw(draw_img)
+        preview_draw = ImageDraw.Draw(preview_img)
 
         try:
-            font = ImageFont.truetype("arial.ttf", 18)
+            font = ImageFont.truetype("arial.ttf", 24)
         except:
             font = ImageFont.load_default()
 
-        for p in pile_data:
+        for idx, (x, y, r) in enumerate(piles):
 
-            x = p["x"]
-            y = p["y"]
-            r = p["r"]
-
-            draw.ellipse(
-                (x-r, y-r, x+r, y+r),
+            preview_draw.ellipse(
+                (
+                    x - r,
+                    y - r,
+                    x + r,
+                    y + r
+                ),
                 outline="red",
                 width=3
             )
 
-            draw.text(
-                (x+r+5, y-r),
-                str(p["pile_no"]),
+            preview_draw.text(
+                (
+                    x + 12,
+                    y - 18
+                ),
+                str(idx + 1),
                 fill="red",
                 font=font
             )
 
-        st.image(draw_img, width=900)
+        AI_PREVIEW_WIDTH = 900
 
-    # =========================
-    # 右側條件
-    # =========================
+        scale_ratio = AI_PREVIEW_WIDTH / preview_img.width
 
-    with col2:
+        ai_height = int(preview_img.height * scale_ratio)
 
-        st.markdown("## 🗓️ 施工條件")
-
-        start_date = st.date_input(
-            "施工開始日期",
-            value=datetime.today()
+        preview_display = preview_img.resize(
+            (AI_PREVIEW_WIDTH, ai_height)
         )
 
-        piles_per_day = st.number_input(
-            "每日施工支數",
-            min_value=1,
-            value=15
-        )
+        ai_col, setting_col = st.columns([4, 1.2])
 
-        spacing = st.selectbox(
-            "循環間隔",
-            [3,4,5,6,7,8]
-        )
+        with ai_col:
 
-        total_days = int(
-            np.ceil(len(pile_data) / piles_per_day)
-        )
+            st.subheader("🔍 AI辨識結果")
 
-        finish_date = start_date + timedelta(days=total_days-1)
-
-        st.info(f"預定完成日期\n\n# {finish_date}")
-
-        execute = st.button("🚀 執行排程")
-
-    # =========================
-    # 執行排程
-    # =========================
-
-    if execute:
-
-        colors = generate_unique_colors(300)
-
-        schedule = create_schedule(
-            pile_data,
-            piles_per_day,
-            spacing
-        )
-
-        # =========================
-        # 排程表
-        # =========================
-
-        st.markdown("## 📋 施工排程結果")
-
-        table_data = []
-
-        for idx, s in enumerate(schedule):
-
-            c = colors[idx]
-
-            color_hex = '#%02x%02x%02x' % c
-
-            piles_txt = ", ".join(
-                [str(p["pile_no"]) for p in s["piles"]]
+            st.image(
+                preview_display,
+                use_container_width=False
             )
 
-            table_data.append({
-                "施工日": f"Day {idx+1}",
-                "日期": (
-                    start_date +
-                    timedelta(days=idx)
-                ).strftime("%Y-%m-%d"),
-                "日期顏色": color_hex,
-                "施工樁號": piles_txt
-            })
+        with setting_col:
 
-        df = pd.DataFrame(table_data)
+            st.subheader("📅 施工條件")
 
-        def color_row(val):
+            start_date = st.date_input("施工開始日期")
 
-            return f'background-color: {val}; color:black'
+            daily_count = st.number_input(
+                "每日施工支數",
+                min_value=1,
+                value=10
+            )
 
-        styled_df = df.style.map(
-            color_row,
-            subset=["日期顏色"]
-        )
+            start_no = st.number_input(
+                "起始樁號",
+                min_value=1,
+                value=1
+            )
 
-        st.dataframe(
-            styled_df,
-            hide_index=True,
-            width=1800,
-            height=600
-        )
+            cycle = st.selectbox(
+                "循環間隔",
+                [3, 4, 5, 6, 7, 8]
+            )
 
-        # =========================
-        # CSV
-        # =========================
+            execute = st.button(
+                "🚀 執行排程",
+                use_container_width=True
+            )
 
-        csv = df.to_csv(index=False).encode("utf-8-sig")
+        # =====================================================
+        # 執行排程
+        # =====================================================
 
-        st.download_button(
-            "📥 下載施工排程 CSV",
-            csv,
-            file_name="施工排程.csv",
-            mime="text/csv"
-        )
+        if execute:
 
-        # =========================
-        # 排樁施工圖
-        # =========================
+            schedule = create_schedule(
+                total_piles=total_piles,
+                start_no=start_no,
+                daily_count=daily_count,
+                cycle=cycle,
+                start_date=start_date
+            )
 
-        st.markdown("## 🗺️ 排樁施工圖")
+            df = pd.DataFrame(schedule)
 
-        output = img.copy()
+            st.session_state.schedule_df = df
 
-        w, h = output.size
+            # =====================================================
+            # 加寬畫布
+            # =====================================================
 
-        new_w = w + 500
+            LEGEND_WIDTH = 320
 
-        canvas = Image.new(
-            "RGB",
-            (new_w, h),
-            (245,245,245)
-        )
+            new_width = image.width + LEGEND_WIDTH
+            new_height = image.height
 
-        canvas.paste(output, (0,0))
+            result_img = Image.new(
+                "RGB",
+                (new_width, new_height),
+                (255, 255, 255)
+            )
 
-        draw = ImageDraw.Draw(canvas)
+            result_img.paste(image, (0, 0))
 
-        try:
-            font_big = ImageFont.truetype("arial.ttf", 18)
-            font_small = ImageFont.truetype("arial.ttf", 14)
+            draw = ImageDraw.Draw(result_img)
 
-        except:
-            font_big = ImageFont.load_default()
-            font_small = ImageFont.load_default()
+            pile_positions = piles
 
-        # =========================
-        # 畫樁
-        # =========================
+            try:
+                day_font = ImageFont.truetype("arial.ttf", 16)
+                legend_font = ImageFont.truetype("arial.ttf", 20)
+            except:
+                day_font = ImageFont.load_default()
+                legend_font = ImageFont.load_default()
 
-        for idx, s in enumerate(schedule):
+            # =====================================================
+            # 畫樁體
+            # =====================================================
 
-            c = colors[idx]
+            for i, row in df.iterrows():
 
-            for p in s["piles"]:
+                color = row["RGB"]
 
-                x = p["x"]
-                y = p["y"]
-                r = p["r"]
+                day_text = row["施工日"].replace("Day ", "D")
 
-                pile_no = p["pile_no"]
+                for pile_no in row["施工樁號"]:
 
-                draw.ellipse(
-                    (x-r, y-r, x+r, y+r),
-                    fill=c,
-                    outline="black",
-                    width=2
-                )
+                    idx = pile_no - start_no
 
-                # D1 D2
-                draw.text(
-                    (x-10, y+r+5),
-                    f"D{idx+1}",
-                    fill="black",
-                    font=font_small
-                )
+                    if idx >= len(pile_positions):
+                        continue
 
-                # 樁號
-                draw.text(
-                    (x+r+5, y-r),
-                    str(pile_no),
-                    fill="black",
-                    font=font_small
-                )
+                    x, y, r = pile_positions[idx]
 
-        # =========================
-        # 圖例
-        # =========================
+                    rr = int(r * 0.85)
 
-        legend_x = w + 80
-        legend_y = 80
+                    draw.ellipse(
+                        (
+                            x - rr,
+                            y - rr,
+                            x + rr,
+                            y + rr
+                        ),
+                        fill=color,
+                        outline="black",
+                        width=1
+                    )
 
-        draw.rectangle(
-            (
-                legend_x-20,
-                legend_y-20,
-                legend_x+180,
-                legend_y+40+len(schedule)*30
-            ),
-            outline="black",
-            width=2,
-            fill="white"
-        )
+                    # Day
+                    draw.text(
+                        (
+                            x - 10,
+                            y + rr + 5
+                        ),
+                        day_text,
+                        fill="black",
+                        font=day_font
+                    )
 
-        draw.text(
-            (legend_x, legend_y-10),
-            "施工日顏色",
-            fill="black",
-            font=font_big
-        )
+                    # 樁號
+                    draw.text(
+                        (
+                            x - 8,
+                            y - rr - 18
+                        ),
+                        str(pile_no),
+                        fill="red",
+                        font=day_font
+                    )
 
-        for idx, s in enumerate(schedule):
+            # =====================================================
+            # Legend
+            # =====================================================
 
-            c = colors[idx]
+            legend_x = image.width + 40
+            legend_y = 80
 
-            yy = legend_y + 40 + idx*30
+            draw.text(
+                (
+                    legend_x,
+                    legend_y - 35
+                ),
+                "施工日顏色對照表",
+                fill="black",
+                font=legend_font
+            )
+
+            legend_height = (len(df) * 32) + 50
 
             draw.rectangle(
                 (
-                    legend_x,
-                    yy,
-                    legend_x+20,
-                    yy+20
+                    legend_x - 20,
+                    legend_y - 10,
+                    legend_x + 220,
+                    legend_y + legend_height
                 ),
-                fill=c,
-                outline="black"
+                outline="black",
+                width=2
             )
 
-            draw.text(
-                (legend_x+35, yy),
-                f"D{idx+1}",
-                fill="black",
-                font=font_small
-            )
+            for i, row in df.iterrows():
 
-        st.image(canvas, width=1200)
+                color = row["RGB"]
 
-        # =========================
-        # 下載圖面
-        # =========================
+                yy = legend_y + (i * 30)
 
-        img_bytes = io.BytesIO()
+                draw.rectangle(
+                    (
+                        legend_x,
+                        yy,
+                        legend_x + 20,
+                        yy + 20
+                    ),
+                    fill=color,
+                    outline="black"
+                )
 
-        canvas.save(
-            img_bytes,
-            format="PNG"
+                day_no = row["施工日"].replace("Day ", "D")
+
+                draw.text(
+                    (
+                        legend_x + 35,
+                        yy
+                    ),
+                    day_no,
+                    fill="black",
+                    font=day_font
+                )
+
+            st.session_state.result_image = result_img
+
+            st.session_state.processed = True
+
+            st.rerun()
+
+# =====================================================
+# 排程結果
+# =====================================================
+
+if st.session_state.schedule_df is not None:
+
+    st.subheader("📋 施工排程結果")
+
+    show_df = st.session_state.schedule_df.copy()
+
+    show_df["施工樁號"] = show_df["施工樁號"].apply(
+        lambda x: ", ".join(map(str, x))
+    )
+
+    if "RGB" in show_df.columns:
+        show_df = show_df.drop(columns=["RGB"])
+
+    def color_date_column(val):
+
+        return f"""
+        background-color: {val};
+        color: {val};
+        """
+
+    styled_df = show_df.style.map(
+        color_date_column,
+        subset=["日期顏色"]
+    )
+
+    st.dataframe(
+        styled_df,
+        use_container_width=True,
+        hide_index=True,
+        height=500
+    )
+
+# =====================================================
+# 成果圖
+# =====================================================
+
+if st.session_state.result_image is not None:
+
+    result_col, download_col = st.columns([4, 1])
+
+    with result_col:
+
+        st.subheader("🗺️ 排樁施工圖")
+
+        RESULT_WIDTH = 1200
+
+        result_img = st.session_state.result_image
+
+        scale_ratio = RESULT_WIDTH / result_img.width
+
+        result_height = int(result_img.height * scale_ratio)
+
+        result_display = result_img.resize(
+            (RESULT_WIDTH, result_height)
         )
 
+        st.image(
+            result_display,
+            use_container_width=False
+        )
+
+    # =====================================================
+    # 下載
+    # =====================================================
+
+    with download_col:
+
+        st.subheader("📥 下載圖面")
+
+        export_format = st.selectbox(
+            "選擇匯出格式",
+            ["PNG", "JPG", "PDF"]
+        )
+
+        result_img = st.session_state.result_image
+
+        img_buffer = io.BytesIO()
+
+        # PNG
+        if export_format == "PNG":
+
+            result_img.save(
+                img_buffer,
+                format="PNG"
+            )
+
+            file_name = "排樁施工圖.png"
+
+            mime_type = "image/png"
+
+        # JPG
+        elif export_format == "JPG":
+
+            rgb_img = result_img.convert("RGB")
+
+            rgb_img.save(
+                img_buffer,
+                format="JPEG",
+                quality=95
+            )
+
+            file_name = "排樁施工圖.jpg"
+
+            mime_type = "image/jpeg"
+
+        # PDF
+        elif export_format == "PDF":
+
+            rgb_img = result_img.convert("RGB")
+
+            rgb_img.save(
+                img_buffer,
+                format="PDF"
+            )
+
+            file_name = "排樁施工圖.pdf"
+
+            mime_type = "application/pdf"
+
         st.download_button(
-            "📥 下載排程圖面",
-            img_bytes.getvalue(),
-            file_name="排樁施工圖.png",
-            mime="image/png"
+            label=f"下載 {export_format} 圖面",
+            data=img_buffer.getvalue(),
+            file_name=file_name,
+            mime=mime_type,
+            use_container_width=True
         )
