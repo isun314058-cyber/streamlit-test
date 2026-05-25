@@ -5,7 +5,7 @@ import numpy as np
 import random
 import io
 import cv2
-from streamlit_drawable_canvas import st_canvas
+from streamlit_image_coordinates import streamlit_image_coordinates
 
 # =====================================================
 # 頁面設定
