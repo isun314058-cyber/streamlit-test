@@ -2,6 +2,5 @@ streamlit
 pillow
 pandas
 numpy
-PyMuPDF
 opencv-python-headless
 streamlit-drawable-canvas
