@@ -263,10 +263,6 @@ if uploaded_file:
         (display_width, display_height)
     )
 
-    # =====================================================
-    # 標題
-    # =====================================================
-
     st.subheader("✏️ 框選施工區域")
 
     st.markdown("""
@@ -275,15 +271,7 @@ if uploaded_file:
 🔴 左上　🔵 左下　🟠 右上　🟢 右下
 """)
 
-    # =====================================================
-    # 左右欄位
-    # =====================================================
-
     left_col, right_col = st.columns([5, 1.3])
-
-    # =====================================================
-    # 建立畫布
-    # =====================================================
 
     preview_canvas = canvas_bg.copy()
 
@@ -495,10 +483,6 @@ if uploaded_file:
             (AI_PREVIEW_WIDTH, ai_height)
         )
 
-        # =====================================================
-        # 左右欄位
-        # =====================================================
-
         ai_col, setting_col = st.columns([4, 1.2])
 
         # =====================================================
@@ -542,19 +526,36 @@ if uploaded_file:
             )
 
             # =====================================================
-            # 預定完成日期
+            # 真實排程工期計算
             # =====================================================
 
-            estimated_days = max(
-                1,
-                int(np.ceil(total_piles / daily_count))
-            )
+            pile_numbers = list(range(total_piles))
+
+            groups = [[] for _ in range(cycle)]
+
+            for idx, pile in enumerate(pile_numbers):
+
+                groups[idx % cycle].append(pile)
+
+            estimated_days = 0
+
+            for group in groups:
+
+                group_days = int(
+                    np.ceil(len(group) / daily_count)
+                )
+
+                estimated_days += group_days
 
             estimated_finish = (
                 pd.to_datetime(start_date)
                 +
                 pd.Timedelta(days=estimated_days - 1)
             )
+
+            # =====================================================
+            # 預定完成日期顯示
+            # =====================================================
 
             st.markdown(
                 f"""
