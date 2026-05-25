@@ -6,6 +6,7 @@ import random
 import io
 import cv2
 
+from math import sqrt
 from streamlit_image_coordinates import streamlit_image_coordinates
 
 # =====================================================
@@ -175,24 +176,45 @@ def detect_piles(pil_image, roi=None):
     return positions
 
 # =====================================================
-# 排程邏輯
+# 安全距離判定
+# =====================================================
+
+def is_safe_distance(
+    pile1,
+    pile2,
+    min_distance
+):
+
+    x1, y1, _ = pile1
+    x2, y2, _ = pile2
+
+    dist = sqrt(
+        (x1 - x2) ** 2 +
+        (y1 - y2) ** 2
+    )
+
+    return dist >= min_distance
+
+# =====================================================
+# AI智慧避碰排程
 # =====================================================
 
 def create_schedule(
-    total_piles,
+    pile_positions,
     start_no,
     daily_count,
-    cycle,
+    min_distance,
     start_date
 ):
 
-    pile_numbers = list(range(start_no, start_no + total_piles))
+    remaining = []
 
-    groups = [[] for _ in range(cycle)]
+    for idx, pile in enumerate(pile_positions):
 
-    for idx, pile in enumerate(pile_numbers):
-
-        groups[idx % cycle].append(pile)
+        remaining.append({
+            "pile_no": start_no + idx,
+            "position": pile
+        })
 
     result = []
 
@@ -200,25 +222,64 @@ def create_schedule(
 
     colors = generate_unique_colors(300)
 
-    for group in groups:
+    while remaining:
 
-        for i in range(0, len(group), daily_count):
+        today_piles = []
 
-            current_date = pd.to_datetime(start_date) + pd.Timedelta(days=day - 1)
+        used = []
 
-            color = colors[day - 1]
+        for pile_data in remaining:
 
-            hex_color = '#%02x%02x%02x' % color
+            current_pos = pile_data["position"]
 
-            result.append({
-                "施工日": f"Day {day}",
-                "日期": current_date.strftime("%Y-%m-%d"),
-                "日期顏色": hex_color,
-                "RGB": color,
-                "施工樁號": group[i:i + daily_count]
-            })
+            safe = True
 
-            day += 1
+            for selected in today_piles:
+
+                selected_pos = selected["position"]
+
+                if not is_safe_distance(
+                    current_pos,
+                    selected_pos,
+                    min_distance
+                ):
+
+                    safe = False
+                    break
+
+            if safe:
+
+                today_piles.append(pile_data)
+
+                used.append(pile_data)
+
+            if len(today_piles) >= daily_count:
+                break
+
+        for u in used:
+            remaining.remove(u)
+
+        current_date = (
+            pd.to_datetime(start_date)
+            + pd.Timedelta(days=day - 1)
+        )
+
+        color = colors[day - 1]
+
+        hex_color = '#%02x%02x%02x' % color
+
+        result.append({
+            "施工日": f"Day {day}",
+            "日期": current_date.strftime("%Y-%m-%d"),
+            "日期顏色": hex_color,
+            "RGB": color,
+            "施工樁號": [
+                p["pile_no"]
+                for p in today_piles
+            ]
+        })
+
+        day += 1
 
     return result
 
@@ -240,10 +301,6 @@ if uploaded_file:
     image = Image.open(uploaded_file).convert("RGB")
 
     st.session_state.original_image = image
-
-    # =====================================================
-    # 固定顯示尺寸
-    # =====================================================
 
     MAX_WIDTH = 900
     MAX_HEIGHT = 650
@@ -341,7 +398,7 @@ if uploaded_file:
         )
 
     # =====================================================
-    # 顯示可點擊圖片
+    # 點擊圖片
     # =====================================================
 
     with left_col:
@@ -390,7 +447,7 @@ if uploaded_file:
                 st.rerun()
 
     # =====================================================
-    # 右側資訊
+    # 點位資訊
     # =====================================================
 
     with right_col:
@@ -428,15 +485,10 @@ if uploaded_file:
         if st.button("🔄 重新選取"):
 
             st.session_state.points = []
-
             st.session_state.last_clicked = None
-
             st.session_state.pile_positions = []
-
             st.session_state.schedule_df = None
-
             st.session_state.result_image = None
-
             st.session_state.processed = False
 
             st.rerun()
@@ -454,10 +506,6 @@ if uploaded_file:
         total_piles = len(piles)
 
         st.success(f"✅ AI 辨識到 {total_piles} 支樁體")
-
-        # =====================================================
-        # 建立辨識圖
-        # =====================================================
 
         preview_img = image.copy()
 
@@ -481,10 +529,6 @@ if uploaded_file:
                 str(idx + 1),
                 fill="red"
             )
-
-        # =====================================================
-        # 固定大小
-        # =====================================================
 
         AI_PREVIEW_WIDTH = 900
 
@@ -533,42 +577,27 @@ if uploaded_file:
                 value=1
             )
 
-            cycle = st.selectbox(
-                "循環間隔",
-                [3, 4, 5, 6, 7, 8]
+            min_distance = st.slider(
+                "安全距離 (像素)",
+                min_value=30,
+                max_value=300,
+                value=120,
+                step=10
             )
 
             # =====================================================
-            # 真實排程工期計算
+            # 預估工期
             # =====================================================
 
-            pile_numbers = list(range(total_piles))
-
-            groups = [[] for _ in range(cycle)]
-
-            for idx, pile in enumerate(pile_numbers):
-
-                groups[idx % cycle].append(pile)
-
-            estimated_days = 0
-
-            for group in groups:
-
-                group_days = int(
-                    np.ceil(len(group) / daily_count)
-                )
-
-                estimated_days += group_days
+            estimated_days = int(
+                np.ceil(total_piles / daily_count)
+            )
 
             estimated_finish = (
                 pd.to_datetime(start_date)
                 +
                 pd.Timedelta(days=estimated_days - 1)
             )
-
-            # =====================================================
-            # 預定完成日期
-            # =====================================================
 
             st.markdown(
                 f"""
@@ -611,10 +640,10 @@ if uploaded_file:
         if execute:
 
             schedule = create_schedule(
-                total_piles=total_piles,
+                pile_positions=piles,
                 start_no=start_no,
                 daily_count=daily_count,
-                cycle=cycle,
+                min_distance=min_distance,
                 start_date=start_date
             )
 
@@ -626,8 +655,6 @@ if uploaded_file:
 
             draw = ImageDraw.Draw(result_img)
 
-            pile_positions = piles
-
             for i, row in df.iterrows():
 
                 color = row["RGB"]
@@ -636,10 +663,10 @@ if uploaded_file:
 
                     idx = pile_no - start_no
 
-                    if idx >= len(pile_positions):
+                    if idx >= len(piles):
                         continue
 
-                    x, y, r = pile_positions[idx]
+                    x, y, r = piles[idx]
 
                     rr = int(r * 0.85)
 
@@ -671,17 +698,9 @@ if st.session_state.schedule_df is not None:
 
     show_df = st.session_state.schedule_df.copy()
 
-    # =====================================================
-    # 樁號格式化
-    # =====================================================
-
     show_df["施工樁號"] = show_df["施工樁號"].apply(
         lambda x: ", ".join(map(str, x))
     )
-
-    # =====================================================
-    # 刪除 RGB 欄位
-    # =====================================================
 
     if "RGB" in show_df.columns:
 
@@ -702,10 +721,6 @@ if st.session_state.schedule_df is not None:
         color_date_column,
         subset=["日期顏色"]
     )
-
-    # =====================================================
-    # 顯示 dataframe
-    # =====================================================
 
     st.dataframe(
         styled_df,
