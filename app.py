@@ -583,32 +583,23 @@ if st.session_state.schedule_df is not None:
     show_df = st.session_state.schedule_df.copy()
 
     # =====================================================
+    # 日期顏色
+    # =====================================================
+
+    def color_dot(hex_color):
+
+        return f"⬤ {hex_color}"
+
+    show_df["日期顏色"] = show_df["日期顏色"].apply(
+        color_dot
+    )
+
+    # =====================================================
     # 樁號格式化
     # =====================================================
 
     show_df["施工樁號"] = show_df["施工樁號"].apply(
         lambda x: ", ".join(map(str, x))
-    )
-
-    # =====================================================
-    # 圓形色塊
-    # =====================================================
-
-    def create_color_dot(hex_color):
-
-        return f"""
-        <div style="
-            width:18px;
-            height:18px;
-            border-radius:50%;
-            background:{hex_color};
-            margin:auto;
-            border:1px solid #999;
-        "></div>
-        """
-
-    show_df["日期顏色"] = show_df["日期顏色"].apply(
-        create_color_dot
     )
 
     # =====================================================
@@ -620,42 +611,13 @@ if st.session_state.schedule_df is not None:
         show_df = show_df.drop(columns=["RGB"])
 
     # =====================================================
-    # HTML表格
+    # 顯示 dataframe
     # =====================================================
 
-    table_html = show_df.to_html(
-        escape=False,
-        index=False
-    )
-
-    st.markdown(
-        f"""
-        <style>
-
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-        }}
-
-        th {{
-            text-align: center;
-            padding: 12px;
-            background-color: #1e1e1e;
-            color: white;
-            border: 1px solid #333;
-        }}
-
-        td {{
-            text-align: center;
-            padding: 10px;
-            border: 1px solid #333;
-        }}
-
-        </style>
-
-        {table_html}
-        """,
-        unsafe_allow_html=True
+    st.dataframe(
+        show_df,
+        use_container_width=True,
+        hide_index=True
     )
 
     # =====================================================
