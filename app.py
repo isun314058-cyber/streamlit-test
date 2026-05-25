@@ -587,27 +587,6 @@ if st.session_state.schedule_df is not None:
     show_df = st.session_state.schedule_df.copy()
 
     # =====================================================
-    # 日期顏色改成圓形色塊
-    # =====================================================
-
-    def color_circle(hex_color):
-
-        return f"""
-        <div style="
-            width:25px;
-            height:25px;
-            border-radius:50%;
-            background:{hex_color};
-            margin:auto;
-            border:1px solid #999;
-        "></div>
-        """
-
-    show_df["日期顏色"] = show_df["日期顏色"].apply(
-        color_circle
-    )
-
-    # =====================================================
     # 樁號格式化
     # =====================================================
 
@@ -616,22 +595,57 @@ if st.session_state.schedule_df is not None:
     )
 
     # =====================================================
+    # 顏色樣式
+    # =====================================================
+
+    def color_circle(val):
+
+        return f"""
+        background-color: {val};
+        color: transparent;
+        border-radius: 50%;
+        """
+
+    # =====================================================
     # 刪除RGB欄位
     # =====================================================
 
     if "RGB" in show_df.columns:
+
         show_df = show_df.drop(columns=["RGB"])
 
     # =====================================================
-    # 顯示HTML表格
+    # styler
     # =====================================================
 
-    st.markdown(
-        show_df.to_html(
-            escape=False,
-            index=False
-        ),
-        unsafe_allow_html=True
+    styled_df = show_df.style.map(
+        color_circle,
+        subset=["日期顏色"]
+    )
+
+    # =====================================================
+    # 顯示 dataframe
+    # =====================================================
+
+    st.dataframe(
+        styled_df,
+        use_container_width=True,
+        hide_index=True
+    )
+
+    # =====================================================
+    # CSV下載
+    # =====================================================
+
+    csv = show_df.to_csv(
+        index=False
+    ).encode("utf-8-sig")
+
+    st.download_button(
+        label="📥 下載施工排程 CSV",
+        data=csv,
+        file_name="施工排程.csv",
+        mime="text/csv"
     )
 
 # =====================================================
