@@ -33,11 +33,6 @@ h1, h2, h3, h4, h5, h6, p, div, label {
     color: white !important;
 }
 
-[data-testid="stDataFrame"] {
-    background-color: #111827;
-    border-radius: 10px;
-}
-
 .stButton button {
     border-radius: 10px;
     height: 45px;
@@ -45,25 +40,9 @@ h1, h2, h3, h4, h5, h6, p, div, label {
     font-weight: bold;
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
+[data-testid="stDataFrame"] {
     background-color: #111827;
-    color: white;
-}
-
-thead tr th {
-    background-color: #1f2937;
-    color: white;
-    padding: 14px;
-    text-align: left;
-    border: 1px solid #374151;
-}
-
-tbody tr td {
-    padding: 12px;
-    border: 1px solid #374151;
-    vertical-align: middle;
+    border-radius: 10px;
 }
 
 </style>
@@ -687,35 +666,38 @@ if st.session_state.schedule_df is not None:
     )
 
     # =====================================================
-    # 日期顏色轉HTML
+    # 刪除 RGB 欄位
     # =====================================================
 
-    def create_color_block(hex_color):
+    if "RGB" in show_df.columns:
+
+        show_df = show_df.drop(columns=["RGB"])
+
+    # =====================================================
+    # 日期顏色欄位上色
+    # =====================================================
+
+    def color_date_column(val):
 
         return f"""
-        <div style="
-            width:100%;
-            height:28px;
-            background:{hex_color};
-            border-radius:6px;
-        ">
-        </div>
+        background-color: {val};
+        color: {val};
         """
 
-    show_df["日期顏色"] = show_df["日期顏色"].apply(
-        create_color_block
+    styled_df = show_df.style.map(
+        color_date_column,
+        subset=["日期顏色"]
     )
 
     # =====================================================
-    # 顯示表格
+    # 顯示 dataframe
     # =====================================================
 
-    st.markdown(
-        show_df.to_html(
-            escape=False,
-            index=False
-        ),
-        unsafe_allow_html=True
+    st.dataframe(
+        styled_df,
+        use_container_width=True,
+        hide_index=True,
+        height=500
     )
 
     # =====================================================
