@@ -3,7 +3,7 @@
 # =====================================================
 
 import streamlit as st
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 import pandas as pd
 import numpy as np
 import random
@@ -445,9 +445,22 @@ if uploaded_file:
 
         st.success(f"✅ AI 辨識到 {total_piles} 支樁體")
 
+        # =====================================================
+        # AI辨識結果圖
+        # =====================================================
+
         preview_img = image.copy()
 
         preview_draw = ImageDraw.Draw(preview_img)
+
+        try:
+            font = ImageFont.truetype("arial.ttf", 24)
+        except:
+            font = ImageFont.load_default()
+
+        # =====================================================
+        # 畫樁位 + AI編號
+        # =====================================================
 
         for idx, (x, y, r) in enumerate(piles):
 
@@ -463,9 +476,13 @@ if uploaded_file:
             )
 
             preview_draw.text(
-                (x + 10, y - 10),
+                (
+                    x + 12,
+                    y - 18
+                ),
                 str(idx + 1),
-                fill="red"
+                fill="red",
+                font=font
             )
 
         AI_PREVIEW_WIDTH = 900
@@ -480,10 +497,6 @@ if uploaded_file:
 
         ai_col, setting_col = st.columns([4, 1.2])
 
-        # =====================================================
-        # AI辨識結果
-        # =====================================================
-
         with ai_col:
 
             st.subheader("🔍 AI辨識結果")
@@ -492,10 +505,6 @@ if uploaded_file:
                 preview_display,
                 use_container_width=False
             )
-
-        # =====================================================
-        # 施工條件
-        # =====================================================
 
         with setting_col:
 
@@ -519,10 +528,6 @@ if uploaded_file:
                 "循環間隔",
                 [3, 4, 5, 6, 7, 8]
             )
-
-            # =====================================================
-            # 真實工期
-            # =====================================================
 
             pile_numbers = list(range(total_piles))
 
@@ -615,12 +620,18 @@ if uploaded_file:
                 (255, 255, 255)
             )
 
-            # 原圖貼上
             result_img.paste(image, (0, 0))
 
             draw = ImageDraw.Draw(result_img)
 
             pile_positions = piles
+
+            try:
+                day_font = ImageFont.truetype("arial.ttf", 16)
+                legend_font = ImageFont.truetype("arial.ttf", 20)
+            except:
+                day_font = ImageFont.load_default()
+                legend_font = ImageFont.load_default()
 
             # =====================================================
             # 畫樁體 + Day文字
@@ -643,7 +654,6 @@ if uploaded_file:
 
                     rr = int(r * 0.85)
 
-                    # 彩色樁體
                     draw.ellipse(
                         (
                             x - rr,
@@ -656,14 +666,14 @@ if uploaded_file:
                         width=1
                     )
 
-                    # 下方 D1 D2
                     draw.text(
                         (
-                            x - 8,
+                            x - 10,
                             y + rr + 5
                         ),
                         day_text,
-                        fill="black"
+                        fill="black",
+                        font=day_font
                     )
 
             # =====================================================
@@ -673,19 +683,18 @@ if uploaded_file:
             legend_x = image.width + 40
             legend_y = 80
 
-            # 標題
             draw.text(
                 (
                     legend_x,
                     legend_y - 35
                 ),
                 "施工日顏色對照表",
-                fill="black"
+                fill="black",
+                font=legend_font
             )
 
             legend_height = (len(df) * 32) + 50
 
-            # 外框
             draw.rectangle(
                 (
                     legend_x - 20,
@@ -697,14 +706,12 @@ if uploaded_file:
                 width=2
             )
 
-            # 顏色列表
             for i, row in df.iterrows():
 
                 color = row["RGB"]
 
                 yy = legend_y + (i * 30)
 
-                # 顏色方塊
                 draw.rectangle(
                     (
                         legend_x,
@@ -716,7 +723,6 @@ if uploaded_file:
                     outline="black"
                 )
 
-                # D1 D2 D3
                 day_no = row["施工日"].replace("Day ", "D")
 
                 draw.text(
@@ -725,7 +731,8 @@ if uploaded_file:
                         yy
                     ),
                     day_no,
-                    fill="black"
+                    fill="black",
+                    font=day_font
                 )
 
             st.session_state.result_image = result_img
@@ -769,10 +776,6 @@ if st.session_state.schedule_df is not None:
         hide_index=True,
         height=500
     )
-
-    # =====================================================
-    # CSV下載
-    # =====================================================
 
     csv_export_df = st.session_state.schedule_df.copy()
 
