@@ -1,12 +1,16 @@
 # =====================================================
 # AI 排樁施工系統 完整版
-# 支援：
-# JPG / PNG / PDF
+# =====================================================
+# 功能：
+# JPG / PNG / PDF 上傳
+# 四點 ROI
 # AI辨識樁位
-# 四點ROI
-# 排程
+# 左上→右上排序
+# 智能避碰排程
+# 動態滿載施工
 # 彩色施工圖
-# Day顏色圖例
+# Day圖例
+# 樁號顯示
 # PDF/JPG/PNG下載
 # =====================================================
 
@@ -182,60 +186,176 @@ def detect_piles(pil_image, roi=None):
             if not duplicated:
                 filtered.append((x, y, r))
 
-        filtered = sorted(filtered, key=lambda k: (k[1], k[0]))
+        # =====================================================
+        # 左上 → 右上 → 下一列
+        # =====================================================
 
-        positions = filtered
+        filtered = sorted(filtered, key=lambda k: k[1])
+
+        rows = []
+
+        ROW_THRESHOLD = 25
+
+        for circle in filtered:
+
+            x, y, r = circle
+
+            placed = False
+
+            for row in rows:
+
+                avg_y = np.mean([p[1] for p in row])
+
+                if abs(y - avg_y) < ROW_THRESHOLD:
+
+                    row.append(circle)
+
+                    placed = True
+
+                    break
+
+            if not placed:
+
+                rows.append([circle])
+
+        final_sorted = []
+
+        for row in rows:
+
+            row_sorted = sorted(row, key=lambda k: k[0])
+
+            final_sorted.extend(row_sorted)
+
+        positions = final_sorted
 
     return positions
 
 # =====================================================
-# 排程
+# 智能避碰排程
 # =====================================================
 
 def create_schedule(
-    total_piles,
+    pile_positions,
     start_no,
     daily_count,
     cycle,
     start_date
 ):
 
-    pile_numbers = list(range(start_no, start_no + total_piles))
+    piles = []
 
-    groups = [[] for _ in range(cycle)]
+    for i, (x, y, r) in enumerate(pile_positions):
 
-    for idx, pile in enumerate(pile_numbers):
-
-        groups[idx % cycle].append(pile)
+        piles.append({
+            "pile_no": start_no + i,
+            "x": x,
+            "y": y,
+            "done": False
+        })
 
     result = []
 
-    day = 1
-
     colors = generate_unique_colors(300)
 
-    for group in groups:
+    day = 1
 
-        for i in range(0, len(group), daily_count):
+    SAFE_DISTANCE = 80
 
-            current_date = (
-                pd.to_datetime(start_date)
-                + pd.Timedelta(days=day - 1)
-            )
+    # =====================================================
+    # 開始排程
+    # =====================================================
 
-            color = colors[day - 1]
+    while any(not p["done"] for p in piles):
 
-            hex_color = '#%02x%02x%02x' % color
+        current_date = (
+            pd.to_datetime(start_date)
+            + pd.Timedelta(days=day - 1)
+        )
 
-            result.append({
-                "施工日": f"Day {day}",
-                "日期": current_date.strftime("%Y-%m-%d"),
-                "日期顏色": hex_color,
-                "RGB": color,
-                "施工樁號": group[i:i + daily_count]
-            })
+        # =================================================
+        # 前 cycle 天施工過的樁
+        # =================================================
+
+        blocked = []
+
+        for prev in result[-cycle:]:
+
+            blocked.extend(prev["施工樁號"])
+
+        today = []
+
+        # =================================================
+        # 今天挑樁
+        # =================================================
+
+        for pile in piles:
+
+            if pile["done"]:
+                continue
+
+            safe = True
+
+            for b_no in blocked:
+
+                b_idx = b_no - start_no
+
+                if b_idx < 0 or b_idx >= len(piles):
+                    continue
+
+                bp = piles[b_idx]
+
+                dist = (
+                    (pile["x"] - bp["x"]) ** 2
+                    +
+                    (pile["y"] - bp["y"]) ** 2
+                ) ** 0.5
+
+                if dist < SAFE_DISTANCE:
+
+                    safe = False
+                    break
+
+            if safe:
+
+                today.append(pile)
+
+            if len(today) >= daily_count:
+                break
+
+        # =================================================
+        # 若今天完全無法施工
+        # =================================================
+
+        if len(today) == 0:
 
             day += 1
+            continue
+
+        # =================================================
+        # 標記完成
+        # =================================================
+
+        pile_nos = []
+
+        for p in today:
+
+            p["done"] = True
+
+            pile_nos.append(p["pile_no"])
+
+        color = colors[day - 1]
+
+        hex_color = '#%02x%02x%02x' % color
+
+        result.append({
+            "施工日": f"Day {day}",
+            "日期": current_date.strftime("%Y-%m-%d"),
+            "日期顏色": hex_color,
+            "RGB": color,
+            "施工樁號": pile_nos
+        })
+
+        day += 1
 
     return result
 
@@ -312,7 +432,7 @@ if uploaded_file:
     draw_preview = ImageDraw.Draw(preview_canvas)
 
     # =====================================================
-    # 畫點位
+    # 點位
     # =====================================================
 
     for idx, point in enumerate(st.session_state.points):
@@ -572,7 +692,7 @@ if uploaded_file:
         if execute:
 
             schedule = create_schedule(
-                total_piles=total_piles,
+                pile_positions=piles,
                 start_no=start_no,
                 daily_count=daily_count,
                 cycle=cycle,
@@ -632,6 +752,7 @@ if uploaded_file:
 
                     rr = int(r * 0.85)
 
+                    # 彩色樁體
                     draw.ellipse(
                         (
                             x - rr,
@@ -795,10 +916,6 @@ if st.session_state.result_image is not None:
             result_display,
             use_container_width=False
         )
-
-    # =====================================================
-    # 下載
-    # =====================================================
 
     with download_col:
 
