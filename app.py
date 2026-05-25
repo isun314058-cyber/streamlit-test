@@ -45,6 +45,27 @@ h1, h2, h3, h4, h5, h6, p, div, label {
     font-weight: bold;
 }
 
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #111827;
+    color: white;
+}
+
+thead tr th {
+    background-color: #1f2937;
+    color: white;
+    padding: 14px;
+    text-align: left;
+    border: 1px solid #374151;
+}
+
+tbody tr td {
+    padding: 12px;
+    border: 1px solid #374151;
+    vertical-align: middle;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -263,6 +284,10 @@ if uploaded_file:
         (display_width, display_height)
     )
 
+    # =====================================================
+    # 標題
+    # =====================================================
+
     st.subheader("✏️ 框選施工區域")
 
     st.markdown("""
@@ -271,7 +296,15 @@ if uploaded_file:
 🔴 左上　🔵 左下　🟠 右上　🟢 右下
 """)
 
+    # =====================================================
+    # 左右欄位
+    # =====================================================
+
     left_col, right_col = st.columns([5, 1.3])
+
+    # =====================================================
+    # 建立畫布
+    # =====================================================
 
     preview_canvas = canvas_bg.copy()
 
@@ -654,35 +687,35 @@ if st.session_state.schedule_df is not None:
     )
 
     # =====================================================
-    # 日期顏色欄位上色
+    # 日期顏色轉HTML
     # =====================================================
 
-    def color_cell(val):
+    def create_color_block(hex_color):
 
         return f"""
-        background-color: {val};
-        color: white;
-        text-align: center;
-        font-weight: bold;
+        <div style="
+            width:100%;
+            height:28px;
+            background:{hex_color};
+            border-radius:6px;
+        ">
+        </div>
         """
 
-    styled_df = (
-        show_df
-        .style
-        .applymap(
-            color_cell,
-            subset=["日期顏色"]
-        )
+    show_df["日期顏色"] = show_df["日期顏色"].apply(
+        create_color_block
     )
 
     # =====================================================
-    # 顯示 DataFrame
+    # 顯示表格
     # =====================================================
 
-    st.dataframe(
-        styled_df,
-        use_container_width=True,
-        hide_index=True
+    st.markdown(
+        show_df.to_html(
+            escape=False,
+            index=False
+        ),
+        unsafe_allow_html=True
     )
 
     # =====================================================
