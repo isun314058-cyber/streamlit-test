@@ -1,9 +1,19 @@
 # =====================================================
 # AI 排樁施工系統 完整版
+# 支援：
+# JPG / PNG / PDF
+# AI辨識樁位
+# 四點ROI
+# 排程
+# 彩色施工圖
+# Day顏色圖例
+# PDF/JPG/PNG下載
 # =====================================================
 
 import streamlit as st
 from PIL import Image, ImageDraw, ImageFont
+from pdf2image import convert_from_bytes
+
 import pandas as pd
 import numpy as np
 import random
@@ -52,6 +62,10 @@ h1,h2,h3,h4,h5,h6,p,div,label {
 </style>
 """, unsafe_allow_html=True)
 
+# =====================================================
+# Title
+# =====================================================
+
 st.title("🏗️ AI 排樁施工系統")
 
 # =====================================================
@@ -78,10 +92,10 @@ for key, value in DEFAULT_STATES.items():
 # =====================================================
 
 POINT_COLORS = [
-    ("第一點", "red"),
-    ("第二點", "blue"),
-    ("第三點", "orange"),
-    ("第四點", "lime")
+    ("左上", "red"),
+    ("左下", "blue"),
+    ("右上", "orange"),
+    ("右下", "lime")
 ]
 
 COLOR_TEXT = {
@@ -113,7 +127,7 @@ def generate_unique_colors(n):
     return colors
 
 # =====================================================
-# AI辨識樁體
+# AI辨識樁位
 # =====================================================
 
 def detect_piles(pil_image, roi=None):
@@ -175,7 +189,7 @@ def detect_piles(pil_image, roi=None):
     return positions
 
 # =====================================================
-# 排程邏輯
+# 排程
 # =====================================================
 
 def create_schedule(
@@ -226,12 +240,12 @@ def create_schedule(
     return result
 
 # =====================================================
-# 上傳圖面
+# 上傳
 # =====================================================
 
 uploaded_file = st.file_uploader(
-    "上傳 JPG / PNG 圖面",
-    type=["jpg", "jpeg", "png"]
+    "上傳 JPG / PNG / PDF 圖面",
+    type=["jpg", "jpeg", "png", "pdf"]
 )
 
 # =====================================================
@@ -240,7 +254,28 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file:
 
-    image = Image.open(uploaded_file).convert("RGB")
+    # =====================================================
+    # PDF
+    # =====================================================
+
+    if uploaded_file.type == "application/pdf":
+
+        pdf_bytes = uploaded_file.read()
+
+        pdf_pages = convert_from_bytes(
+            pdf_bytes,
+            dpi=300
+        )
+
+        image = pdf_pages[0].convert("RGB")
+
+    # =====================================================
+    # 圖片
+    # =====================================================
+
+    else:
+
+        image = Image.open(uploaded_file).convert("RGB")
 
     st.session_state.original_image = image
 
@@ -390,7 +425,7 @@ if uploaded_file:
 
     with right_col:
 
-        st.markdown("## 📍 點位資訊")
+        st.subheader("📍 點位資訊")
 
         if len(st.session_state.points) == 0:
 
@@ -446,7 +481,7 @@ if uploaded_file:
         st.success(f"✅ AI 辨識到 {total_piles} 支樁體")
 
         # =====================================================
-        # AI辨識結果圖
+        # AI預覽圖
         # =====================================================
 
         preview_img = image.copy()
@@ -457,10 +492,6 @@ if uploaded_file:
             font = ImageFont.truetype("arial.ttf", 24)
         except:
             font = ImageFont.load_default()
-
-        # =====================================================
-        # 畫樁位 + AI編號
-        # =====================================================
 
         for idx, (x, y, r) in enumerate(piles):
 
@@ -534,6 +565,10 @@ if uploaded_file:
                 use_container_width=True
             )
 
+        # =====================================================
+        # 執行排程
+        # =====================================================
+
         if execute:
 
             schedule = create_schedule(
@@ -549,7 +584,7 @@ if uploaded_file:
             st.session_state.schedule_df = df
 
             # =====================================================
-            # 建立加寬畫布
+            # 加寬畫布
             # =====================================================
 
             LEGEND_WIDTH = 320
@@ -577,7 +612,7 @@ if uploaded_file:
                 legend_font = ImageFont.load_default()
 
             # =====================================================
-            # 畫樁體 + Day文字 + 樁號
+            # 畫樁體
             # =====================================================
 
             for i, row in df.iterrows():
@@ -597,7 +632,6 @@ if uploaded_file:
 
                     rr = int(r * 0.85)
 
-                    # 彩色樁體
                     draw.ellipse(
                         (
                             x - rr,
@@ -610,7 +644,7 @@ if uploaded_file:
                         width=1
                     )
 
-                    # Day文字
+                    # Day
                     draw.text(
                         (
                             x - 10,
@@ -633,7 +667,7 @@ if uploaded_file:
                     )
 
             # =====================================================
-            # 右側 Legend
+            # Legend
             # =====================================================
 
             legend_x = image.width + 40
@@ -762,21 +796,68 @@ if st.session_state.result_image is not None:
             use_container_width=False
         )
 
+    # =====================================================
+    # 下載
+    # =====================================================
+
     with download_col:
 
         st.subheader("📥 下載圖面")
 
-        img_buffer = io.BytesIO()
-
-        st.session_state.result_image.save(
-            img_buffer,
-            format="PNG"
+        export_format = st.selectbox(
+            "選擇匯出格式",
+            ["PNG", "JPG", "PDF"]
         )
 
+        result_img = st.session_state.result_image
+
+        img_buffer = io.BytesIO()
+
+        # PNG
+        if export_format == "PNG":
+
+            result_img.save(
+                img_buffer,
+                format="PNG"
+            )
+
+            file_name = "排樁施工圖.png"
+
+            mime_type = "image/png"
+
+        # JPG
+        elif export_format == "JPG":
+
+            rgb_img = result_img.convert("RGB")
+
+            rgb_img.save(
+                img_buffer,
+                format="JPEG",
+                quality=95
+            )
+
+            file_name = "排樁施工圖.jpg"
+
+            mime_type = "image/jpeg"
+
+        # PDF
+        elif export_format == "PDF":
+
+            rgb_img = result_img.convert("RGB")
+
+            rgb_img.save(
+                img_buffer,
+                format="PDF"
+            )
+
+            file_name = "排樁施工圖.pdf"
+
+            mime_type = "application/pdf"
+
         st.download_button(
-            label="下載排程圖面",
+            label=f"下載 {export_format} 圖面",
             data=img_buffer.getvalue(),
-            file_name="排樁施工圖.png",
-            mime="image/png",
+            file_name=file_name,
+            mime=mime_type,
             use_container_width=True
         )
