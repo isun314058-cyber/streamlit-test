@@ -30,6 +30,7 @@ DEFAULT_STATES = {
     "roi": None,
     "processed": False,
     "canvas_key": "canvas_main",
+    "original_image": None,
 }
 
 for key, value in DEFAULT_STATES.items():
@@ -40,15 +41,16 @@ for key, value in DEFAULT_STATES.items():
 # 工具函式
 # =====================================================
 
-
 def generate_unique_colors(n):
+
     colors = []
 
     while len(colors) < n:
+
         color = (
-            random.randint(40, 255),
-            random.randint(40, 255),
-            random.randint(40, 255)
+            random.randint(50, 255),
+            random.randint(50, 255),
+            random.randint(50, 255)
         )
 
         if color not in colors:
@@ -56,11 +58,9 @@ def generate_unique_colors(n):
 
     return colors
 
-
 # =====================================================
 # AI 辨識樁體
 # =====================================================
-
 
 def detect_piles(pil_image, roi=None):
 
@@ -68,13 +68,25 @@ def detect_piles(pil_image, roi=None):
 
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
+    # ROI 裁切
     if roi:
 
         x1, y1, x2, y2 = roi
 
         gray = gray[y1:y2, x1:x2]
 
+    # 降噪
     gray = cv2.GaussianBlur(gray, (5, 5), 1.5)
+
+    # 自適應二值化
+    gray = cv2.adaptiveThreshold(
+        gray,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY,
+        11,
+        2
+    )
 
     circles = cv2.HoughCircles(
         gray,
@@ -120,11 +132,9 @@ def detect_piles(pil_image, roi=None):
 
     return positions
 
-
 # =====================================================
 # 排程邏輯
 # =====================================================
-
 
 def create_schedule(
     total_piles,
@@ -169,7 +179,6 @@ def create_schedule(
 
     return result
 
-
 # =====================================================
 # 上傳圖面
 # =====================================================
@@ -185,31 +194,54 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file:
 
-    st.session_state.uploaded = True
+    # 修正 RGBA 問題
+    image = Image.open(uploaded_file).convert("RGB")
 
-    image = Image.open(uploaded_file).convert("RGBA")
+    st.session_state.original_image = image
+
+    # =====================================================
+    # 固定顯示尺寸
+    # =====================================================
+
+    MAX_WIDTH = 1400
+
+    scale = MAX_WIDTH / image.width
+
+    display_width = int(image.width * scale)
+    display_height = int(image.height * scale)
+
+    scale_x = image.width / display_width
+    scale_y = image.height / display_height
+
+    canvas_bg = image.resize(
+        (display_width, display_height)
+    )
 
     st.subheader("✏️ 框選施工區域")
 
     st.info("請直接在圖面上框選要施工的樁區域")
 
+    # =====================================================
+    # Canvas
+    # =====================================================
+
     canvas_result = st_canvas(
         fill_color="rgba(255,0,0,0.08)",
         stroke_width=3,
         stroke_color="#ff0000",
-        background_image=image,
-        update_streamlit=True,
+        background_image=canvas_bg,
+        update_streamlit=False,
         drawing_mode="rect",
-        height=image.height,
-        width=image.width,
+        height=display_height,
+        width=display_width,
         key=st.session_state.canvas_key
     )
+
+    roi = None
 
     # =====================================================
     # ROI
     # =====================================================
-
-    roi = None
 
     if (
         canvas_result.json_data is not None
@@ -218,32 +250,31 @@ if uploaded_file:
 
         rect = canvas_result.json_data["objects"][-1]
 
-        left = int(rect["left"])
-        top = int(rect["top"])
+        # Canvas 座標
+        left = rect["left"]
+        top = rect["top"]
 
-        width = int(rect["width"] * rect["scaleX"])
-        height = int(rect["height"] * rect["scaleY"])
+        width = rect["width"] * rect["scaleX"]
+        height = rect["height"] * rect["scaleY"]
 
-        roi = (
-            left,
-            top,
-            left + width,
-            top + height
-        )
+        # 換算回原圖座標
+        x1 = int(left * scale_x)
+        y1 = int(top * scale_y)
+
+        x2 = int((left + width) * scale_x)
+        y2 = int((top + height) * scale_y)
+
+        roi = (x1, y1, x2, y2)
 
         st.session_state.roi = roi
 
     # =====================================================
-    # 有框選後才顯示施工設定
+    # 有框選才辨識
     # =====================================================
 
     if roi:
 
         st.success("已完成施工區域框選")
-
-        # =====================================================
-        # AI 辨識
-        # =====================================================
 
         piles = detect_piles(image, roi)
 
@@ -254,7 +285,7 @@ if uploaded_file:
         st.success(f"AI 辨識到 {total_piles} 支樁體")
 
         # =====================================================
-        # 顯示辨識結果
+        # 預覽辨識結果
         # =====================================================
 
         preview_img = image.copy()
@@ -271,7 +302,7 @@ if uploaded_file:
                     y + r
                 ),
                 outline="red",
-                width=2
+                width=3
             )
 
             preview_draw.text(
@@ -282,10 +313,13 @@ if uploaded_file:
 
         st.subheader("🔍 AI 樁位辨識結果")
 
-        st.image(preview_img, use_container_width=True)
+        st.image(
+            preview_img,
+            use_container_width=True
+        )
 
         # =====================================================
-        # 施工設定
+        # 施工條件
         # =====================================================
 
         st.subheader("📅 施工條件設定")
@@ -336,10 +370,6 @@ if uploaded_file:
             df = pd.DataFrame(schedule)
 
             st.session_state.schedule_df = df
-
-            # =====================================================
-            # 繪圖
-            # =====================================================
 
             result_img = image.copy()
 
@@ -392,54 +422,13 @@ if st.session_state.schedule_df is not None:
         lambda x: ", ".join(map(str, x))
     )
 
-    show_df = show_df[[
-        "施工日",
-        "日期",
-        "日期顏色",
-        "施工樁號"
-    ]]
-
     st.dataframe(
         show_df,
         use_container_width=True
     )
 
-    # =====================================================
-    # 顏色說明
-    # =====================================================
-
-    st.subheader("🎨 顏色說明")
-
-    for _, row in st.session_state.schedule_df.iterrows():
-
-        color = row["日期顏色"]
-
-        st.markdown(
-            f'''
-            <div style="
-                display:flex;
-                align-items:center;
-                gap:10px;
-                margin-bottom:10px;
-            ">
-                <div style="
-                    width:25px;
-                    height:25px;
-                    border-radius:50%;
-                    background:{color};
-                    border:1px solid white;
-                "></div>
-
-                <div>
-                    {row['施工日']} - {row['日期']} - {color}
-                </div>
-            </div>
-            ''',
-            unsafe_allow_html=True
-        )
-
 # =====================================================
-# 顯示結果圖
+# 顯示成果圖
 # =====================================================
 
 if st.session_state.result_image is not None:
@@ -457,27 +446,16 @@ if st.session_state.result_image is not None:
 
     st.subheader("📥 下載圖面")
 
-    col1, col2 = st.columns([3, 1])
+    img_buffer = io.BytesIO()
 
-    with col1:
+    st.session_state.result_image.save(
+        img_buffer,
+        format="PNG"
+    )
 
-        filename = st.text_input(
-            "檔案名稱",
-            value="排樁施工圖"
-        )
-
-    with col2:
-
-        img_buffer = io.BytesIO()
-
-        st.session_state.result_image.save(
-            img_buffer,
-            format="PNG"
-        )
-
-        st.download_button(
-            label="下載排程圖面",
-            data=img_buffer.getvalue(),
-            file_name=f"{filename}.png",
-            mime="image/png"
-        )
+    st.download_button(
+        label="下載排程圖面",
+        data=img_buffer.getvalue(),
+        file_name="排樁施工圖.png",
+        mime="image/png"
+    )
