@@ -481,27 +481,3 @@ if st.session_state.result_image is not None:
             file_name=f"{filename}.png",
             mime="image/png"
         )
-```
-
----
-
-# requirements.txt
-
-```txt
-streamlit
-pillow
-pandas
-numpy
-opencv-python-headless
-streamlit-drawable-canvas
-```
-
----
-
-# GitHub 更新方式
-
-1. 開啟 app.py
-2. 全部刪除
-3. 貼上新的完整 code
-4. Commit changes
-5. Streamlit Cloud → Reboot app
