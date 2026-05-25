@@ -29,7 +29,8 @@ DEFAULT_STATES = {
     "pile_positions": [],
     "processed": False,
     "original_image": None,
-    "points": []
+    "points": [],
+    "last_clicked": None
 }
 
 for key, value in DEFAULT_STATES.items():
@@ -60,7 +61,7 @@ COLOR_TEXT = {
 }
 
 # =====================================================
-# 隨機顏色
+# 顏色生成
 # =====================================================
 
 def generate_unique_colors(n):
@@ -250,6 +251,12 @@ if uploaded_file:
     left_col, right_col = st.columns([5, 1.3])
 
     # =====================================================
+    # 動態圖片容器（重點）
+    # =====================================================
+
+    image_container = left_col.empty()
+
+    # =====================================================
     # 建立畫布
     # =====================================================
 
@@ -324,7 +331,7 @@ if uploaded_file:
     # 顯示可點擊圖片
     # =====================================================
 
-    with left_col:
+    with image_container:
 
         coords = streamlit_image_coordinates(
             preview_canvas,
@@ -332,7 +339,7 @@ if uploaded_file:
         )
 
     # =====================================================
-    # 點擊事件
+    # 點擊事件（重要修正）
     # =====================================================
 
     if coords is not None:
@@ -342,28 +349,32 @@ if uploaded_file:
             coords["y"]
         )
 
-        duplicated = False
+        if st.session_state.last_clicked != clicked_point:
 
-        for old_point in st.session_state.points:
+            st.session_state.last_clicked = clicked_point
 
-            dist = (
-                (clicked_point[0] - old_point[0]) ** 2
-                +
-                (clicked_point[1] - old_point[1]) ** 2
-            ) ** 0.5
+            duplicated = False
 
-            if dist < 10:
-                duplicated = True
-                break
+            for old_point in st.session_state.points:
 
-        if (
-            not duplicated
-            and len(st.session_state.points) < 4
-        ):
+                dist = (
+                    (clicked_point[0] - old_point[0]) ** 2
+                    +
+                    (clicked_point[1] - old_point[1]) ** 2
+                ) ** 0.5
 
-            st.session_state.points.append(clicked_point)
+                if dist < 10:
+                    duplicated = True
+                    break
 
-            st.rerun()
+            if (
+                not duplicated
+                and len(st.session_state.points) < 4
+            ):
+
+                st.session_state.points.append(clicked_point)
+
+                st.rerun()
 
     # =====================================================
     # 右側資訊
@@ -400,6 +411,7 @@ if uploaded_file:
         if st.button("🔄 重新選取"):
 
             st.session_state.points = []
+            st.session_state.last_clicked = None
 
             st.rerun()
 
