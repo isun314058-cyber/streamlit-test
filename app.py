@@ -601,10 +601,22 @@ if uploaded_file:
             st.session_state.schedule_df = df
 
             # =====================================================
-            # 建立成果圖
+            # 建立加寬畫布
             # =====================================================
 
-            result_img = image.copy()
+            LEGEND_WIDTH = 320
+
+            new_width = image.width + LEGEND_WIDTH
+            new_height = image.height
+
+            result_img = Image.new(
+                "RGB",
+                (new_width, new_height),
+                (255, 255, 255)
+            )
+
+            # 原圖貼上
+            result_img.paste(image, (0, 0))
 
             draw = ImageDraw.Draw(result_img)
 
@@ -631,6 +643,7 @@ if uploaded_file:
 
                     rr = int(r * 0.85)
 
+                    # 彩色樁體
                     draw.ellipse(
                         (
                             x - rr,
@@ -643,7 +656,7 @@ if uploaded_file:
                         width=1
                     )
 
-                    # Day文字
+                    # 下方 D1 D2
                     draw.text(
                         (
                             x - 8,
@@ -654,48 +667,50 @@ if uploaded_file:
                     )
 
             # =====================================================
-            # 右側施工圖例
+            # 右側 Legend
             # =====================================================
 
-            legend_x = result_img.width - 180
+            legend_x = image.width + 40
             legend_y = 80
 
-            legend_height = (len(df) * 28) + 50
+            # 標題
+            draw.text(
+                (
+                    legend_x,
+                    legend_y - 35
+                ),
+                "施工日顏色對照表",
+                fill="black"
+            )
 
+            legend_height = (len(df) * 32) + 50
+
+            # 外框
             draw.rectangle(
                 (
                     legend_x - 20,
-                    legend_y - 20,
-                    legend_x + 140,
+                    legend_y - 10,
+                    legend_x + 220,
                     legend_y + legend_height
                 ),
-                fill=(255, 255, 255),
                 outline="black",
                 width=2
             )
 
-            draw.text(
-                (
-                    legend_x,
-                    legend_y - 8
-                ),
-                "施工圖例",
-                fill="black"
-            )
-
+            # 顏色列表
             for i, row in df.iterrows():
 
                 color = row["RGB"]
 
-                yy = legend_y + 25 + (i * 26)
+                yy = legend_y + (i * 30)
 
                 # 顏色方塊
                 draw.rectangle(
                     (
                         legend_x,
                         yy,
-                        legend_x + 18,
-                        yy + 18
+                        legend_x + 20,
+                        yy + 20
                     ),
                     fill=color,
                     outline="black"
@@ -706,8 +721,8 @@ if uploaded_file:
 
                 draw.text(
                     (
-                        legend_x + 28,
-                        yy - 1
+                        legend_x + 35,
+                        yy
                     ),
                     day_no,
                     fill="black"
@@ -791,7 +806,7 @@ if st.session_state.result_image is not None:
 
         st.subheader("🗺️ 排樁施工圖")
 
-        RESULT_WIDTH = 900
+        RESULT_WIDTH = 1200
 
         result_img = st.session_state.result_image
 
