@@ -40,6 +40,17 @@ for key, value in DEFAULT_STATES.items():
         st.session_state[key] = value
 
 # =====================================================
+# 點位顏色
+# =====================================================
+
+POINT_COLORS = [
+    ("左上", "red"),
+    ("左下", "blue"),
+    ("右上", "orange"),
+    ("右下", "lime")
+]
+
+# =====================================================
 # 工具函式
 # =====================================================
 
@@ -212,15 +223,24 @@ if uploaded_file:
     )
 
     # =====================================================
-    # 框選施工區域
+    # 標題
     # =====================================================
 
     st.subheader("✏️ 框選施工區域")
 
-    st.info("請自由點選施工區域，可任意點選多個位置")
+    st.info(
+        """
+請依序點選：
+
+1. 左上
+2. 左下
+3. 右上
+4. 右下
+"""
+    )
 
     # =====================================================
-    # 左右版面
+    # 左右欄位
     # =====================================================
 
     left_col, right_col = st.columns([4, 1])
@@ -234,31 +254,33 @@ if uploaded_file:
     draw_preview = ImageDraw.Draw(preview_canvas)
 
     # =====================================================
-    # 畫已選點位
+    # 畫點位
     # =====================================================
 
     for idx, point in enumerate(st.session_state.points):
 
         px, py = point
 
-        # 紅色點
+        label, color = POINT_COLORS[idx]
+
+        # 畫圓點
         draw_preview.ellipse(
             (
-                px - 8,
-                py - 8,
-                px + 8,
-                py + 8
+                px - 10,
+                py - 10,
+                px + 10,
+                py + 10
             ),
-            fill="red",
-            outline="yellow",
+            fill=color,
+            outline="white",
             width=3
         )
 
-        # 點位編號
+        # 顯示名稱
         draw_preview.text(
-            (px + 12, py - 12),
-            str(idx + 1),
-            fill="yellow"
+            (px + 15, py - 15),
+            label,
+            fill=color
         )
 
     # =====================================================
@@ -267,7 +289,7 @@ if uploaded_file:
 
     roi = None
 
-    if len(st.session_state.points) >= 2:
+    if len(st.session_state.points) == 4:
 
         xs = [p[0] for p in st.session_state.points]
         ys = [p[1] for p in st.session_state.points]
@@ -278,7 +300,7 @@ if uploaded_file:
         x2 = max(xs)
         y2 = max(ys)
 
-        # 綠色矩形框
+        # 綠色框
         draw_preview.rectangle(
             (
                 x1,
@@ -287,7 +309,7 @@ if uploaded_file:
                 y2
             ),
             outline="lime",
-            width=4
+            width=5
         )
 
         roi = (
@@ -298,7 +320,7 @@ if uploaded_file:
         )
 
     # =====================================================
-    # 左邊圖片
+    # 左側圖片
     # =====================================================
 
     with left_col:
@@ -309,7 +331,7 @@ if uploaded_file:
         )
 
     # =====================================================
-    # 右邊資訊
+    # 右側資訊
     # =====================================================
 
     with right_col:
@@ -324,19 +346,20 @@ if uploaded_file:
 
             for idx, point in enumerate(st.session_state.points):
 
-                st.success(
-                    f"""
-Point {idx+1}
+                label, color = POINT_COLORS[idx]
 
-X = {point[0]}
-Y = {point[1]}
+                st.markdown(
+                    f"""
+### {label}
+
+顏色：{color}
 """
                 )
 
         st.markdown("---")
 
         # =====================================================
-        # ROI資訊
+        # ROI完成
         # =====================================================
 
         if roi:
@@ -380,7 +403,11 @@ Y = {point[1]}
                 duplicated = True
                 break
 
-        if not duplicated:
+        # 最多只允許4點
+        if (
+            not duplicated
+            and len(st.session_state.points) < 4
+        ):
 
             st.session_state.points.append(new_point)
 
