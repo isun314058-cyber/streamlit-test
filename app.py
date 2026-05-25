@@ -421,10 +421,23 @@ if uploaded_file:
 
             st.success("✅ 已完成施工區域")
 
+        # =====================================================
+        # 重新選取
+        # =====================================================
+
         if st.button("🔄 重新選取"):
 
             st.session_state.points = []
+
             st.session_state.last_clicked = None
+
+            st.session_state.pile_positions = []
+
+            st.session_state.schedule_df = None
+
+            st.session_state.result_image = None
+
+            st.session_state.processed = False
 
             st.rerun()
 
@@ -554,7 +567,7 @@ if uploaded_file:
             )
 
             # =====================================================
-            # 預定完成日期顯示
+            # 預定完成日期
             # =====================================================
 
             st.markdown(
@@ -734,10 +747,6 @@ if st.session_state.result_image is not None:
 
     result_col, download_col = st.columns([4, 1])
 
-    # =====================================================
-    # 左側成果圖
-    # =====================================================
-
     with result_col:
 
         st.subheader("🗺️ 排樁施工圖")
@@ -758,10 +767,6 @@ if st.session_state.result_image is not None:
             result_display,
             use_container_width=False
         )
-
-    # =====================================================
-    # 右側下載
-    # =====================================================
 
     with download_col:
 
