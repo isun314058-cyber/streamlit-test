@@ -1,13 +1,26 @@
+# ==========================================
+# AI 排樁施工系統 - 完整修正版
+# 修正內容：
+# 1. AI自動辨識樁數（非固定150）
+# 2. AI自動偵測樁位置與大小
+# 3. 顏色精準鎖定樁心
+# 4. 下載後圖面不消失
+# 5. 顏色說明正常顯示
+# 6. 無上傳圖面不可執行
+# ==========================================
+
 import streamlit as st
 from PIL import Image, ImageDraw
 import pandas as pd
 import io
+import cv2
+import numpy as np
 from datetime import timedelta
 import fitz
 
-# ====================================
+# ==========================================
 # 頁面設定
-# ====================================
+# ==========================================
 
 st.set_page_config(
     page_title="AI 排樁施工系統",
@@ -16,25 +29,30 @@ st.set_page_config(
 
 st.title("🏗️ AI 排樁施工系統")
 
-# ====================================
-# 初始化變數
-# ====================================
+# ==========================================
+# SESSION STATE
+# ==========================================
 
-image = None
-output_image = None
+if "output_image" not in st.session_state:
+    st.session_state.output_image = None
 
-# ====================================
+if "schedule_df" not in st.session_state:
+    st.session_state.schedule_df = None
+
+# ==========================================
 # 上傳圖面
-# ====================================
+# ==========================================
 
 uploaded_file = st.file_uploader(
     "上傳 JPG / PNG / PDF 圖面",
     type=["jpg", "jpeg", "png", "pdf"]
 )
 
-# ====================================
+image = None
+
+# ==========================================
 # 讀取圖面
-# ====================================
+# ==========================================
 
 if uploaded_file is not None:
 
@@ -69,10 +87,9 @@ if uploaded_file is not None:
         use_container_width=True
     )
 
-# ====================================
-# 施工條件設定
-# 永遠顯示
-# ====================================
+# ==========================================
+# 施工條件
+# ==========================================
 
 st.header("🗓️ 施工條件設定")
 
@@ -104,254 +121,312 @@ with col2:
         value=1
     )
 
-# ====================================
-# 幾支樁一循環
-# ====================================
-
 cycle_gap = st.selectbox(
     "幾支樁一循環",
     options=[2, 3, 4, 5, 6],
     index=3
 )
 
-# ====================================
+# ==========================================
 # 執行排程
-# ====================================
+# ==========================================
 
 if st.button("🚀 執行排程"):
 
-    # ====================================
+    # ======================================
     # 未上傳圖面
-    # ====================================
+    # ======================================
 
     if image is None:
 
-        st.error("請先上傳排樁圖面")
+        st.error("請先上傳圖面")
 
     else:
 
-        # ====================================
-        # 複製圖面
-        # 避免下載後消失
-        # ====================================
+        # ======================================
+        # PIL → OpenCV
+        # ======================================
 
-        output_image = image.copy()
+        img_cv = cv2.cvtColor(
+            np.array(image),
+            cv2.COLOR_RGB2BGR
+        )
 
-        draw = ImageDraw.Draw(output_image)
+        gray = cv2.cvtColor(
+            img_cv,
+            cv2.COLOR_BGR2GRAY
+        )
 
-        # ====================================
-        # 圖片尺寸
-        # ====================================
+        # ======================================
+        # AI偵測圓形樁位
+        # ======================================
 
-        img_width, img_height = output_image.size
+        circles = cv2.HoughCircles(
+            gray,
+            cv2.HOUGH_GRADIENT,
+            dp=1.2,
+            minDist=40,
+            param1=100,
+            param2=20,
+            minRadius=10,
+            maxRadius=40
+        )
 
-        # ====================================
-        # 樁位設定
-        # ====================================
+        pile_positions = []
 
-        total_piles = 150
-        cols = 15
+        if circles is not None:
 
-        # ====================================
-        # 依圖片比例自動計算位置
-        # ====================================
+            circles = np.round(circles[0, :]).astype("int")
 
-        start_x = img_width * 0.16
-        start_y = img_height * 0.28
+            for c in circles:
 
-        x_spacing = img_width * 0.065
-        y_spacing = img_height * 0.075
+                x, y, r = c
 
-        # ====================================
-        # 建立樁位座標
-        # ====================================
+                # 避免偵測到右側說明框
+                if x < image.width * 0.82:
 
-        pile_positions = {}
+                    pile_positions.append({
+                        "x": x,
+                        "y": y,
+                        "r": r
+                    })
 
-        for pile_no in range(1, total_piles + 1):
+        # ======================================
+        # AI排序
+        # 由上到下、由左到右
+        # ======================================
 
-            row = (pile_no - 1) // cols
-            col = (pile_no - 1) % cols
+        pile_positions = sorted(
+            pile_positions,
+            key=lambda k: (k["y"], k["x"])
+        )
 
-            x = int(start_x + (col * x_spacing))
-            y = int(start_y + (row * y_spacing))
+        # ======================================
+        # AI重新編號
+        # ======================================
 
-            pile_positions[pile_no] = (x, y)
+        piles = {}
 
-        # ====================================
+        for idx, p in enumerate(pile_positions):
+
+            pile_no = idx + 1
+
+            piles[pile_no] = p
+
+        total_piles = len(piles)
+
+        # ======================================
+        # 顯示辨識結果
+        # ======================================
+
+        st.success(f"AI已辨識 {total_piles} 支樁")
+
+        # ======================================
         # 排程邏輯
-        # ====================================
+        # ======================================
 
         all_piles = list(
             range(start_pile, total_piles + 1)
         )
 
-        grouped_piles = []
+        grouped = []
 
-        # 跳號排程
         for i in range(cycle_gap):
 
             temp = []
 
-            for pile in all_piles:
+            for p in all_piles:
 
-                if (pile - start_pile) % cycle_gap == i:
-                    temp.append(pile)
+                if (p - start_pile) % cycle_gap == i:
+                    temp.append(p)
 
-            grouped_piles.extend(temp)
+            grouped.extend(temp)
 
-        # ====================================
-        # 建立每日排程
-        # ====================================
+        # ======================================
+        # 建立排程
+        # ======================================
 
         schedule = []
 
         current_date = start_date
 
-        index = 0
+        idx = 0
 
         for day in range(total_days):
 
-            today_piles = grouped_piles[
-                index:index + piles_per_day
+            today = grouped[
+                idx:idx + piles_per_day
             ]
 
-            if len(today_piles) == 0:
+            if len(today) == 0:
                 break
 
             schedule.append({
-                "施工日": f"Day {day + 1}",
+                "施工日": f"Day {day+1}",
                 "日期": current_date.strftime("%Y-%m-%d"),
                 "施工樁號": ", ".join(
-                    map(str, today_piles)
+                    map(str, today)
                 )
             })
 
+            idx += piles_per_day
+
             current_date += timedelta(days=1)
 
-            index += piles_per_day
-
-        # ====================================
+        # ======================================
         # 顏色
-        # ====================================
+        # ======================================
 
-        day_colors = [
-            "red",
-            "blue",
-            "green",
-            "orange",
-            "purple",
-            "cyan",
-            "yellow",
-            "lime",
-            "pink",
-            "magenta"
+        colors = [
+            (255,0,0),      # 紅
+            (255,255,0),    # 黃
+            (0,255,0),      # 綠
+            (0,0,255),      # 藍
+            (255,0,255),    # 紫
+            (0,255,255),    # 青
+            (255,128,0),    # 橘
+            (128,255,0),
+            (255,192,203),
+            (255,0,128)
         ]
 
-        # ====================================
-        # 圖面上色
-        # ====================================
+        # ======================================
+        # 畫圖
+        # ======================================
 
-        for day_index, row_data in enumerate(schedule):
+        output = image.copy()
 
-            color = day_colors[
-                day_index % len(day_colors)
-            ]
+        draw = ImageDraw.Draw(output)
 
-            pile_text = row_data["施工樁號"]
+        for d, row in enumerate(schedule):
 
-            pile_list = pile_text.split(",")
+            color = colors[d % len(colors)]
 
-            for pile_str in pile_list:
+            pile_list = row["施工樁號"].split(",")
 
-                pile_no = int(pile_str.strip())
+            for p in pile_list:
 
-                if pile_no in pile_positions:
+                pile_no = int(p.strip())
 
-                    x, y = pile_positions[pile_no]
+                if pile_no in piles:
 
+                    data = piles[pile_no]
+
+                    x = data["x"]
+                    y = data["y"]
+                    r = data["r"]
+
+                    # AI依原樁大小畫圖
                     draw.ellipse(
                         (
-                            x - 22,
-                            y - 22,
-                            x + 22,
-                            y + 22
+                            x-r,
+                            y-r,
+                            x+r,
+                            y+r
                         ),
                         fill=color
                     )
 
-        # ====================================
-        # 顯示排程表
-        # ====================================
+        # ======================================
+        # 存SESSION
+        # ======================================
 
-        st.header("📋 施工排程結果")
+        st.session_state.output_image = output
 
-        df = pd.DataFrame(schedule)
+        st.session_state.schedule_df = pd.DataFrame(schedule)
 
-        st.dataframe(
-            df,
-            use_container_width=True
-        )
+# ==========================================
+# 顯示結果
+# ==========================================
 
-        # ====================================
-        # 顏色說明
-        # ====================================
+if st.session_state.schedule_df is not None:
 
-        st.subheader("🎨 顏色說明")
+    st.header("📋 施工排程結果")
 
-        for i in range(len(schedule)):
+    st.dataframe(
+        st.session_state.schedule_df,
+        use_container_width=True
+    )
 
-            color = day_colors[i % len(day_colors)]
+    # ======================================
+    # 顏色說明
+    # ======================================
 
-            st.markdown(
-                f"""
-                <div style="
-                    display:flex;
-                    align-items:center;
-                    margin-bottom:8px;
-                ">
-                    <div style="
-                        width:25px;
-                        height:25px;
-                        background:{color};
-                        border-radius:50%;
-                        margin-right:10px;
-                    "></div>
+    st.header("🎨 顏色說明")
 
-                    <div>
-                        Day {i+1}
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+    color_names = [
+        "紅色",
+        "黃色",
+        "綠色",
+        "藍色",
+        "紫色",
+        "青色",
+        "橘色",
+        "黃綠色",
+        "粉紅色",
+        "桃紅色"
+    ]
 
-        # ====================================
-        # 顯示圖面
-        # ====================================
+    html = ""
 
-        st.header("🗺️ 排樁施工圖")
+    for i in range(len(st.session_state.schedule_df)):
 
-        st.image(
-            output_image,
-            caption="AI 自動排程結果",
-            use_container_width=True
-        )
+        c = colors[i % len(colors)]
 
-        # ====================================
-        # 下載圖面
-        # ====================================
+        rgb = f"rgb({c[0]},{c[1]},{c[2]})"
 
-        img_buffer = io.BytesIO()
+        html += f"""
+        <div style="
+            display:flex;
+            align-items:center;
+            margin-bottom:10px;
+        ">
+            <div style="
+                width:25px;
+                height:25px;
+                border-radius:50%;
+                background:{rgb};
+                margin-right:10px;
+            "></div>
 
-        output_image.save(
-            img_buffer,
-            format="PNG"
-        )
+            <div>
+                Day {i+1} - {color_names[i % len(color_names)]}
+            </div>
+        </div>
+        """
 
-        st.download_button(
-            label="📥 下載排程圖面",
-            data=img_buffer.getvalue(),
-            file_name="pile_schedule.png",
-            mime="image/png"
-        )
+    st.markdown(
+        html,
+        unsafe_allow_html=True
+    )
+
+# ==========================================
+# 顯示圖面
+# ==========================================
+
+if st.session_state.output_image is not None:
+
+    st.header("🗺️ 排樁施工圖")
+
+    st.image(
+        st.session_state.output_image,
+        use_container_width=True
+    )
+
+    # ======================================
+    # 下載圖面
+    # ======================================
+
+    buffer = io.BytesIO()
+
+    st.session_state.output_image.save(
+        buffer,
+        format="PNG"
+    )
+
+    st.download_button(
+        label="📥 下載排程圖面",
+        data=buffer.getvalue(),
+        file_name="pile_schedule.png",
+        mime="image/png"
+    )
