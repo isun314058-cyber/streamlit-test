@@ -529,67 +529,10 @@ if uploaded_file:
                 [3, 4, 5, 6, 7, 8]
             )
 
-            pile_numbers = list(range(total_piles))
-
-            groups = [[] for _ in range(cycle)]
-
-            for idx, pile in enumerate(pile_numbers):
-
-                groups[idx % cycle].append(pile)
-
-            estimated_days = 0
-
-            for group in groups:
-
-                group_days = int(
-                    np.ceil(len(group) / daily_count)
-                )
-
-                estimated_days += group_days
-
-            estimated_finish = (
-                pd.to_datetime(start_date)
-                +
-                pd.Timedelta(days=estimated_days - 1)
-            )
-
-            st.markdown(
-                f"""
-<div style="
-    background-color:#1f2937;
-    padding:14px;
-    border-radius:10px;
-    border:1px solid #374151;
-    margin-bottom:15px;
-">
-<div style="
-    color:#9ca3af;
-    font-size:14px;
-    margin-bottom:6px;
-">
-預定完成日期
-</div>
-
-<div style="
-    color:#22c55e;
-    font-size:24px;
-    font-weight:bold;
-">
-{estimated_finish.strftime("%Y-%m-%d")}
-</div>
-</div>
-""",
-                unsafe_allow_html=True
-            )
-
             execute = st.button(
                 "🚀 執行排程",
                 use_container_width=True
             )
-
-        # =====================================================
-        # 執行排程
-        # =====================================================
 
         if execute:
 
@@ -634,7 +577,7 @@ if uploaded_file:
                 legend_font = ImageFont.load_default()
 
             # =====================================================
-            # 畫樁體 + Day文字
+            # 畫樁體 + Day文字 + 樁號
             # =====================================================
 
             for i, row in df.iterrows():
@@ -654,6 +597,7 @@ if uploaded_file:
 
                     rr = int(r * 0.85)
 
+                    # 彩色樁體
                     draw.ellipse(
                         (
                             x - rr,
@@ -666,6 +610,7 @@ if uploaded_file:
                         width=1
                     )
 
+                    # Day文字
                     draw.text(
                         (
                             x - 10,
@@ -673,6 +618,17 @@ if uploaded_file:
                         ),
                         day_text,
                         fill="black",
+                        font=day_font
+                    )
+
+                    # 樁號
+                    draw.text(
+                        (
+                            x - 8,
+                            y - rr - 18
+                        ),
+                        str(pile_no),
+                        fill="red",
                         font=day_font
                     )
 
@@ -775,26 +731,6 @@ if st.session_state.schedule_df is not None:
         use_container_width=True,
         hide_index=True,
         height=500
-    )
-
-    csv_export_df = st.session_state.schedule_df.copy()
-
-    csv_export_df["施工樁號"] = csv_export_df["施工樁號"].apply(
-        lambda x: ", ".join(map(str, x))
-    )
-
-    if "RGB" in csv_export_df.columns:
-        csv_export_df = csv_export_df.drop(columns=["RGB"])
-
-    csv = csv_export_df.to_csv(
-        index=False
-    ).encode("utf-8-sig")
-
-    st.download_button(
-        label="📥 下載施工排程 CSV",
-        data=csv,
-        file_name="施工排程.csv",
-        mime="text/csv"
     )
 
 # =====================================================
