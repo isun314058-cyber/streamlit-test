@@ -12,6 +12,8 @@ import math
 import random
 import io
 import cv2
+import math
+import random
 
 from streamlit_image_coordinates import streamlit_image_coordinates
 
@@ -250,8 +252,7 @@ def build_neighbor_map(
 # =====================================================
 # AI 智慧避鄰排程
 # =====================================================
-import math
-import random
+
 def create_schedule(
     pile_positions,
     total_piles,
