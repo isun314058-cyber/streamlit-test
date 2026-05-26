@@ -557,6 +557,7 @@ def create_schedule(
                 # =========================================
                 
                 score = 0
+                
                 # 二層模擬加分
                 score += secondary_future * 1.2
                 
@@ -566,13 +567,51 @@ def create_schedule(
                 
                 future_count = len(future_remaining_list)
                 
-                score += future_count * 8
+                future_days_left = math.ceil(
+                    future_count / daily_count
+                )
+                
+                # ==================================================
+                # 尾盤預測（新增）
+                # ==================================================
+                
+                if future_days_left > 0:
+                
+                    estimated_tail_avg = (
+                        future_count / future_days_left
+                    )
+                
+                    # 尾盤太少
+                    if estimated_tail_avg < daily_count * 0.75:
+                
+                        score -= 500
+                
+                    # 尾盤穩定
+                    else:
+                
+                        score += 120
+                
+                # ==================================================
+                # 未來平均量
+                # ==================================================
+                
+                if future_days_left >= 1:
+                
+                    expected_avg = (
+                        future_count / future_days_left
+                    )
+                
+                    score += expected_avg * 35
+                
+                # 未來可施工數量
+                score += future_count * 5
+
                 
                 # ==================================================
                 # 2. 孤立樁重罰
                 # ==================================================
                 
-                score -= isolated_count * 40
+                score -= isolated_count * 80
                 
                 # ==================================================
                 # 3. 未來平均施工量
@@ -589,16 +628,16 @@ def create_schedule(
                     future_count / future_days
                 )
                 
-                score += future_avg * 12
+                score += future_avg * 25
                 
                 # ==================================================
                 # 4. 如果未來平均太低
                 # 代表後面會崩盤
                 # ==================================================
                 
-                if future_avg < daily_count * 0.6:
+                if future_avg < daily_count * 0.8:
                 
-                    score -= 120
+                    score -= 400
                 
                 # ==================================================
                 # 5. 最後幾天避免只剩單支
@@ -632,7 +671,7 @@ def create_schedule(
                             pile - existing
                         )
                 
-                    score -= cluster_score * 0.3
+                    score -= cluster_score * 0.08
                 
                 # ==================================================
                 # 8. 靠近起始樁
@@ -1042,7 +1081,7 @@ if uploaded_file:
             best_total_score = -999999
             
             # AI 多次模擬
-            for sim in range(3):
+            for sim in range(30):
             
                 schedule = create_schedule(
             
@@ -1094,13 +1133,37 @@ if uploaded_file:
                 schedule_score -= variance * 30
             
                 # =====================================
+                # 尾盤修復
+                # =====================================
+                
+                tail_days = schedule[-3:]
+                
+                tail_total = sum(
+                    len(x["施工樁號"])
+                    for x in tail_days
+                )
+                
+                # 如果最後三天太少
+                if tail_total < daily_count * 2:
+                
+                    schedule_score -= 200
+                
+                # 最後一天不能太少
+                last_day_count = len(schedule[-1]["施工樁號"])
+                
+                if last_day_count <= 2:
+                
+                    schedule_score -= 300
+                
+                
+                # =====================================
                 # 更新最佳結果
                 # =====================================
-            
+                
                 if schedule_score > best_total_score:
-            
+                
                     best_total_score = schedule_score
-            
+                
                     best_schedule = schedule
             
             # 最終最佳排程
