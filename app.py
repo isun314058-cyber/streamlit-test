@@ -283,14 +283,12 @@ def create_schedule(
 
     # 紀錄樁最後施工日
     last_used_day = {}
-
+    blocked_until = {}
     day = 1
 
     while remaining:
 
         today_piles = []
-
-        blocked = set()
 
         for pile in remaining:
 
@@ -299,18 +297,11 @@ def create_schedule(
                 break
 
             # 是否冷卻中
-            cooling = False
+            if pile in blocked_until:
 
-            if pile in last_used_day:
-
-                if (
-                    day - last_used_day[pile]
-                    <= cooldown_days
-                ):
-                    cooling = True
-
-            if cooling:
-                continue
+                if day <= blocked_until[pile]:
+            
+                    continue
 
             # 是否鄰樁衝突
             conflict = False
@@ -328,13 +319,29 @@ def create_schedule(
             if conflict:
                 continue
 
+            # =====================================================
             # 加入今日施工
+            # =====================================================
+            
             today_piles.append(pile)
-
-            # 封鎖鄰樁
-            blocked.update(
-                neighbor_map[pile]
+            
+            # =====================================================
+            # 封鎖自己
+            # =====================================================
+            
+            blocked_until[pile] = (
+                day + cooldown_days
             )
+            
+            # =====================================================
+            # 封鎖鄰樁
+            # =====================================================
+            
+            for neighbor in neighbor_map[pile]:
+            
+                blocked_until[neighbor] = (
+                    day + cooldown_days
+                )
 
         # 避免卡死
         if len(today_piles) == 0:
