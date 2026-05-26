@@ -563,54 +563,53 @@ left_ai, right_condition = st.columns([4, 1.8])
 # AI辨識結果
 # =====================================================
 
-        with left_ai:
+with left_ai:
 
-            st.subheader("🔍 AI辨識結果")
+    st.subheader("🔍 AI辨識結果")
 
-            st.image(
-                result_img,
-                width=900
-            )
+    st.image(
+        result_img,
+        width=900
+    )
 
 # =====================================================
 # 施工條件
 # =====================================================
 
-        with right_condition:
+with right_condition:
 
-            st.subheader("📅 施工條件")
+    st.subheader("📅 施工條件")
 
-            start_date = st.date_input(
-                "施工開始日期"
-            )
+    start_date = st.date_input(
+        "施工開始日期"
+    )
 
-            daily_count = st.number_input(
-                "每日施工支數",
-                min_value=1,
-                value=14
-            )
+    daily_count = st.number_input(
+        "每日施工支數",
+        min_value=1,
+        value=14
+     )
 
-            start_no = st.number_input(
-                "起始樁號",
-                min_value=1,
-                max_value=total_piles,
-                value=1
-            )
+    start_no = st.number_input(
+        "起始樁號",
+        min_value=1,
+        max_value=total_piles,
+        value=1
+    )
 
-            cycle = st.selectbox(
-                "循環間隔",
-                [3, 4, 5, 6, 7, 8]
-            )
+    cycle = st.selectbox(
+        "循環間隔",
+        [3, 4, 5, 6, 7, 8]
+    )
 
-            execute = st.button(
-                "🚀 執行排程"
-            )
+    execute = st.button(
+        "🚀 執行排程"
+    )
 
         # =====================================================
         # 執行排程
         # =====================================================
-
-        if execute:
+if execute:
 
             schedule = create_schedule(
                 total_piles=total_piles,
