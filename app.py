@@ -667,7 +667,7 @@ if uploaded_file:
         if execute:
 
             schedule = create_schedule(
-                total_piles=total_piles,
+                pile_positions=piles,
                 start_no=start_no,
                 daily_count=daily_count,
                 start_date=start_date,
