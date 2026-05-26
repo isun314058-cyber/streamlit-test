@@ -842,7 +842,6 @@ if st.session_state.processed:
         if "RGB" in display_df.columns:
 
             display_df = display_df.drop(columns=["RGB"])
-    
         # =====================================================
         # 卡片式施工排程
         # =====================================================
@@ -927,6 +926,7 @@ if st.session_state.processed:
                 """,
                 unsafe_allow_html=True
             )
+    
 
        
 
