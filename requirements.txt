@@ -7,3 +7,4 @@ Pillow
 PyMuPDF
 pdf2image
 matplotlib
+openpyxl
