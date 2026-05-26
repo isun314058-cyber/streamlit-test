@@ -250,7 +250,8 @@ def build_neighbor_map(
 # =====================================================
 # AI 智慧避鄰排程
 # =====================================================
-
+import math
+import random
 def create_schedule(
     pile_positions,
     total_piles,
@@ -519,8 +520,14 @@ def create_schedule(
                 # ==================================================
                 
                 secondary_future = 0
+                sample_future = random.sample(
+
+                    future_remaining_list,
                 
-                for fp in future_remaining_list:
+                    min(15, len(future_remaining_list))
+                )
+                
+                for fp in sample_future:
                 
                     second_blocked = set()
                 
@@ -540,6 +547,9 @@ def create_schedule(
                     ]
                 
                     secondary_future += len(second_remaining)
+                    # 避免二層模擬過重
+                    if secondary_future > 5000:
+                        break
 
                 # =========================================
                 # AI 評分
@@ -555,7 +565,7 @@ def create_schedule(
                 
                 future_count = len(future_remaining_list)
                 
-                score += future_count * 15
+                score += future_count * 8
                 
                 # ==================================================
                 # 2. 孤立樁重罰
@@ -578,7 +588,7 @@ def create_schedule(
                     future_count / future_days
                 )
                 
-                score += future_avg * 25
+                score += future_avg * 12
                 
                 # ==================================================
                 # 4. 如果未來平均太低
@@ -1024,7 +1034,7 @@ if uploaded_file:
             best_total_score = -999999
             
             # AI 多次模擬
-            for sim in range(50):
+            for sim in range(10):
             
                 schedule = create_schedule(
             
