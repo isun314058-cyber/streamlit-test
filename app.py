@@ -345,7 +345,7 @@ def create_schedule(
     # =====================================================
 
     while remaining:
-
+    loop_guard = 0
         today_piles = []
 
         # =================================================
@@ -525,7 +525,7 @@ def create_schedule(
 
                     future_remaining_list,
                 
-                    min(15, len(future_remaining_list))
+                    min(5, len(future_remaining_list))
                 )
                 
                 for fp in sample_future:
@@ -549,7 +549,7 @@ def create_schedule(
                 
                     secondary_future += len(second_remaining)
                     # 避免二層模擬過重
-                    if secondary_future > 5000:
+                    if secondary_future > 1000:
                         break
 
                 # =========================================
@@ -741,6 +741,13 @@ def create_schedule(
         })
 
         day += 1
+        loop_guard += 1
+        
+        if loop_guard > total_piles * 2:
+        
+            st.warning("AI 排程過久，已自動停止")
+        
+            break
 
     return result
 
@@ -1035,7 +1042,7 @@ if uploaded_file:
             best_total_score = -999999
             
             # AI 多次模擬
-            for sim in range(10):
+            for sim in range(3):
             
                 schedule = create_schedule(
             
