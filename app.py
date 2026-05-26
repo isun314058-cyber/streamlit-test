@@ -42,7 +42,7 @@ h1,h2,h3,h4,h5,h6,p,span,label{
 .stButton>button{
     border-radius:12px;
     height:50px;
-    font-size:18px;
+    font-size:20px;
     font-weight:bold;
 }
 
@@ -93,7 +93,7 @@ COLOR_TEXT = {
 }
 
 # =====================================================
-# 產生顏色
+# 隨機顏色
 # =====================================================
 
 def generate_unique_colors(n):
@@ -313,6 +313,9 @@ if uploaded_file:
     st.subheader("✏️ 框選施工區域")
 
     st.markdown("""
+
+✏️ 點選順序
+
 🔴 左上　🔵 左下　🟠 右上　🟢 右下
 """)
 
@@ -395,7 +398,24 @@ if uploaded_file:
 
             st.session_state.last_clicked = clicked_point
 
-            if len(st.session_state.points) < 4:
+            duplicated = False
+
+            for old_point in st.session_state.points:
+
+                dist = (
+                    (clicked_point[0] - old_point[0]) ** 2
+                    +
+                    (clicked_point[1] - old_point[1]) ** 2
+                ) ** 0.5
+
+                if dist < 10:
+                    duplicated = True
+                    break
+
+            if (
+                not duplicated
+                and len(st.session_state.points) < 4
+            ):
 
                 st.session_state.points.append(clicked_point)
 
@@ -405,16 +425,39 @@ if uploaded_file:
 
         st.subheader("📍 點位資訊")
 
-        for idx, point in enumerate(st.session_state.points):
+        if len(st.session_state.points) == 0:
 
-            label, color = POINT_COLORS[idx]
+            st.info("尚未點選")
 
-            st.markdown(f"{label} - {COLOR_TEXT[color]}")
+        else:
+
+            for idx, point in enumerate(st.session_state.points):
+
+                label, color = POINT_COLORS[idx]
+
+                st.markdown(
+                    f"""
+{label}
+
+顏色：{COLOR_TEXT[color]}
+"""
+                )
+
+        st.markdown("---")
+
+        if roi:
+
+            st.success("✅ 已完成施工區域")
 
         if st.button("🔄 重新選取"):
 
             st.session_state.points = []
             st.session_state.last_clicked = None
+            st.session_state.pile_positions = []
+            st.session_state.schedule_df = None
+            st.session_state.result_image = None
+            st.session_state.processed = False
+
             st.rerun()
 
     if roi:
@@ -534,37 +577,118 @@ if uploaded_file:
 
             draw = ImageDraw.Draw(result_img)
 
-            colors = generate_unique_colors(len(df) + 5)
+            pile_positions = piles
 
             try:
-                font = ImageFont.truetype("arial.ttf", 18)
+                day_font = ImageFont.truetype("arial.ttf", 16)
+                legend_font = ImageFont.truetype("arial.ttf", 20)
             except:
-                font = ImageFont.load_default()
+                day_font = ImageFont.load_default()
+                legend_font = ImageFont.load_default()
 
             for i, row in df.iterrows():
 
                 color = row["RGB"]
 
+                day_text = row["施工日"].replace("Day ", "D")
+
                 for pile_no in row["施工樁號"]:
 
                     idx = pile_no - 1
 
-                    if idx >= len(piles):
+                    if idx >= len(pile_positions):
                         continue
 
-                    x, y, r = piles[idx]
+                    x, y, r = pile_positions[idx]
+
+                    rr = int(r * 0.85)
 
                     draw.ellipse(
                         (
-                            x - r,
-                            y - r,
-                            x + r,
-                            y + r
+                            x - rr,
+                            y - rr,
+                            x + rr,
+                            y + rr
                         ),
                         fill=color,
                         outline="black",
-                        width=2
+                        width=1
                     )
+
+                    draw.text(
+                        (
+                            x - 10,
+                            y + rr + 5
+                        ),
+                        day_text,
+                        fill="black",
+                        font=day_font
+                    )
+
+                    draw.text(
+                        (
+                            x - 8,
+                            y - rr - 18
+                        ),
+                        str(pile_no),
+                        fill="red",
+                        font=day_font
+                    )
+
+            legend_x = image.width + 40
+            legend_y = 80
+
+            draw.text(
+                (
+                    legend_x,
+                    legend_y - 35
+                ),
+                "施工日顏色對照表",
+                fill="black",
+                font=legend_font
+            )
+
+            legend_height = (len(df) * 32) + 50
+
+            draw.rectangle(
+                (
+                    legend_x - 20,
+                    legend_y - 10,
+                    legend_x + 220,
+                    legend_y + legend_height
+                ),
+                outline="black",
+                width=2
+            )
+
+            for i, row in df.iterrows():
+
+                color = row["RGB"]
+
+                yy = legend_y + (i * 30)
+
+                draw.rectangle(
+                    (
+                        legend_x,
+                        yy,
+                        legend_x + 20,
+                        yy + 20
+                    ),
+                    fill=color,
+                    outline="black"
+                )
+
+                day_no = row["施工日"].replace("Day ", "D")
+
+                draw.text(
+                    (
+                        legend_x + 35,
+                        yy
+                    ),
+                    day_no,
+                    fill="black",
+                    font=day_font
+                )
 
             st.session_state.result_image = result_img
             st.session_state.processed = True
@@ -587,69 +711,14 @@ if st.session_state.processed:
 
         display_df = df.copy()
 
-        # 樁號轉文字
         display_df["施工樁號"] = display_df["施工樁號"].apply(
             lambda x: ", ".join(map(str, x))
         )
 
-        # 刪除 RGB
-        if "RGB" in display_df.columns:
-
-            display_df = display_df.drop(columns=["RGB"])
-
-        # 日期顏色
-        display_df["日期顏色"] = display_df["日期顏色"].apply(
-            lambda c: f'''
-            <div style="
-                background:{c};
-                width:100%;
-                height:32px;
-                border-radius:6px;
-            "></div>
-            '''
-        )
-
-        st.write(
-            display_df.to_html(
-                escape=False,
-                index=False
-            ),
-            unsafe_allow_html=True
-        )
-
-        # =====================================================
-        # Excel下載
-        # =====================================================
-
-        excel_buffer = io.BytesIO()
-
-        export_df = df.copy()
-
-        export_df["施工樁號"] = export_df["施工樁號"].apply(
-            lambda x: ", ".join(map(str, x))
-        )
-
-        if "RGB" in export_df.columns:
-
-            export_df = export_df.drop(columns=["RGB"])
-
-        with pd.ExcelWriter(
-            excel_buffer,
-            engine="openpyxl"
-        ) as writer:
-
-            export_df.to_excel(
-                writer,
-                index=False,
-                sheet_name="施工排程"
-            )
-
-        st.download_button(
-            label="📥 下載 Excel 排程表",
-            data=excel_buffer.getvalue(),
-            file_name="施工排程.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True
+        st.dataframe(
+            display_df,
+            use_container_width=True,
+            hide_index=True
         )
 
     # =====================================================
@@ -719,3 +788,4 @@ if st.session_state.processed:
                 mime="application/pdf",
                 use_container_width=True
             )
+
