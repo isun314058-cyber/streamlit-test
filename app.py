@@ -252,6 +252,7 @@ def create_schedule(
                 "施工日": f"Day {day}",
                 "日期": current_date.strftime("%Y-%m-%d"),
                 "日期顏色": hex_color,
+                "RGB": color,
                 "施工樁號": group[i:i + daily_count]
             })
 
