@@ -382,90 +382,119 @@ def create_schedule(
             reverse=True
         )
 
-        # =================================================
-        # 找今日可施工樁
-        # =================================================
-
+        best_score = -999
+        best_pile = None
+        
         for pile in sorted_remaining:
-
+        
             if len(today_piles) >= daily_count:
                 break
-
+        
             # 冷卻判定
             if pile in blocked_until:
-
+        
                 if day <= blocked_until[pile]:
                     continue
-
-            # =================================================
-            # 九宮格衝突檢查
-            # =================================================
-
+        
+            # 十字衝突檢查
             conflict = False
-
+        
             for existing in today_piles:
-
+        
                 if (
                     pile in neighbor_map[existing]
                     or
                     existing in neighbor_map[pile]
                 ):
-
+        
                     conflict = True
                     break
-
+        
             if conflict:
                 continue
-
-
+        
             # =====================================================
-            # 孤立樁檢查
+            # AI 未來分析
             # =====================================================
-            
+        
             temp_today = today_piles + [pile]
-            
+        
             future_blocked = set()
-            
+        
             for p in temp_today:
-            
+        
                 future_blocked.add(p)
-            
+        
                 future_blocked.update(
                     neighbor_map[p]
                 )
-            
+        
             future_remaining_list = [
-            
+        
                 p for p in remaining
-            
+        
                 if p not in future_blocked
-            
+        
             ]
-            
-            # 檢查是否產生孤立樁
+        
+            # =====================================================
+            # 放鬆版孤立檢查
+            # =====================================================
+        
             isolated_count = 0
-            
+        
             for p in future_remaining_list:
-            
+        
                 available_neighbors = [
-            
+        
                     n for n in neighbor_map[p]
-            
+        
                     if n in future_remaining_list
-            
+        
                 ]
-            
+        
                 if len(available_neighbors) == 0:
-            
+        
                     isolated_count += 1
-            
-            # 孤立太多就跳過
-            if isolated_count >= 2:
-            
-                continue
-            score = len(future_remaining_list)
-            
-            today_piles.append(pile)
+        
+            # =====================================================
+            # AI 評分
+            # =====================================================
+        
+            score = 0
+        
+            # 未來可施工數量越多越好
+            score += len(future_remaining_list) * 5
+        
+            # 孤立樁越少越好
+            score -= isolated_count * 8
+        
+            # 鄰居多的樁優先
+            score += len(neighbor_map[pile]) * 3
+        
+            # =====================================================
+            # 放鬆孤立門檻
+            # =====================================================
+        
+            if isolated_count >= 8:
+                score -= 30
+        
+            # =====================================================
+            # 更新最佳樁
+            # =====================================================
+        
+            if score > best_score:
+        
+                best_score = score
+                best_pile = pile
+        
+        # =====================================================
+        # 加入最佳樁
+        # =====================================================
+        
+        if best_pile is not None:
+        
+            today_piles.append(best_pile)
 
         # =================================================
         # 避免卡死
