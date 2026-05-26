@@ -605,3 +605,248 @@ if uploaded_file:
             df = pd.DataFrame(schedule)
 
             st.session_state.schedule_df = df
+
+            # =====================================================
+            # 加寬畫布
+            # =====================================================
+
+            LEGEND_WIDTH = 320
+
+            new_width = image.width + LEGEND_WIDTH
+            new_height = image.height
+
+            result_img = Image.new(
+                "RGB",
+                (new_width, new_height),
+                (255, 255, 255)
+            )
+
+            result_img.paste(image, (0, 0))
+
+            draw = ImageDraw.Draw(result_img)
+
+            pile_positions = piles
+
+            try:
+                day_font = ImageFont.truetype("arial.ttf", 16)
+                legend_font = ImageFont.truetype("arial.ttf", 20)
+            except:
+                day_font = ImageFont.load_default()
+                legend_font = ImageFont.load_default()
+
+            # =====================================================
+            # 畫樁體
+            # =====================================================
+
+            for i, row in df.iterrows():
+
+                color = row["RGB"]
+
+                day_text = row["施工日"].replace("Day ", "D")
+
+                for pile_no in row["施工樁號"]:
+
+                    idx = pile_no - 1
+
+                    if idx >= len(pile_positions):
+                        continue
+
+                    x, y, r = pile_positions[idx]
+
+                    rr = int(r * 0.85)
+
+                    draw.ellipse(
+                        (
+                            x - rr,
+                            y - rr,
+                            x + rr,
+                            y + rr
+                        ),
+                        fill=color,
+                        outline="black",
+                        width=1
+                    )
+
+                    # D1 D2
+                    draw.text(
+                        (
+                            x - 10,
+                            y + rr + 5
+                        ),
+                        day_text,
+                        fill="black",
+                        font=day_font
+                    )
+
+                    # 樁號
+                    draw.text(
+                        (
+                            x - 8,
+                            y - rr - 18
+                        ),
+                        str(pile_no),
+                        fill="red",
+                        font=day_font
+                    )
+
+            # =====================================================
+            # Legend
+            # =====================================================
+
+            legend_x = image.width + 40
+            legend_y = 80
+
+            draw.text(
+                (
+                    legend_x,
+                    legend_y - 35
+                ),
+                "施工日顏色對照表",
+                fill="black",
+                font=legend_font
+            )
+
+            legend_height = (len(df) * 32) + 50
+
+            draw.rectangle(
+                (
+                    legend_x - 20,
+                    legend_y - 10,
+                    legend_x + 220,
+                    legend_y + legend_height
+                ),
+                outline="black",
+                width=2
+            )
+
+            for i, row in df.iterrows():
+
+                color = row["RGB"]
+
+                yy = legend_y + (i * 30)
+
+                draw.rectangle(
+                    (
+                        legend_x,
+                        yy,
+                        legend_x + 20,
+                        yy + 20
+                    ),
+                    fill=color,
+                    outline="black"
+                )
+
+                day_no = row["施工日"].replace("Day ", "D")
+
+                draw.text(
+                    (
+                        legend_x + 35,
+                        yy
+                    ),
+                    day_no,
+                    fill="black",
+                    font=day_font
+                )
+
+            st.session_state.result_image = result_img
+            st.session_state.processed = True
+
+            st.rerun()
+
+# =====================================================
+# 顯示排程結果
+# =====================================================
+
+if st.session_state.processed:
+
+    st.markdown("---")
+
+    # =====================================================
+    # 施工排程結果
+    # =====================================================
+
+    st.subheader("📋 施工排程結果")
+
+    df = st.session_state.schedule_df
+
+    if df is not None:
+
+        display_df = df.copy()
+
+        display_df["施工樁號"] = display_df["施工樁號"].apply(
+            lambda x: ", ".join(map(str, x))
+        )
+
+        st.dataframe(
+            display_df,
+            use_container_width=True,
+            hide_index=True
+        )
+
+    # =====================================================
+    # 排樁施工圖
+    # =====================================================
+
+    st.subheader("🗺️ 排樁施工圖")
+
+    st.image(
+        st.session_state.result_image,
+        use_container_width=True
+    )
+
+    # =====================================================
+    # 匯出格式
+    # =====================================================
+
+    st.subheader("📥 下載圖面")
+
+    export_type = st.selectbox(
+        "選擇匯出格式",
+        ["PNG", "JPG", "PDF"]
+    )
+
+    img_buffer = io.BytesIO()
+
+    result_img = st.session_state.result_image
+
+    # PNG
+    if export_type == "PNG":
+
+        result_img.save(img_buffer, format="PNG")
+
+        st.download_button(
+            label="下載 PNG 圖面",
+            data=img_buffer.getvalue(),
+            file_name="pile_schedule.png",
+            mime="image/png"
+        )
+
+    # JPG
+    elif export_type == "JPG":
+
+        rgb_img = result_img.convert("RGB")
+
+        rgb_img.save(img_buffer, format="JPEG")
+
+        st.download_button(
+            label="下載 JPG 圖面",
+            data=img_buffer.getvalue(),
+            file_name="pile_schedule.jpg",
+            mime="image/jpeg"
+        )
+
+    # PDF
+    else:
+
+        rgb_img = result_img.convert("RGB")
+
+        rgb_img.save(img_buffer, format="PDF")
+
+        st.download_button(
+            label="下載 PDF 圖面",
+            data=img_buffer.getvalue(),
+            file_name="pile_schedule.pdf",
+            mime="application/pdf"
+        )
+
+
