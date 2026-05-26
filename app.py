@@ -521,36 +521,37 @@ def create_schedule(
                 # ==================================================
                 
                 secondary_future = 0
-                sample_future = random.sample(
 
-                    future_remaining_list,
+                if len(future_remaining_list) > 0:
                 
-                    min(5, len(future_remaining_list))
-                )
+                    sample_future = random.sample(
                 
-                for fp in sample_future:
+                        future_remaining_list,
                 
-                    second_blocked = set()
-                
-                    # 模擬第二層施工
-                    second_blocked.add(fp)
-                
-                    second_blocked.update(
-                        neighbor_map[fp]
+                        min(3, len(future_remaining_list))
                     )
                 
-                    # 第二層施工後還能剩多少
-                    second_remaining = [
+                    for fp in sample_future:
                 
-                        x for x in future_remaining_list
+                        second_blocked = set()
                 
-                        if x not in second_blocked
-                    ]
+                        second_blocked.add(fp)
                 
-                    secondary_future += len(second_remaining)
-                    # 避免二層模擬過重
-                    if secondary_future > 1000:
-                        break
+                        second_blocked.update(
+                            neighbor_map[fp]
+                        )
+                
+                        second_remaining = [
+                
+                            x for x in future_remaining_list
+                
+                            if x not in second_blocked
+                        ]
+                
+                        secondary_future += len(second_remaining)
+                
+                        if secondary_future > 300:
+                            break
 
                 # =========================================
                 # AI 評分
@@ -559,7 +560,7 @@ def create_schedule(
                 score = 0
                 
                 # 二層模擬加分
-                score += secondary_future * 1.2
+                score += secondary_future * 0.08
                 
                 # ==================================================
                 # 1. 未來可施工量（最重要）
@@ -601,7 +602,7 @@ def create_schedule(
                         future_count / future_days_left
                     )
                 
-                    score += expected_avg * 35
+                    score += expected_avg * 8
                 
                 # 未來可施工數量
                 score += future_count * 5
@@ -611,7 +612,7 @@ def create_schedule(
                 # 2. 孤立樁重罰
                 # ==================================================
                 
-                score -= isolated_count * 80
+                score -= isolated_count * 25
                 
                 # ==================================================
                 # 3. 未來平均施工量
@@ -628,7 +629,7 @@ def create_schedule(
                     future_count / future_days
                 )
                 
-                score += future_avg * 25
+                score += future_avg * 5
                 
                 # ==================================================
                 # 4. 如果未來平均太低
@@ -1081,7 +1082,7 @@ if uploaded_file:
             best_total_score = -999999
             
             # AI 多次模擬
-            for sim in range(30):
+            for sim in range(5):
             
                 schedule = create_schedule(
             
