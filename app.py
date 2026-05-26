@@ -567,10 +567,12 @@ with left_ai:
 
     st.subheader("🔍 AI辨識結果")
 
-    st.image(
-        result_img,
-        width=900
-    )
+    if "result_img" in locals():
+
+        st.image(
+            result_img,
+            width=900
+        )
 
 # =====================================================
 # 施工條件
