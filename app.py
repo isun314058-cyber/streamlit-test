@@ -462,19 +462,10 @@ def create_schedule(
             )
             
             # 避免最後幾天只剩1~2支
-            if future_avg < daily_count * 0.75:
+            if future_avg < daily_count * 0.35:
             
                 continue
 
-            MIN_LAST_DAY = int(daily_count * 0.5)
-            
-            if (
-                future_remaining > 0
-                and
-                future_remaining < MIN_LAST_DAY
-            ):
-            
-                continue
             
             today_piles.append(pile)
 
