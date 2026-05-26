@@ -820,7 +820,14 @@ if uploaded_file:
 
             for i, row in df.iterrows():
 
-                color = row["RGB"]
+                hex_color = row["日期顏色"]
+
+                color = tuple(
+                
+                    int(hex_color[i:i+2], 16)
+                
+                    for i in (1, 3, 5)
+                )
 
                 day_text = row["施工日"].replace("Day ", "D")
 
