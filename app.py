@@ -713,7 +713,11 @@ if st.session_state.processed:
         display_df["施工樁號"] = display_df["施工樁號"].apply(
             lambda x: ", ".join(map(str, x))
         )
+        # 刪除 RGB 欄位
+        if "RGB" in display_df.columns:
 
+            display_df = display_df.drop(columns=["RGB"])
+    
         # 日期顏色改成色塊
         display_df["日期顏色"] = display_df["日期顏色"].apply(
             lambda c: f'''
