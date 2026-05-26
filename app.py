@@ -8,6 +8,7 @@ from pdf2image import convert_from_bytes
 
 import pandas as pd
 import numpy as np
+import math
 import random
 import io
 import cv2
