@@ -202,61 +202,181 @@ def detect_piles(pil_image, roi=None):
     return positions
 
 # =====================================================
-# 排程
+# 智慧避鄰排程
+# =====================================================
+
+def calculate_distance(p1, p2):
+
+    x1, y1, _ = p1
+    x2, y2, _ = p2
+
+    return ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
+
+
+# =====================================================
+# 建立鄰樁關係
+# =====================================================
+
+def build_neighbor_map(
+    pile_positions,
+    safe_distance=120
+):
+
+    neighbor_map = {}
+
+    for i, p1 in enumerate(pile_positions):
+
+        pile_no = i + 1
+
+        neighbor_map[pile_no] = []
+
+        for j, p2 in enumerate(pile_positions):
+
+            other_no = j + 1
+
+            if pile_no == other_no:
+                continue
+
+            dist = calculate_distance(p1, p2)
+
+            if dist < safe_distance:
+
+                neighbor_map[pile_no].append(other_no)
+
+    return neighbor_map
+
+
+# =====================================================
+# AI 智慧避鄰排程
 # =====================================================
 
 def create_schedule(
-    total_piles,
+    pile_positions,
     start_no,
     daily_count,
-    cycle,
-    start_date
+    start_date,
+    safe_distance=120,
+    cooldown_days=1
 ):
 
-    pile_numbers = list(range(1, total_piles + 1))
+    total_piles = len(pile_positions)
 
-    start_index = start_no - 1
-
-    pile_numbers = (
-        pile_numbers[start_index:]
-        +
-        pile_numbers[:start_index]
+    neighbor_map = build_neighbor_map(
+        pile_positions,
+        safe_distance=safe_distance
     )
 
-    groups = [[] for _ in range(cycle)]
+    all_piles = list(range(1, total_piles + 1))
 
-    for idx, pile in enumerate(pile_numbers):
+    # 起始樁號旋轉
+    start_index = start_no - 1
 
-        groups[idx % cycle].append(pile)
+    remaining = (
+        all_piles[start_index:]
+        +
+        all_piles[:start_index]
+    )
 
     result = []
 
-    day = 1
-
     colors = generate_unique_colors(300)
 
-    for group in groups:
+    # 紀錄樁最後施工日
+    last_used_day = {}
 
-        for i in range(0, len(group), daily_count):
+    day = 1
 
-            current_date = (
-                pd.to_datetime(start_date)
-                + pd.Timedelta(days=day - 1)
+    while remaining:
+
+        today_piles = []
+
+        blocked = set()
+
+        for pile in remaining:
+
+            # 已達每日數量
+            if len(today_piles) >= daily_count:
+                break
+
+            # 是否冷卻中
+            cooling = False
+
+            if pile in last_used_day:
+
+                if (
+                    day - last_used_day[pile]
+                    <= cooldown_days
+                ):
+                    cooling = True
+
+            if cooling:
+                continue
+
+            # 是否鄰樁衝突
+            conflict = False
+
+            for existing in today_piles:
+
+                if (
+                    pile in neighbor_map[existing]
+                    or
+                    existing in neighbor_map[pile]
+                ):
+                    conflict = True
+                    break
+
+            if conflict:
+                continue
+
+            # 加入今日施工
+            today_piles.append(pile)
+
+            # 封鎖鄰樁
+            blocked.update(
+                neighbor_map[pile]
             )
 
-            color = colors[day - 1]
+        # 避免卡死
+        if len(today_piles) == 0:
 
-            hex_color = '#%02x%02x%02x' % color
+            today_piles.append(
+                remaining[0]
+            )
 
-            result.append({
-                "施工日": f"Day {day}",
-                "日期": current_date.strftime("%Y-%m-%d"),
-                "日期顏色": hex_color,
-                "RGB": color,
-                "施工樁號": group[i:i + daily_count]
-            })
+        # 更新剩餘樁
+        for pile in today_piles:
 
-            day += 1
+            if pile in remaining:
+
+                remaining.remove(pile)
+
+            last_used_day[pile] = day
+
+        # 日期
+        current_date = (
+            pd.to_datetime(start_date)
+            + pd.Timedelta(days=day - 1)
+        )
+
+        # 顏色
+        color = colors[day - 1]
+
+        hex_color = '#%02x%02x%02x' % color
+
+        result.append({
+
+            "施工日": f"Day {day}",
+
+            "日期": current_date.strftime("%Y-%m-%d"),
+
+            "日期顏色": hex_color,
+
+            "RGB": color,
+
+            "施工樁號": today_piles
+        })
+
+        day += 1
 
     return result
 
@@ -538,11 +658,7 @@ if uploaded_file:
                 value=1
             )
 
-            cycle = st.selectbox(
-                "循環間隔",
-                [3, 4, 5, 6, 7, 8]
-            )
-
+            
             execute = st.button(
                 "🚀 執行排程",
                 use_container_width=True
@@ -554,8 +670,9 @@ if uploaded_file:
                 total_piles=total_piles,
                 start_no=start_no,
                 daily_count=daily_count,
-                cycle=cycle,
-                start_date=start_date
+                start_date=start_date,
+                safe_distance=120,
+                cooldown_days=1
             )
 
             df = pd.DataFrame(schedule)
