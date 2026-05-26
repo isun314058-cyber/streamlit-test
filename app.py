@@ -290,7 +290,13 @@ def create_schedule(
 
         today_piles = []
 
-        for pile in remaining:
+        sorted_remaining = sorted(
+            remaining,
+            key=lambda p: len(neighbor_map[p]),
+            reverse=True
+        )
+
+        for pile in sorted_remaining:
 
             # 已達每日數量
             if len(today_piles) >= daily_count:
