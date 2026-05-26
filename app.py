@@ -162,17 +162,12 @@ def detect_piles(pil_image, roi=None):
 
                 dist = ((x - fx) ** 2 + (y - fy) ** 2) ** 0.5
 
-                # 修正重複辨識
                 if dist < 25:
                     duplicated = True
                     break
 
             if not duplicated:
                 filtered.append((x, y, r))
-
-        # =====================================================
-        # 左上 → 右上 → 下一列
-        # =====================================================
 
         row_tolerance = 40
 
@@ -218,15 +213,7 @@ def create_schedule(
     start_date
 ):
 
-    # =====================================================
-    # 保持原始樁號
-    # =====================================================
-
     pile_numbers = list(range(1, total_piles + 1))
-
-    # =====================================================
-    # 從指定起始點開始旋轉
-    # =====================================================
 
     start_index = start_no - 1
 
@@ -235,10 +222,6 @@ def create_schedule(
         +
         pile_numbers[:start_index]
     )
-
-    # =====================================================
-    # 分組
-    # =====================================================
 
     groups = [[] for _ in range(cycle)]
 
@@ -292,10 +275,6 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file:
 
-    # =====================================================
-    # PDF
-    # =====================================================
-
     if uploaded_file.type == "application/pdf":
 
         pdf_bytes = uploaded_file.read()
@@ -346,10 +325,6 @@ if uploaded_file:
 
     draw_preview = ImageDraw.Draw(preview_canvas)
 
-    # =====================================================
-    # 畫點位
-    # =====================================================
-
     for idx, point in enumerate(st.session_state.points):
 
         px, py = point
@@ -373,10 +348,6 @@ if uploaded_file:
             label,
             fill=color
         )
-
-    # =====================================================
-    # ROI
-    # =====================================================
 
     roi = None
 
@@ -408,10 +379,6 @@ if uploaded_file:
             int(x2 * scale_x),
             int(y2 * scale_y)
         )
-
-    # =====================================================
-    # 點擊
-    # =====================================================
 
     with left_col:
 
@@ -454,10 +421,6 @@ if uploaded_file:
 
                 st.rerun()
 
-    # =====================================================
-    # 點位資訊
-    # =====================================================
-
     with right_col:
 
         st.subheader("📍 點位資訊")
@@ -486,10 +449,6 @@ if uploaded_file:
 
             st.success("✅ 已完成施工區域")
 
-        # =====================================================
-        # 重新選取
-        # =====================================================
-
         if st.button("🔄 重新選取"):
 
             st.session_state.points = []
@@ -501,10 +460,6 @@ if uploaded_file:
 
             st.rerun()
 
-    # =====================================================
-    # AI辨識
-    # =====================================================
-
     if roi:
 
         piles = detect_piles(image, roi)
@@ -514,10 +469,6 @@ if uploaded_file:
         total_piles = len(piles)
 
         st.success(f"✅ AI 辨識到 {total_piles} 支樁體")
-
-        # =====================================================
-        # AI辨識結果圖
-        # =====================================================
 
         result_img = image.copy()
 
@@ -553,44 +504,49 @@ if uploaded_file:
                 font=font
             )
 
-        st.subheader("🔍 AI辨識結果")
-
-        st.image(
-            result_img,
-            use_container_width=True
-        )
-
         # =====================================================
-        # 施工條件
+        # AI辨識結果 + 施工條件
         # =====================================================
 
-        st.subheader("📅 施工條件")
+        left_area, right_area = st.columns([3, 1.2])
 
-        start_date = st.date_input("施工開始日期")
+        with left_area:
 
-        daily_count = st.number_input(
-            "每日施工支數",
-            min_value=1,
-            value=14
-        )
+            st.subheader("🔍 AI辨識結果")
 
-        start_no = st.number_input(
-            "起始樁號",
-            min_value=1,
-            max_value=total_piles,
-            value=1
-        )
+            st.image(
+                result_img,
+                width=900
+            )
 
-        cycle = st.selectbox(
-            "循環間隔",
-            [3, 4, 5, 6, 7, 8]
-        )
+        with right_area:
 
-        execute = st.button("🚀 執行排程")
+            st.subheader("📅 施工條件")
 
-        # =====================================================
-        # 執行排程
-        # =====================================================
+            start_date = st.date_input("施工開始日期")
+
+            daily_count = st.number_input(
+                "每日施工支數",
+                min_value=1,
+                value=14
+            )
+
+            start_no = st.number_input(
+                "起始樁號",
+                min_value=1,
+                max_value=total_piles,
+                value=1
+            )
+
+            cycle = st.selectbox(
+                "循環間隔",
+                [3, 4, 5, 6, 7, 8]
+            )
+
+            execute = st.button(
+                "🚀 執行排程",
+                use_container_width=True
+            )
 
         if execute:
 
@@ -605,10 +561,6 @@ if uploaded_file:
             df = pd.DataFrame(schedule)
 
             st.session_state.schedule_df = df
-
-            # =====================================================
-            # 加寬畫布
-            # =====================================================
 
             LEGEND_WIDTH = 320
 
@@ -633,10 +585,6 @@ if uploaded_file:
             except:
                 day_font = ImageFont.load_default()
                 legend_font = ImageFont.load_default()
-
-            # =====================================================
-            # 畫樁體
-            # =====================================================
 
             for i, row in df.iterrows():
 
@@ -667,7 +615,6 @@ if uploaded_file:
                         width=1
                     )
 
-                    # D1 D2
                     draw.text(
                         (
                             x - 10,
@@ -678,7 +625,6 @@ if uploaded_file:
                         font=day_font
                     )
 
-                    # 樁號
                     draw.text(
                         (
                             x - 8,
@@ -688,10 +634,6 @@ if uploaded_file:
                         fill="red",
                         font=day_font
                     )
-
-            # =====================================================
-            # Legend
-            # =====================================================
 
             legend_x = image.width + 40
             legend_y = 80
@@ -761,10 +703,6 @@ if st.session_state.processed:
 
     st.markdown("---")
 
-    # =====================================================
-    # 施工排程結果
-    # =====================================================
-
     st.subheader("📋 施工排程結果")
 
     df = st.session_state.schedule_df
@@ -784,69 +722,70 @@ if st.session_state.processed:
         )
 
     # =====================================================
-    # 排樁施工圖
+    # 排樁施工圖 + 下載圖面
     # =====================================================
 
-    st.subheader("🗺️ 排樁施工圖")
+    left_result, right_download = st.columns([3, 1])
 
-    st.image(
-        st.session_state.result_image,
-        use_container_width=True
-    )
+    with left_result:
 
-    # =====================================================
-    # 匯出格式
-    # =====================================================
+        st.subheader("🗺️ 排樁施工圖")
 
-    st.subheader("📥 下載圖面")
-
-    export_type = st.selectbox(
-        "選擇匯出格式",
-        ["PNG", "JPG", "PDF"]
-    )
-
-    img_buffer = io.BytesIO()
-
-    result_img = st.session_state.result_image
-
-    # PNG
-    if export_type == "PNG":
-
-        result_img.save(img_buffer, format="PNG")
-
-        st.download_button(
-            label="下載 PNG 圖面",
-            data=img_buffer.getvalue(),
-            file_name="pile_schedule.png",
-            mime="image/png"
+        st.image(
+            st.session_state.result_image,
+            width=900
         )
 
-    # JPG
-    elif export_type == "JPG":
+    with right_download:
 
-        rgb_img = result_img.convert("RGB")
+        st.subheader("📥 下載圖面")
 
-        rgb_img.save(img_buffer, format="JPEG")
-
-        st.download_button(
-            label="下載 JPG 圖面",
-            data=img_buffer.getvalue(),
-            file_name="pile_schedule.jpg",
-            mime="image/jpeg"
+        export_type = st.selectbox(
+            "選擇匯出格式",
+            ["PNG", "JPG", "PDF"]
         )
 
-    # PDF
-    else:
+        img_buffer = io.BytesIO()
 
-        rgb_img = result_img.convert("RGB")
+        result_img = st.session_state.result_image
 
-        rgb_img.save(img_buffer, format="PDF")
+        if export_type == "PNG":
 
-        st.download_button(
-            label="下載 PDF 圖面",
-            data=img_buffer.getvalue(),
-            file_name="pile_schedule.pdf",
-            mime="application/pdf"
-        )
+            result_img.save(img_buffer, format="PNG")
 
+            st.download_button(
+                label="下載 PNG 圖面",
+                data=img_buffer.getvalue(),
+                file_name="pile_schedule.png",
+                mime="image/png",
+                use_container_width=True
+            )
+
+        elif export_type == "JPG":
+
+            rgb_img = result_img.convert("RGB")
+
+            rgb_img.save(img_buffer, format="JPEG")
+
+            st.download_button(
+                label="下載 JPG 圖面",
+                data=img_buffer.getvalue(),
+                file_name="pile_schedule.jpg",
+                mime="image/jpeg",
+                use_container_width=True
+            )
+
+        else:
+
+            rgb_img = result_img.convert("RGB")
+
+            rgb_img.save(img_buffer, format="PDF")
+
+            st.download_button(
+                label="下載 PDF 圖面",
+                data=img_buffer.getvalue(),
+                file_name="pile_schedule.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
 
