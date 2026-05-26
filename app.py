@@ -724,15 +724,25 @@ if st.session_state.processed:
             lambda c:
             f'<div style="background:{c}; width:80px; height:28px; border-radius:6px;"></div>'
         )
-
-        # 顯示 HTML 表格
-        st.write(
-            display_df.to_html(
-                escape=False,
-                index=False
-            ),
+        
+        st.markdown(
+            f"""
+            <div style="
+                max-height:500px;
+                overflow-y:auto;
+                border:1px solid #333;
+                border-radius:10px;
+            ">
+                {display_df.to_html(
+                    escape=False,
+                    index=False
+                )}
+            </div>
+            """,
             unsafe_allow_html=True
         )
+
+       
 
     # =====================================================
     # 排樁施工圖 + 下載圖面
