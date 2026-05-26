@@ -842,6 +842,13 @@ if st.session_state.processed:
         if "RGB" in display_df.columns:
 
             display_df = display_df.drop(columns=["RGB"])
+    
+        # 日期顏色改成色塊
+        display_df["日期顏色"] = display_df["日期顏色"].apply(
+            lambda c:
+            f'<div style="background:{c}; width:80px; height:28px; border-radius:6px;"></div>'
+        )
+        
         # =====================================================
         # 卡片式施工排程
         # =====================================================
@@ -926,7 +933,6 @@ if st.session_state.processed:
                 """,
                 unsafe_allow_html=True
             )
-    
 
        
 
@@ -997,4 +1003,3 @@ if st.session_state.processed:
                 mime="application/pdf",
                 use_container_width=True
             )
-
