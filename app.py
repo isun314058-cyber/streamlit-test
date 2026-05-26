@@ -1,3 +1,7 @@
+# =====================================================
+# AI 排樁施工系統 完整版
+# =====================================================
+
 import streamlit as st
 from PIL import Image, ImageDraw, ImageFont
 from pdf2image import convert_from_bytes
@@ -167,9 +171,7 @@ def detect_piles(pil_image, roi=None):
                 filtered.append((x, y, r))
 
         # =====================================================
-        # 正確排序
-        # 左上 → 右上
-        # 再往下
+        # 左上 → 右上 → 下一列
         # =====================================================
 
         row_tolerance = 40
@@ -205,7 +207,7 @@ def detect_piles(pil_image, roi=None):
     return positions
 
 # =====================================================
-# 新版排程邏輯
+# 排程
 # =====================================================
 
 def create_schedule(
@@ -216,9 +218,33 @@ def create_schedule(
     start_date
 ):
 
-    pile_numbers = list(range(start_no, start_no + total_piles))
+    # =====================================================
+    # 保持原始樁號
+    # =====================================================
 
-    remaining = pile_numbers.copy()
+    pile_numbers = list(range(1, total_piles + 1))
+
+    # =====================================================
+    # 從指定起始點開始旋轉
+    # =====================================================
+
+    start_index = start_no - 1
+
+    pile_numbers = (
+        pile_numbers[start_index:]
+        +
+        pile_numbers[:start_index]
+    )
+
+    # =====================================================
+    # 分組
+    # =====================================================
+
+    groups = [[] for _ in range(cycle)]
+
+    for idx, pile in enumerate(pile_numbers):
+
+        groups[idx % cycle].append(pile)
 
     result = []
 
@@ -226,60 +252,28 @@ def create_schedule(
 
     colors = generate_unique_colors(300)
 
-    while remaining:
+    for group in groups:
 
-        today = []
+        for i in range(0, len(group), daily_count):
 
-        used_mod = set()
+            current_date = (
+                pd.to_datetime(start_date)
+                + pd.Timedelta(days=day - 1)
+            )
 
-        for pile in remaining[:]:
+            color = colors[day - 1]
 
-            mod_value = pile % cycle
+            hex_color = '#%02x%02x%02x' % color
 
-            # 保留循環區間
-            if mod_value in used_mod:
-                continue
+            result.append({
+                "施工日": f"Day {day}",
+                "日期": current_date.strftime("%Y-%m-%d"),
+                "日期顏色": hex_color,
+                "RGB": color,
+                "施工樁號": group[i:i + daily_count]
+            })
 
-            # 避開鄰近樁位
-            adjacent = False
-
-            for t in today:
-
-                if abs(pile - t) <= 1:
-                    adjacent = True
-                    break
-
-            if adjacent:
-                continue
-
-            today.append(pile)
-
-            used_mod.add(mod_value)
-
-            remaining.remove(pile)
-
-            # 每日盡量排滿
-            if len(today) >= daily_count:
-                break
-
-        current_date = (
-            pd.to_datetime(start_date)
-            + pd.Timedelta(days=day - 1)
-        )
-
-        color = colors[day - 1]
-
-        hex_color = '#%02x%02x%02x' % color
-
-        result.append({
-            "施工日": f"Day {day}",
-            "日期": current_date.strftime("%Y-%m-%d"),
-            "日期顏色": hex_color,
-            "RGB": color,
-            "施工樁號": today
-        })
-
-        day += 1
+            day += 1
 
     return result
 
@@ -297,6 +291,10 @@ uploaded_file = st.file_uploader(
 # =====================================================
 
 if uploaded_file:
+
+    # =====================================================
+    # PDF
+    # =====================================================
 
     if uploaded_file.type == "application/pdf":
 
@@ -456,6 +454,10 @@ if uploaded_file:
 
                 st.rerun()
 
+    # =====================================================
+    # 點位資訊
+    # =====================================================
+
     with right_col:
 
         st.subheader("📍 點位資訊")
@@ -484,6 +486,10 @@ if uploaded_file:
 
             st.success("✅ 已完成施工區域")
 
+        # =====================================================
+        # 重新選取
+        # =====================================================
+
         if st.button("🔄 重新選取"):
 
             st.session_state.points = []
@@ -508,3 +514,94 @@ if uploaded_file:
         total_piles = len(piles)
 
         st.success(f"✅ AI 辨識到 {total_piles} 支樁體")
+
+        # =====================================================
+        # AI辨識結果圖
+        # =====================================================
+
+        result_img = image.copy()
+
+        draw = ImageDraw.Draw(result_img)
+
+        try:
+            font = ImageFont.truetype("arial.ttf", 22)
+        except:
+            font = ImageFont.load_default()
+
+        for idx, (x, y, r) in enumerate(piles):
+
+            pile_no = idx + 1
+
+            draw.ellipse(
+                (
+                    x - r,
+                    y - r,
+                    x + r,
+                    y + r
+                ),
+                outline="red",
+                width=4
+            )
+
+            draw.text(
+                (
+                    x + r + 5,
+                    y - r - 5
+                ),
+                str(pile_no),
+                fill="red",
+                font=font
+            )
+
+        st.subheader("🔍 AI辨識結果")
+
+        st.image(
+            result_img,
+            use_container_width=True
+        )
+
+        # =====================================================
+        # 施工條件
+        # =====================================================
+
+        st.subheader("📅 施工條件")
+
+        start_date = st.date_input("施工開始日期")
+
+        daily_count = st.number_input(
+            "每日施工支數",
+            min_value=1,
+            value=14
+        )
+
+        start_no = st.number_input(
+            "起始樁號",
+            min_value=1,
+            max_value=total_piles,
+            value=1
+        )
+
+        cycle = st.selectbox(
+            "循環間隔",
+            [3, 4, 5, 6, 7, 8]
+        )
+
+        execute = st.button("🚀 執行排程")
+
+        # =====================================================
+        # 執行排程
+        # =====================================================
+
+        if execute:
+
+            schedule = create_schedule(
+                total_piles=total_piles,
+                start_no=start_no,
+                daily_count=daily_count,
+                cycle=cycle,
+                start_date=start_date
+            )
+
+            df = pd.DataFrame(schedule)
+
+            st.session_state.schedule_df = df
