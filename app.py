@@ -252,7 +252,6 @@ def create_schedule(
                 "施工日": f"Day {day}",
                 "日期": current_date.strftime("%Y-%m-%d"),
                 "日期顏色": hex_color,
-                "RGB": color,
                 "施工樁號": group[i:i + daily_count]
             })
 
@@ -715,10 +714,25 @@ if st.session_state.processed:
             lambda x: ", ".join(map(str, x))
         )
 
-        st.dataframe(
-            display_df,
-            use_container_width=True,
-            hide_index=True
+        # 日期顏色改成色塊
+        display_df["日期顏色"] = display_df["日期顏色"].apply(
+            lambda c: f'''
+            <div style="
+                background:{c};
+                width:100%;
+                height:32px;
+                border-radius:6px;
+            "></div>
+            '''
+        )
+
+        # 顯示 HTML 表格
+        st.write(
+            display_df.to_html(
+                escape=False,
+                index=False
+            ),
+            unsafe_allow_html=True
         )
 
     # =====================================================
