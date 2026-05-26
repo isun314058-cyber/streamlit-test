@@ -422,6 +422,59 @@ def create_schedule(
             # 加入今日施工
             # =================================================
 
+            # =====================================================
+            # AI 未來評估
+            # =====================================================
+            
+            temp_today = today_piles + [pile]
+            
+
+            future_blocked = set()
+
+            # 今天施工後會被封鎖的樁
+            for p in temp_today:
+            
+                future_blocked.add(p)
+            
+                future_blocked.update(
+                    neighbor_map[p]
+                )
+            
+            # 未來還能施工的樁
+            future_remaining = len([
+            
+                p for p in remaining
+            
+                if p not in future_blocked
+            
+            ])
+            
+            future_days = max(
+                1,
+                math.ceil(
+                    future_remaining / daily_count
+                )
+            )
+            
+            future_avg = (
+                future_remaining / future_days
+            )
+            
+            # 避免最後幾天只剩1~2支
+            if future_avg < daily_count * 0.75:
+            
+                continue
+
+            MIN_LAST_DAY = int(daily_count * 0.5)
+            
+            if (
+                future_remaining > 0
+                and
+                future_remaining < MIN_LAST_DAY
+            ):
+            
+                continue
+            
             today_piles.append(pile)
 
         # =================================================
