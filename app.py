@@ -547,7 +547,7 @@ def create_schedule(
                 
                 score = 0
                 # 二層模擬加分
-                score += secondary_future * 0.2
+                score += secondary_future * 1.2
                 
                 # ==================================================
                 # 1. 未來可施工量（最重要）
@@ -627,7 +627,7 @@ def create_schedule(
                 # 8. 靠近起始樁
                 # ==================================================
                 
-                score -= abs(pile - start_no) * 0.05
+                score -= abs(pile - start_no) * 0.01
                 # =========================================
                 # 更新最佳選擇
                 # =========================================
@@ -1048,7 +1048,7 @@ if uploaded_file:
                 schedule_score = 0
             
                 # 天數越少越好
-                schedule_score -= len(schedule) * 500
+                schedule_score -= len(schedule) * 120
             
                 # 最後三天不要太少
                 last_days = schedule[-3:]
