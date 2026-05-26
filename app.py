@@ -776,11 +776,17 @@ if uploaded_file:
         if execute:
 
             schedule = create_schedule(
+
                 pile_positions=piles,
-                start_no=start_no,
+            
+                total_piles=total_piles,
+            
                 daily_count=daily_count,
+            
                 start_date=start_date,
-                safe_distance=120,
+            
+                start_no=start_no,
+            
                 cooldown_days=1
             )
 
