@@ -721,14 +721,8 @@ if st.session_state.processed:
     
         # 日期顏色改成色塊
         display_df["日期顏色"] = display_df["日期顏色"].apply(
-            lambda c: f'''
-            <div style="
-                background:{c};
-                width:100%;
-                height:32px;
-                border-radius:6px;
-            "></div>
-            '''
+            lambda c:
+            f'<div style="background:{c}; width:80px; height:28px; border-radius:6px;"></div>'
         )
 
         # 顯示 HTML 表格
