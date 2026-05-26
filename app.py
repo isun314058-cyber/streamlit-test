@@ -290,55 +290,7 @@ def create_schedule(
 
         today_piles = []
 
-        # =====================================================
-        # AI 最遠距離優先排序
-        # =====================================================
-
-        candidates = []
-
         for pile in remaining:
-
-            # 第一天第一支 = 起始樁
-            if day == 1 and len(today_piles) == 0:
-
-                if pile != start_no:
-                    continue
-
-            # 今天還沒有施工樁
-            if len(today_piles) == 0:
-
-                min_dist = 999999
-
-            else:
-
-                # 計算與今日施工樁最小距離
-                min_dist = min([
-
-                    calculate_distance(
-                        pile_positions[pile - 1],
-                        pile_positions[p - 1]
-                    )
-
-                    for p in today_piles
-
-                ])
-
-            candidates.append((pile, min_dist))
-
-        # 距離最大優先
-        sorted_remaining = [
-
-            x[0]
-
-            for x in sorted(
-                candidates,
-                key=lambda x: x[1],
-                reverse=True
-            )
-
-        ]
-
-        for pile in sorted_remaining:
 
             # 已達每日數量
             if len(today_piles) >= daily_count:
