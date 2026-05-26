@@ -1076,99 +1076,100 @@ if uploaded_file:
             )
 
         if execute:
-
-            best_schedule = None
-
-            best_total_score = -999999
-            
-            # AI 多次模擬
-            for sim in range(20):
-            
-                schedule = create_schedule(
-            
-                    pile_positions=piles,
-            
-                    total_piles=total_piles,
-            
-                    daily_count=daily_count,
-            
-                    start_date=start_date,
-            
-                    start_no=start_no,
-            
-                    cooldown_days=1
-                )
-            
-                # =====================================
-                # AI 總體評分
-                # =====================================
-            
-                schedule_score = 0
-            
-                # 天數越少越好
-                schedule_score -= len(schedule) * 120
-            
-                # 最後三天不要太少
-                last_days = schedule[-3:]
-            
-                last_count = sum(
-            
-                    len(x["施工樁號"])
-            
-                    for x in last_days
-                )
-            
-                schedule_score += last_count * 40
-            
-                # 平均施工量穩定
-                daily_counts = [
-            
-                    len(x["施工樁號"])
-            
-                    for x in schedule
-                ]
-            
-                variance = np.var(daily_counts)
-            
-                # 波動越小越好
-                schedule_score -= variance * 30
-            
-                # =====================================
-                # 尾盤修復
-                # =====================================
+            with st.spinner("🤖 AI 正在分析最佳施工排程中，請稍候..."):
+    
+                best_schedule = None
+    
+                best_total_score = -999999
                 
-                tail_days = schedule[-3:]
+                # AI 多次模擬
+                for sim in range(20):
                 
-                tail_total = sum(
-                    len(x["施工樁號"])
-                    for x in tail_days
-                )
+                    schedule = create_schedule(
                 
-                # 如果最後三天太少
-                if tail_total < daily_count * 2:
+                        pile_positions=piles,
                 
-                    schedule_score -= 200
+                        total_piles=total_piles,
                 
-                # 最後一天不能太少
-                last_day_count = len(schedule[-1]["施工樁號"])
+                        daily_count=daily_count,
                 
-                if last_day_count <= 2:
+                        start_date=start_date,
                 
-                    schedule_score -= 300
+                        start_no=start_no,
                 
+                        cooldown_days=1
+                    )
                 
-                # =====================================
-                # 更新最佳結果
-                # =====================================
+                    # =====================================
+                    # AI 總體評分
+                    # =====================================
                 
-                if schedule_score > best_total_score:
+                    schedule_score = 0
                 
-                    best_total_score = schedule_score
+                    # 天數越少越好
+                    schedule_score -= len(schedule) * 120
                 
-                    best_schedule = schedule
-            
-            # 最終最佳排程
-            schedule = best_schedule
+                    # 最後三天不要太少
+                    last_days = schedule[-3:]
+                
+                    last_count = sum(
+                
+                        len(x["施工樁號"])
+                
+                        for x in last_days
+                    )
+                
+                    schedule_score += last_count * 40
+                
+                    # 平均施工量穩定
+                    daily_counts = [
+                
+                        len(x["施工樁號"])
+                
+                        for x in schedule
+                    ]
+                
+                    variance = np.var(daily_counts)
+                
+                    # 波動越小越好
+                    schedule_score -= variance * 30
+                
+                    # =====================================
+                    # 尾盤修復
+                    # =====================================
+                    
+                    tail_days = schedule[-3:]
+                    
+                    tail_total = sum(
+                        len(x["施工樁號"])
+                        for x in tail_days
+                    )
+                    
+                    # 如果最後三天太少
+                    if tail_total < daily_count * 2:
+                    
+                        schedule_score -= 200
+                    
+                    # 最後一天不能太少
+                    last_day_count = len(schedule[-1]["施工樁號"])
+                    
+                    if last_day_count <= 2:
+                    
+                        schedule_score -= 300
+                    
+                    
+                    # =====================================
+                    # 更新最佳結果
+                    # =====================================
+                    
+                    if schedule_score > best_total_score:
+                    
+                        best_total_score = schedule_score
+                    
+                        best_schedule = schedule
+                
+                # 最終最佳排程
+                schedule = best_schedule
 
             df = pd.DataFrame(schedule)
 
