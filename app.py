@@ -279,31 +279,29 @@ def create_schedule(
         pile_grid[i + 1] = (row, col)
 
     # =====================================================
-    # 建立鄰樁表（九宮格）
+    # 建立鄰樁表（十字型）
     # =====================================================
-
+    
     neighbor_map = {}
-
+    
     for p1 in pile_grid:
-
+    
         r1, c1 = pile_grid[p1]
-
+    
         neighbor_map[p1] = []
-
+    
         for p2 in pile_grid:
-
+    
             if p1 == p2:
                 continue
-
+    
             r2, c2 = pile_grid[p2]
-
-            # 九宮格鄰樁
+    
+            # 十字型鄰樁（只避上下左右）
             if (
-                abs(r1 - r2) <= 1
-                and
-                abs(c1 - c2) <= 1
-            ):
-
+                abs(r1 - r2) + abs(c1 - c2)
+            ) == 1:
+    
                 neighbor_map[p1].append(p2)
 
     # =====================================================
@@ -462,7 +460,7 @@ def create_schedule(
                     isolated_count += 1
             
             # 孤立太多就跳過
-            if isolated_count >= 10:
+            if isolated_count >= 2:
             
                 continue
             score = len(future_remaining_list)
