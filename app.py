@@ -537,7 +537,7 @@ def create_schedule(
         # 顏色
         # =================================================
 
-        color = colors[day - 1]
+        color = colors[(day - 1) % len(colors)]
 
         hex_color = '#%02x%02x%02x' % color
 
