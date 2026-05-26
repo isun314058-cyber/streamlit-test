@@ -301,7 +301,7 @@ def create_schedule(
             # 第一天第一支 = 起始樁
             if day == 1 and len(today_piles) == 0:
 
-                if pile != start_pile:
+                if pile != start_no:
                     continue
 
             # 今天還沒有施工樁
