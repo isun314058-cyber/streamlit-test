@@ -252,58 +252,156 @@ def build_neighbor_map(
 
 def create_schedule(
     pile_positions,
-    start_no,
+    total_piles,
     daily_count,
     start_date,
-    safe_distance=120,
+    start_no=1,
     cooldown_days=1
 ):
 
-    total_piles = len(pile_positions)
+    import random
+    import pandas as pd
 
-    neighbor_map = build_neighbor_map(
-        pile_positions,
-        safe_distance=safe_distance
-    )
+    # =====================================================
+    # 建立樁座標 Grid
+    # =====================================================
 
-    all_piles = list(range(1, total_piles + 1))
+    cols = 15
 
-    # 起始樁號旋轉
-    start_index = start_no - 1
+    pile_grid = {}
 
-    remaining = (
-        all_piles[start_index:]
-        +
-        all_piles[:start_index]
-    )
+    for i in range(total_piles):
+
+        row = i // cols
+        col = i % cols
+
+        pile_grid[i + 1] = (row, col)
+
+    # =====================================================
+    # 建立鄰樁表（九宮格）
+    # =====================================================
+
+    neighbor_map = {}
+
+    for p1 in pile_grid:
+
+        r1, c1 = pile_grid[p1]
+
+        neighbor_map[p1] = []
+
+        for p2 in pile_grid:
+
+            if p1 == p2:
+                continue
+
+            r2, c2 = pile_grid[p2]
+
+            # 九宮格鄰樁
+            if (
+                abs(r1 - r2) <= 1
+                and
+                abs(c1 - c2) <= 1
+            ):
+
+                neighbor_map[p1].append(p2)
+
+    # =====================================================
+    # 顏色
+    # =====================================================
+
+    colors = []
+
+    for _ in range(100):
+
+        colors.append(
+            (
+                random.randint(80, 230),
+                random.randint(80, 230),
+                random.randint(80, 230)
+            )
+        )
+
+    # =====================================================
+    # 初始化
+    # =====================================================
+
+    remaining = list(range(1, total_piles + 1))
+
+    # 起始樁優先
+    if start_no in remaining:
+
+        remaining.remove(start_no)
+        remaining.insert(0, start_no)
+
+    blocked_until = {}
 
     result = []
 
-    colors = generate_unique_colors(300)
-
-    # 紀錄樁最後施工日
-    last_used_day = {}
-    blocked_until = {}
     day = 1
+
+    # =====================================================
+    # 開始排程
+    # =====================================================
 
     while remaining:
 
         today_piles = []
 
-        for pile in remaining:
+        # =================================================
+        # 第一天第一支固定起始樁
+        # =================================================
 
-            # 已達每日數量
+        if day == 1:
+
+            if start_no in remaining:
+
+                today_piles.append(start_no)
+
+                remaining.remove(start_no)
+
+                blocked_until[start_no] = (
+                    day + cooldown_days
+                )
+
+                for neighbor in neighbor_map[start_no]:
+
+                    blocked_until[neighbor] = (
+                        day + cooldown_days
+                    )
+
+        # =================================================
+        # 剩餘樁排序
+        # 鄰樁越多越優先
+        # =================================================
+
+        sorted_remaining = sorted(
+
+            remaining,
+
+            key=lambda p: len(neighbor_map[p]),
+
+            reverse=True
+        )
+
+        # =================================================
+        # 找今日可施工樁
+        # =================================================
+
+        for pile in sorted_remaining:
+
             if len(today_piles) >= daily_count:
                 break
 
-            # 是否冷卻中
+            # 冷卻判定
             if pile in blocked_until:
 
                 if day <= blocked_until[pile]:
-            
                     continue
 
-            # 是否鄰樁衝突
+            # =================================================
+            # 九宮格衝突檢查
+            # =================================================
+
             conflict = False
 
             for existing in today_piles:
@@ -313,62 +411,67 @@ def create_schedule(
                     or
                     existing in neighbor_map[pile]
                 ):
+
                     conflict = True
                     break
 
             if conflict:
                 continue
 
-            # =====================================================
+            # =================================================
             # 加入今日施工
-            # =====================================================
-            
-            today_piles.append(pile)
-            
-            # =====================================================
-            # 封鎖自己
-            # =====================================================
-            
-            blocked_until[pile] = (
-                day + cooldown_days
-            )
-            
-            # =====================================================
-            # 封鎖鄰樁
-            # =====================================================
-            
-            for neighbor in neighbor_map[pile]:
-            
-                blocked_until[neighbor] = (
-                    day + cooldown_days
-                )
+            # =================================================
 
+            today_piles.append(pile)
+
+        # =================================================
         # 避免卡死
+        # =================================================
+
         if len(today_piles) == 0:
 
-            today_piles.append(
-                remaining[0]
-            )
+            today_piles.append(remaining[0])
 
-        # 更新剩餘樁
+        # =================================================
+        # 更新封鎖
+        # =================================================
+
         for pile in today_piles:
 
             if pile in remaining:
 
                 remaining.remove(pile)
 
-            last_used_day[pile] = day
+            blocked_until[pile] = (
+                day + cooldown_days
+            )
 
+            for neighbor in neighbor_map[pile]:
+
+                blocked_until[neighbor] = (
+                    day + cooldown_days
+                )
+
+        # =================================================
         # 日期
+        # =================================================
+
         current_date = (
             pd.to_datetime(start_date)
             + pd.Timedelta(days=day - 1)
         )
 
+        # =================================================
         # 顏色
+        # =================================================
+
         color = colors[day - 1]
 
         hex_color = '#%02x%02x%02x' % color
+
+        # =================================================
+        # 儲存結果
+        # =================================================
 
         result.append({
 
@@ -378,9 +481,8 @@ def create_schedule(
 
             "日期顏色": hex_color,
 
-            "RGB": color,
+            "施工樁號": sorted(today_piles)
 
-            "施工樁號": today_piles
         })
 
         day += 1
