@@ -369,132 +369,211 @@ def create_schedule(
                     )
 
         # =================================================
-        # 剩餘樁排序
-        # 鄰樁越多越優先
+        # AI 智慧選樁
         # =================================================
 
-        sorted_remaining = sorted(
-            remaining,
-            key=lambda p: (
-                len(neighbor_map[p]),
-                -abs(p - start_no)
-            ),
-            reverse=True
-        )
-
-        best_score = -999
-        best_pile = None
+        while len(today_piles) < daily_count:
         
-        for pile in sorted_remaining:
+            # =====================================
+            # 先過濾還能施工的樁
+            # =====================================
         
-            if len(today_piles) >= daily_count:
-                break
-        
-            # 冷卻判定
-            if pile in blocked_until:
-        
-                if day <= blocked_until[pile]:
-                    continue
-        
-            # 十字衝突檢查
-            conflict = False
-        
-            for existing in today_piles:
-        
-                if (
-                    pile in neighbor_map[existing]
-                    or
-                    existing in neighbor_map[pile]
-                ):
-        
-                    conflict = True
-                    break
-        
-            if conflict:
-                continue
-        
-            # =====================================================
-            # AI 未來分析
-            # =====================================================
-        
-            temp_today = today_piles + [pile]
-        
-            future_blocked = set()
-        
-            for p in temp_today:
-        
-                future_blocked.add(p)
-        
-                future_blocked.update(
-                    neighbor_map[p]
-                )
-        
-            future_remaining_list = [
-        
+            candidate_piles = [
+            
                 p for p in remaining
-        
-                if p not in future_blocked
-        
+            
+                if (
+            
+                    p not in today_piles
+            
+                    and not (
+            
+                        p in blocked_until
+                        and day <= blocked_until[p]
+            
+                    )
+                )
             ]
         
-            # =====================================================
-            # 放鬆版孤立檢查
-            # =====================================================
+            # 沒候選樁就停止
+            if len(candidate_piles) == 0:
+                break
         
-            isolated_count = 0
+            # =====================================
+            # AI排序
+            # =====================================
         
-            for p in future_remaining_list:
+            sorted_remaining = sorted(
         
-                available_neighbors = [
+                candidate_piles,
         
-                    n for n in neighbor_map[p]
+                key=lambda p: (
         
-                    if n in future_remaining_list
+                    len(neighbor_map[p]),
         
+                    -abs(p - start_no)
+        
+                ),
+        
+                reverse=True
+        
+            )
+        
+            best_score = -999999
+        
+            best_pile = None
+        
+            for pile in sorted_remaining:
+
+                # =========================================
+                # 冷卻判定
+                # =========================================
+
+                if pile in blocked_until:
+
+                    if day <= blocked_until[pile]:
+
+                        continue
+
+                # =========================================
+                # 十字衝突檢查
+                # =========================================
+
+                conflict = False
+
+                for existing in today_piles:
+
+                    if (
+
+                        pile in neighbor_map[existing]
+
+                        or
+
+                        existing in neighbor_map[pile]
+
+                    ):
+
+                        conflict = True
+                        break
+
+                if conflict:
+                    continue
+
+                # =========================================
+                # 模擬加入後
+                # =========================================
+
+                temp_today = today_piles + [pile]
+
+                future_blocked = set()
+
+                for p in temp_today:
+
+                    future_blocked.add(p)
+
+                    future_blocked.update(
+                        neighbor_map[p]
+                    )
+
+                future_remaining_list = [
+                
+                    p for p in remaining
+                
+                    if (
+                
+                        p not in future_blocked
+                
+                        and not (
+                
+                            p in blocked_until
+                            and day <= blocked_until[p]
+                
+                        )
+                
+                    )
+                
                 ]
-        
-                if len(available_neighbors) == 0:
-        
-                    isolated_count += 1
-        
-            # =====================================================
-            # AI 評分
-            # =====================================================
-        
-            score = 0
-        
-            # 未來可施工數量越多越好
-            score += len(future_remaining_list) * 5
-        
-            # 孤立樁越少越好
-            score -= isolated_count * 8
-        
-            # 鄰居多的樁優先
-            score += len(neighbor_map[pile]) * 3
-        
-            # =====================================================
-            # 放鬆孤立門檻
-            # =====================================================
-        
-            if isolated_count >= 8:
-                score -= 30
-        
-            # =====================================================
-            # 更新最佳樁
-            # =====================================================
-        
-            if score > best_score:
-        
-                best_score = score
-                best_pile = pile
-        
-        # =====================================================
-        # 加入最佳樁
-        # =====================================================
-        
-        if best_pile is not None:
-        
+
+                # =========================================
+                # 孤立檢查
+                # =========================================
+
+                isolated_count = 0
+
+                for p in future_remaining_list:
+
+                    available_neighbors = [
+
+                        n for n in neighbor_map[p]
+
+                        if n in future_remaining_list
+
+                    ]
+
+                    if len(available_neighbors) == 0:
+
+                        isolated_count += 1
+
+                # =========================================
+                # AI 評分
+                # =========================================
+
+                score = 0
+
+                # 未來可施工數量
+                score += len(future_remaining_list) * 0.4
+
+                # 孤立懲罰（放鬆版）
+                score -= isolated_count * 0.5
+
+                # 鄰居多優先
+                score += len(neighbor_map[pile]) * 2
+
+                # 靠近起始樁加分
+                score -= abs(pile - start_no) * 0.05
+
+                # =========================================
+                # 太多孤立樁才重罰
+                # =========================================
+
+                if isolated_count >= 60:
+
+                    score -= 20
+
+                # =========================================
+                # 更新最佳樁
+                # =========================================
+
+                if score > best_score:
+
+                    best_score = score
+
+                    best_pile = pile
+                    
+            # =============================================
+            # 找不到可施工樁
+            # =============================================
+
+            if best_pile is None:
+
+                break
+
+            # =============================================
+            # 加入今日施工
+            # =============================================
+
             today_piles.append(best_pile)
+
+            if best_pile in remaining:
+
+                remaining.remove(best_pile)
+
+            # 立即更新封鎖
+            blocked_until[best_pile] = day + cooldown_days
+            
+            for neighbor in neighbor_map[best_pile]:
+            
+                blocked_until[neighbor] = day + cooldown_days
 
         # =================================================
         # 避免卡死
@@ -504,24 +583,26 @@ def create_schedule(
 
             today_piles.append(remaining[0])
 
+            remaining.remove(remaining[0])
+
         # =================================================
         # 更新封鎖
         # =================================================
 
         for pile in today_piles:
 
-            if pile in remaining:
-
-                remaining.remove(pile)
-
             blocked_until[pile] = (
+
                 day + cooldown_days
+
             )
 
             for neighbor in neighbor_map[pile]:
 
                 blocked_until[neighbor] = (
+
                     day + cooldown_days
+
                 )
 
         # =================================================
@@ -529,8 +610,11 @@ def create_schedule(
         # =================================================
 
         current_date = (
+
             pd.to_datetime(start_date)
+
             + pd.Timedelta(days=day - 1)
+
         )
 
         # =================================================
