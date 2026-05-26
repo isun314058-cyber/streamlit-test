@@ -849,90 +849,22 @@ if st.session_state.processed:
             f'<div style="background:{c}; width:80px; height:28px; border-radius:6px;"></div>'
         )
         
-        # =====================================================
-        # 卡片式施工排程
-        # =====================================================
-        
-        for _, row in display_df.iterrows():
-        
-            piles = row["施工樁號"]
-        
-            pile_list = piles.split(",")
-        
-            pile_html = ""
-        
-            for pile in pile_list:
-        
-                pile_html += f"""
-                <div style="
-                    background:#111827;
-                    padding:8px 14px;
-                    border-radius:8px;
-                    margin:4px;
-                    display:inline-block;
-                    color:white;
-                    font-weight:bold;
-                    font-size:15px;
-                    border:1px solid #374151;
-                ">
-                    {pile.strip()}
-                </div>
-                """
-        
-            st.markdown(
-                f"""
-                <div style="
-                    background:#0f172a;
-                    border:1px solid #334155;
-                    border-radius:18px;
-                    padding:20px;
-                    margin-bottom:18px;
-                    box-shadow:0 0 10px rgba(0,0,0,0.25);
-                ">
-        
-                    <div style="
-                        display:flex;
-                        align-items:center;
-                        gap:16px;
-                        margin-bottom:16px;
-                    ">
-        
-                        <div style="
-                            background:{row['日期顏色']};
-                            width:28px;
-                            height:28px;
-                            border-radius:8px;
-                        "></div>
-        
-                        <div style="
-                            font-size:26px;
-                            font-weight:800;
-                            color:white;
-                        ">
-                            {row['施工日']}
-                        </div>
-        
-                        <div style="
-                            font-size:18px;
-                            color:#cbd5e1;
-                            margin-left:auto;
-                        ">
-                            {row['日期']}
-                        </div>
-        
-                    </div>
-        
-                    <div style="
-                        display:flex;
-                        flex-wrap:wrap;
-                    ">
-                        {pile_html}
-                    </div>
-        
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+        st.markdown(
+            f"""
+            <div style="
+                max-height:500px;
+                overflow-y:auto;
+                border:1px solid #333;
+                border-radius:10px;
+            ">
+                {display_df.to_html(
+                    escape=False,
+                    index=False
+                )}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
        
 
