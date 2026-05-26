@@ -560,7 +560,7 @@ def create_schedule(
                 score = 0
                 
                 # 二層模擬加分
-                score += secondary_future * 0.08
+                score += secondary_future * 1.2
                 
                 # ==================================================
                 # 1. 未來可施工量（最重要）
@@ -602,7 +602,7 @@ def create_schedule(
                         future_count / future_days_left
                     )
                 
-                    score += expected_avg * 8
+                    score += expected_avg * 35
                 
                 # 未來可施工數量
                 score += future_count * 5
@@ -612,7 +612,7 @@ def create_schedule(
                 # 2. 孤立樁重罰
                 # ==================================================
                 
-                score -= isolated_count * 25
+                score -= isolated_count * 80
                 
                 # ==================================================
                 # 3. 未來平均施工量
@@ -629,7 +629,7 @@ def create_schedule(
                     future_count / future_days
                 )
                 
-                score += future_avg * 5
+                score += future_avg * 25
                 
                 # ==================================================
                 # 4. 如果未來平均太低
@@ -1082,7 +1082,7 @@ if uploaded_file:
             best_total_score = -999999
             
             # AI 多次模擬
-            for sim in range(5):
+            for sim in range(20):
             
                 schedule = create_schedule(
             
