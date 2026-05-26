@@ -419,10 +419,6 @@ def create_schedule(
             if conflict:
                 continue
 
-            # =================================================
-            # 加入今日施工
-            # =================================================
-
             # =====================================================
             # AI 未來評估
             # =====================================================
@@ -466,6 +462,51 @@ def create_schedule(
             
                 continue
 
+            # =====================================================
+            # 孤立樁檢查
+            # =====================================================
+            
+            temp_today = today_piles + [pile]
+            
+            future_blocked = set()
+            
+            for p in temp_today:
+            
+                future_blocked.add(p)
+            
+                future_blocked.update(
+                    neighbor_map[p]
+                )
+            
+            future_remaining_list = [
+            
+                p for p in remaining
+            
+                if p not in future_blocked
+            
+            ]
+            
+            # 檢查是否產生孤立樁
+            isolated_count = 0
+            
+            for p in future_remaining_list:
+            
+                available_neighbors = [
+            
+                    n for n in neighbor_map[p]
+            
+                    if n in future_remaining_list
+            
+                ]
+            
+                if len(available_neighbors) == 0:
+            
+                    isolated_count += 1
+            
+            # 孤立太多就跳過
+            if isolated_count >= 6:
+            
+                continue
             
             today_piles.append(pile)
 
