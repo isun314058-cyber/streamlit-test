@@ -12,6 +12,8 @@ import math
 import random
 import io
 import cv2
+import math
+import random
 
 from streamlit_image_coordinates import streamlit_image_coordinates
 
@@ -45,6 +47,39 @@ h1,h2,h3,h4,h5,h6,p,span,label{
     height:50px;
     font-size:20px;
     font-weight:bold;
+}
+
+.schedule-table{
+    width:100%;
+    min-width:1400px;
+    border-collapse:collapse;
+    color:white;
+    font-size:16px;
+}
+
+.schedule-table th{
+    background:#132238;
+    color:#ffffff;
+    padding:14px;
+    text-align:center;
+    border:1px solid #2d3b55;
+    position:sticky;
+    top:0;
+    z-index:2;
+}
+
+.schedule-table td{
+    padding:12px;
+    border:1px solid #2d3b55;
+    vertical-align:top;
+}
+
+.schedule-table tr:nth-child(even){
+    background:#0b1730;
+}
+
+.schedule-table tr:hover{
+    background:#16284a;
 }
 
 </style>
@@ -341,9 +376,9 @@ def create_schedule(
     # =====================================================
     # 開始排程
     # =====================================================
-
+    loop_guard = 0
     while remaining:
-
+    
         today_piles = []
 
         # =================================================
@@ -402,7 +437,7 @@ def create_schedule(
             # =====================================
             # AI排序
             # =====================================
-        
+            random.shuffle(candidate_piles)
             sorted_remaining = sorted(
         
                 candidate_piles,
@@ -514,40 +549,179 @@ def create_schedule(
 
                         isolated_count += 1
 
+                # ==================================================
+                # 二層模擬
+                # ==================================================
+                
+                secondary_future = 0
+
+                if len(future_remaining_list) > 0:
+                
+                    sample_future = random.sample(
+                        future_remaining_list,
+                        min(3, len(future_remaining_list))
+                    )
+                
+                    for fp in sample_future:
+                
+                        second_blocked = set()
+                
+                        second_blocked.add(fp)
+                
+                        second_blocked.update(
+                            neighbor_map[fp]
+                        )
+                
+                        second_remaining = [
+                
+                            x for x in future_remaining_list
+                
+                            if x not in second_blocked
+                        ]
+                
+                        secondary_future += len(second_remaining)
+                
+                        if secondary_future > 300:
+                            break
+
                 # =========================================
                 # AI 評分
                 # =========================================
-
+                
                 score = 0
 
+                fill_ratio = len(temp_today) / daily_count
+                
+                score += fill_ratio * 350
+                
+                # 二層模擬加分
+                score += secondary_future * 1.2
+                
+                # ==================================================
+                # 1. 未來可施工量（最重要）
+                # ==================================================
+                
+                future_count = len(future_remaining_list)
+                
+                future_days_left = math.ceil(
+                    future_count / daily_count
+                )
+                
+                # ==================================================
+                # 尾盤預測（新增）
+                # ==================================================
+                
+                if future_days_left > 0:
+                
+                    estimated_tail_avg = (
+                        future_count / future_days_left
+                    )
+                
+                    # 尾盤太少
+                    if estimated_tail_avg < daily_count * 0.75:
+                
+                        score -= 500
+                
+                    # 尾盤穩定
+                    else:
+                
+                        score += 120
+                
+                # ==================================================
+                # 未來平均量
+                # ==================================================
+                
+                if future_days_left >= 1:
+                
+                    expected_avg = (
+                        future_count / future_days_left
+                    )
+                
+                    score += expected_avg * 35
+                
                 # 未來可施工數量
-                score += len(future_remaining_list) * 0.4
+                score += future_count * 12
 
-                # 孤立懲罰（放鬆版）
-                score -= isolated_count * 0.5
-
-                # 鄰居多優先
-                score += len(neighbor_map[pile]) * 2
-
-                # 靠近起始樁加分
-                score -= abs(pile - start_no) * 0.05
-
+                
+                # ==================================================
+                # 2. 孤立樁重罰
+                # ==================================================
+                
+                score -= isolated_count * 80
+                
+                # ==================================================
+                # 3. 未來平均施工量
+                # ==================================================
+                
+                future_days = max(
+                    1,
+                    math.ceil(
+                        future_count / daily_count
+                    )
+                )
+                
+                future_avg = (
+                    future_count / future_days
+                )
+                
+                score += future_avg * 25
+                
+                # ==================================================
+                # 4. 如果未來平均太低
+                # 代表後面會崩盤
+                # ==================================================
+                
+                if future_avg < daily_count * 0.8:
+                
+                    score -= 400
+                
+                # ==================================================
+                # 5. 最後幾天避免只剩單支
+                # ==================================================
+                
+                if (
+                    future_count > 0
+                    and
+                    future_count < daily_count * 0.5
+                ):
+                
+                    score -= 150
+                
+                # ==================================================
+                # 6. 鄰居多優先
+                # ==================================================
+                
+                score += len(neighbor_map[pile]) * 8
+                
+                # ==================================================
+                # 7. 靠近目前群組
+                # ==================================================
+                
+                if len(today_piles) > 0:
+                
+                    cluster_score = 0
+                
+                    for existing in today_piles:
+                
+                        cluster_score += abs(
+                            pile - existing
+                        )
+                
+                    score -= cluster_score * 0.08
+                
+                # ==================================================
+                # 8. 靠近起始樁
+                # ==================================================
+                
+                score -= abs(pile - start_no) * 0.01
                 # =========================================
-                # 太多孤立樁才重罰
+                # 更新最佳選擇
                 # =========================================
-
-                if isolated_count >= 60:
-
-                    score -= 20
-
-                # =========================================
-                # 更新最佳樁
-                # =========================================
-
+                
                 if score > best_score:
-
+                
                     best_score = score
-
+                
                     best_pile = pile
                     
             # =============================================
@@ -642,6 +816,13 @@ def create_schedule(
         })
 
         day += 1
+        loop_guard += 1
+        
+        if loop_guard > total_piles * 2:
+        
+            st.warning("AI 排程過久，已自動停止")
+        
+            break
 
     return result
 
@@ -930,21 +1111,104 @@ if uploaded_file:
             )
 
         if execute:
+            with st.spinner("🤖 AI 正在分析最佳施工排程中，請稍候..."):
+    
+                best_schedule = None
+    
+                best_total_score = -999999
+                
+                # AI 多次模擬
+                for sim in range(15):
+                
+                    schedule = create_schedule(
+                
+                        pile_positions=piles,
+                
+                        total_piles=total_piles,
+                
+                        daily_count=daily_count,
+                
+                        start_date=start_date,
+                
+                        start_no=start_no,
+                
+                        cooldown_days=1
+                    )
+                
+                    # =====================================
+                    # AI 總體評分
+                    # =====================================
+                
+                    schedule_score = 0
+                
+                    # 天數越少越好
+                    schedule_score -= len(schedule) * 120
+                
+                    # 最後三天不要太少
+                    last_days = schedule[-3:]
+                
+                    last_count = sum(
+                
+                        len(x["施工樁號"])
+                
+                        for x in last_days
+                    )
+                
+                    schedule_score += last_count * 40
+                
+                    # 平均施工量穩定
+                    daily_counts = [
+                
+                        len(x["施工樁號"])
+                
+                        for x in schedule
 
-            schedule = create_schedule(
-
-                pile_positions=piles,
-            
-                total_piles=total_piles,
-            
-                daily_count=daily_count,
-            
-                start_date=start_date,
-            
-                start_no=start_no,
-            
-                cooldown_days=1
-            )
+                    ]
+                    avg_daily = np.mean(daily_counts)
+                        
+                    schedule_score += avg_daily * 50
+                
+                    variance = np.var(daily_counts)
+                
+                    # 波動越小越好
+                    schedule_score -= variance * 30
+                
+                    # =====================================
+                    # 尾盤修復
+                    # =====================================
+                    
+                    tail_days = schedule[-5:]
+                    
+                    tail_total = sum(
+                        len(x["施工樁號"])
+                        for x in tail_days
+                    )
+                    
+                    # 如果最後三天太少
+                    if tail_total < daily_count * 4:
+                    
+                        schedule_score -= 200
+                    
+                    # 最後一天不能太少
+                    last_day_count = len(schedule[-1]["施工樁號"])
+                    
+                    if last_day_count <= 2:
+                    
+                        schedule_score -= 300
+                    
+                    
+                    # =====================================
+                    # 更新最佳結果
+                    # =====================================
+                    
+                    if schedule_score > best_total_score:
+                    
+                        best_total_score = schedule_score
+                    
+                        best_schedule = schedule
+                
+                # 最終最佳排程
+                schedule = best_schedule
 
             df = pd.DataFrame(schedule)
 
@@ -1111,6 +1375,8 @@ if st.session_state.processed:
 
         display_df = df.copy()
 
+        display_df["施工數量"] = display_df["施工樁號"].apply(len)
+
         display_df["施工樁號"] = display_df["施工樁號"].apply(
             lambda x: ", ".join(map(str, x))
         )
@@ -1124,18 +1390,33 @@ if st.session_state.processed:
             lambda c:
             f'<div style="background:{c}; width:80px; height:28px; border-radius:6px;"></div>'
         )
+
+        display_df = display_df[
+            [
+                "施工日",
+                "日期",
+                "日期顏色",
+                "施工數量",
+                "施工樁號"
+            ]
+        ]
         
         st.markdown(
             f"""
             <div style="
-                max-height:500px;
+                width:100%;
+                overflow-x:auto;
                 overflow-y:auto;
+                max-height:650px;
                 border:1px solid #333;
-                border-radius:10px;
+                border-radius:12px;
+                padding:10px;
+                background:#071225;
             ">
                 {display_df.to_html(
                     escape=False,
-                    index=False
+                    index=False,
+                    classes="schedule-table"
                 )}
             </div>
             """,
@@ -1211,3 +1492,4 @@ if st.session_state.processed:
                 mime="application/pdf",
                 use_container_width=True
             )
+
