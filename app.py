@@ -1162,10 +1162,11 @@ if uploaded_file:
                         len(x["施工樁號"])
                 
                         for x in schedule
-                        avg_daily = np.mean(daily_counts)
-                        
-                        schedule_score += avg_daily * 50
+
                     ]
+                    avg_daily = np.mean(daily_counts)
+                        
+                    schedule_score += avg_daily * 50
                 
                     variance = np.var(daily_counts)
                 
