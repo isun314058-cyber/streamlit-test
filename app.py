@@ -1619,7 +1619,256 @@ elif mode == "🛠️ 修正當前進度表":
 
         st.subheader("🛠️ 修正當前施工進度")
 
-        st.info(
-            "下一步將建立：\n"
-            "已施工樁位點選、Day1~DayN施工修正、AI重新分析"
+        # ============================================
+        # 讀取圖面
+        # ============================================
+
+        if uploaded_file.type == "application/pdf":
+
+            pdf_bytes = uploaded_file.read()
+
+            pdf_pages = convert_from_bytes(
+                pdf_bytes,
+                dpi=300
+            )
+
+            image = pdf_pages[0].convert("RGB")
+
+        else:
+
+            image = Image.open(
+                uploaded_file
+            ).convert("RGB")
+
+        # ============================================
+        # AI辨識樁位
+        # ============================================
+
+        piles = detect_piles(image)
+
+        total_piles = len(piles)
+
+        st.success(
+            f"✅ AI辨識到 {total_piles} 支樁體"
         )
+
+        # ============================================
+        # 顯示辨識結果
+        # ============================================
+
+        result_img = image.copy()
+
+        draw = ImageDraw.Draw(result_img)
+
+        try:
+            font = ImageFont.truetype(
+                "arial.ttf",
+                20
+            )
+        except:
+            font = ImageFont.load_default()
+
+        for idx, (x, y, r) in enumerate(piles):
+
+            pile_no = idx + 1
+
+            draw.ellipse(
+                (
+                    x-r,
+                    y-r,
+                    x+r,
+                    y+r
+                ),
+                outline="red",
+                width=4
+            )
+
+            draw.text(
+                (
+                    x+r+5,
+                    y-r-5
+                ),
+                str(pile_no),
+                fill="red",
+                font=font
+            )
+
+        st.image(
+            result_img,
+            width=900
+        )
+
+        # ============================================
+        # 原圖樁號對應
+        # ============================================
+
+        st.markdown("---")
+
+        st.subheader("🔢 原圖樁號對應")
+
+        st.info(
+            "請輸入 AI辨識樁號 對應 原圖樁號"
+        )
+
+        mapping_data = []
+
+        cols = st.columns(4)
+
+        for idx in range(total_piles):
+
+            with cols[idx % 4]:
+
+                original_no = st.text_input(
+                    f"AI樁號 {idx+1}",
+                    key=f"map_{idx}"
+                )
+
+                mapping_data.append(original_no)
+
+        # ============================================
+        # 已完成施工輸入
+        # ============================================
+
+        st.markdown("---")
+
+        st.subheader("✅ 已完成施工")
+
+        completed_text = st.text_area(
+
+            "輸入已完成樁號（原圖樁號）",
+
+            placeholder="例如：35,36,40"
+
+        )
+
+        # ============================================
+        # 修正施工條件
+        # ============================================
+
+        st.markdown("---")
+
+        st.subheader("📅 修正施工條件")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+
+            start_date = st.date_input(
+                "後續施工開始日期"
+            )
+
+        with col2:
+
+            daily_count = st.number_input(
+                "修正後每日施工支數",
+                min_value=1,
+                value=10
+            )
+
+        # ============================================
+        # AI重新分析
+        # ============================================
+
+        if st.button(
+            "🧠 AI重新分析後續排程",
+            use_container_width=True
+        ):
+
+            # ========================================
+            # 建立 mapping
+            # ========================================
+
+            pile_mapping = {}
+
+            for idx, val in enumerate(mapping_data):
+
+                if val.strip().isdigit():
+
+                    pile_mapping[int(val)] = idx + 1
+
+            # ========================================
+            # 已完成轉換
+            # ========================================
+
+            completed_piles = []
+
+            if completed_text.strip():
+
+                for x in completed_text.split(","):
+
+                    x = x.strip()
+
+                    if x.isdigit():
+
+                        original_no = int(x)
+
+                        if original_no in pile_mapping:
+
+                            completed_piles.append(
+                                pile_mapping[original_no]
+                            )
+
+            # ========================================
+            # 剩餘樁
+            # ========================================
+
+            remaining_piles = []
+
+            for i in range(1, total_piles + 1):
+
+                if i not in completed_piles:
+
+                    remaining_piles.append(i)
+
+            # ========================================
+            # 建立剩餘 pile_positions
+            # ========================================
+
+            remaining_positions = []
+
+            for pile_no in remaining_piles:
+
+                remaining_positions.append(
+                    piles[pile_no - 1]
+                )
+
+            # ========================================
+            # AI重新排程
+            # ========================================
+
+            with st.spinner(
+                "🤖 AI正在重新分析後續施工..."
+            ):
+
+                new_schedule = create_schedule(
+
+                    pile_positions=remaining_positions,
+
+                    total_piles=len(
+                        remaining_positions
+                    ),
+
+                    daily_count=daily_count,
+
+                    start_date=start_date,
+
+                    start_no=1,
+
+                    cooldown_days=1
+
+                )
+
+            st.success(
+                "✅ AI已完成後續最佳化排程"
+            )
+
+            # ========================================
+            # 顯示結果
+            # ========================================
+
+            new_df = pd.DataFrame(new_schedule)
+
+            st.dataframe(
+                new_df,
+                use_container_width=True
+            )
