@@ -299,45 +299,113 @@ def create_schedule(
     import pandas as pd
 
     # =====================================================
-    # 建立樁座標 Grid
+    # AI 自動學習最近鄰距離
     # =====================================================
-
-    cols = 15
-
-    pile_grid = {}
-
-    for i in range(total_piles):
-
-        row = i // cols
-        col = i % cols
-
-        pile_grid[i + 1] = (row, col)
+    
+    nearest_distances = []
+    
+    for i, p1 in enumerate(pile_positions):
+    
+        min_dist = 999999
+    
+        for j, p2 in enumerate(pile_positions):
+    
+            if i == j:
+                continue
+    
+            dist = calculate_distance(p1, p2)
+    
+            if dist < min_dist:
+    
+                min_dist = dist
+    
+        nearest_distances.append(min_dist)
+    
+    # AI 學習真正樁距
+    base_distance = np.median(nearest_distances)
 
     # =====================================================
-    # 建立鄰樁表（十字型）
+    # Delaunay AI 鄰樁判定
     # =====================================================
+    
+    from scipy.spatial import Delaunay
+    
+    points = np.array([
+        [x, y]
+        for (x, y, r) in pile_positions
+    ])
+    
+    tri = Delaunay(points)
     
     neighbor_map = {}
     
-    for p1 in pile_grid:
+    for i in range(len(points)):
     
-        r1, c1 = pile_grid[p1]
+        neighbor_map[i + 1] = set()
     
-        neighbor_map[p1] = []
+    # 建立三角形鄰接
+    for simplex in tri.simplices:
     
-        for p2 in pile_grid:
+        for i in range(3):
     
-            if p1 == p2:
-                continue
+            for j in range(3):
     
-            r2, c2 = pile_grid[p2]
+                if i != j:
     
-            # 十字型鄰樁（只避上下左右）
-            if (
-                abs(r1 - r2) + abs(c1 - c2)
-            ) == 1:
+                    p1 = simplex[i] + 1
+                    p2 = simplex[j] + 1
     
-                neighbor_map[p1].append(p2)
+                    # 計算真實距離
+                    dist = calculate_distance(
+                        pile_positions[p1 - 1],
+                        pile_positions[p2 - 1]
+                    )
+    
+                    if dist <= base_distance * 1.15:
+                        # 避免超長斜角
+                        dx = abs(
+                            pile_positions[p1 - 1][0]
+                            -
+                            pile_positions[p2 - 1][0]
+                        )
+                    
+                        dy = abs(
+                            pile_positions[p1 - 1][1]
+                            -
+                            pile_positions[p2 - 1][1]
+                        )
+                    
+                        # 過長斜角不算鄰樁
+                        if (
+                            dx > base_distance * 1.2
+                            or
+                            dy > base_distance * 1.2
+                        ):
+                        
+                            continue
+                        
+                        neighbor_map[p1].add(p2)
+    
+    # set 轉 list
+    MAX_NEIGHBORS = 8
+    
+    for p in neighbor_map:
+    
+        neighbors = list(neighbor_map[p])
+    
+        neighbors = sorted(
+    
+            neighbors,
+    
+            key=lambda n:
+            calculate_distance(
+                pile_positions[p - 1],
+                pile_positions[n - 1]
+            )
+    
+        )
+    
+        neighbor_map[p] = neighbors[:MAX_NEIGHBORS]
 
     # =====================================================
     # 顏色
