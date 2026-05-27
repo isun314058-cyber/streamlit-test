@@ -49,6 +49,39 @@ h1,h2,h3,h4,h5,h6,p,span,label{
     font-weight:bold;
 }
 
+.schedule-table{
+    width:100%;
+    min-width:1400px;
+    border-collapse:collapse;
+    color:white;
+    font-size:16px;
+}
+
+.schedule-table th{
+    background:#132238;
+    color:#ffffff;
+    padding:14px;
+    text-align:center;
+    border:1px solid #2d3b55;
+    position:sticky;
+    top:0;
+    z-index:2;
+}
+
+.schedule-table td{
+    padding:12px;
+    border:1px solid #2d3b55;
+    vertical-align:top;
+}
+
+.schedule-table tr:nth-child(even){
+    background:#0b1730;
+}
+
+.schedule-table tr:hover{
+    background:#16284a;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -525,10 +558,8 @@ def create_schedule(
                 if len(future_remaining_list) > 0:
                 
                     sample_future = random.sample(
-                
                         future_remaining_list,
-                
-                        min(3, len(future_remaining_list))
+                        min(2, len(future_remaining_list))
                     )
                 
                     for fp in sample_future:
@@ -558,6 +589,10 @@ def create_schedule(
                 # =========================================
                 
                 score = 0
+
+                fill_ratio = len(temp_today) / daily_count
+                
+                score += fill_ratio * 180
                 
                 # 二層模擬加分
                 score += secondary_future * 1.2
@@ -672,7 +707,7 @@ def create_schedule(
                             pile - existing
                         )
                 
-                    score -= cluster_score * 0.08
+                    score -= cluster_score * 0.2
                 
                 # ==================================================
                 # 8. 靠近起始樁
@@ -1083,7 +1118,7 @@ if uploaded_file:
                 best_total_score = -999999
                 
                 # AI 多次模擬
-                for sim in range(20):
+                for sim in range(8):
                 
                     schedule = create_schedule(
                 
@@ -1127,6 +1162,9 @@ if uploaded_file:
                         len(x["施工樁號"])
                 
                         for x in schedule
+                        avg_daily = np.mean(daily_counts)
+                        
+                        schedule_score += avg_daily * 50
                     ]
                 
                     variance = np.var(daily_counts)
@@ -1138,7 +1176,7 @@ if uploaded_file:
                     # 尾盤修復
                     # =====================================
                     
-                    tail_days = schedule[-3:]
+                    tail_days = schedule[-5:]
                     
                     tail_total = sum(
                         len(x["施工樁號"])
@@ -1146,7 +1184,7 @@ if uploaded_file:
                     )
                     
                     # 如果最後三天太少
-                    if tail_total < daily_count * 2:
+                    if tail_total < daily_count * 4:
                     
                         schedule_score -= 200
                     
@@ -1336,6 +1374,8 @@ if st.session_state.processed:
 
         display_df = df.copy()
 
+        display_df["施工數量"] = display_df["施工樁號"].apply(len)
+
         display_df["施工樁號"] = display_df["施工樁號"].apply(
             lambda x: ", ".join(map(str, x))
         )
@@ -1349,18 +1389,33 @@ if st.session_state.processed:
             lambda c:
             f'<div style="background:{c}; width:80px; height:28px; border-radius:6px;"></div>'
         )
+
+        display_df = display_df[
+            [
+                "施工日",
+                "日期",
+                "日期顏色",
+                "施工數量",
+                "施工樁號"
+            ]
+        ]
         
         st.markdown(
             f"""
             <div style="
-                max-height:500px;
+                width:100%;
+                overflow-x:auto;
                 overflow-y:auto;
+                max-height:650px;
                 border:1px solid #333;
-                border-radius:10px;
+                border-radius:12px;
+                padding:10px;
+                background:#071225;
             ">
                 {display_df.to_html(
                     escape=False,
-                    index=False
+                    index=False,
+                    classes="schedule-table"
                 )}
             </div>
             """,
