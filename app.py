@@ -559,7 +559,7 @@ def create_schedule(
                 
                     sample_future = random.sample(
                         future_remaining_list,
-                        min(2, len(future_remaining_list))
+                        min(3, len(future_remaining_list))
                     )
                 
                     for fp in sample_future:
@@ -592,7 +592,7 @@ def create_schedule(
 
                 fill_ratio = len(temp_today) / daily_count
                 
-                score += fill_ratio * 180
+                score += fill_ratio * 350
                 
                 # 二層模擬加分
                 score += secondary_future * 1.2
@@ -640,7 +640,7 @@ def create_schedule(
                     score += expected_avg * 35
                 
                 # 未來可施工數量
-                score += future_count * 5
+                score += future_count * 12
 
                 
                 # ==================================================
@@ -707,7 +707,7 @@ def create_schedule(
                             pile - existing
                         )
                 
-                    score -= cluster_score * 0.2
+                    score -= cluster_score * 0.08
                 
                 # ==================================================
                 # 8. 靠近起始樁
@@ -1118,7 +1118,7 @@ if uploaded_file:
                 best_total_score = -999999
                 
                 # AI 多次模擬
-                for sim in range(8):
+                for sim in range(15):
                 
                     schedule = create_schedule(
                 
