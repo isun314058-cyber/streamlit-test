@@ -627,7 +627,7 @@ def create_schedule(
                 
                     sample_future = random.sample(
                         future_remaining_list,
-                        min(3, len(future_remaining_list))
+                        min(2, len(future_remaining_list))
                     )
                 
                     for fp in sample_future:
@@ -1186,7 +1186,7 @@ if uploaded_file:
                 best_total_score = -999999
                 
                 # AI 多次模擬
-                for sim in range(5):
+                for sim in range(10):
                 
                     schedule = create_schedule(
                 
