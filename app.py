@@ -917,13 +917,42 @@ def create_schedule(
     return result
 
 # =====================================================
-# 上傳
+# 模式：新建預定進度表
 # =====================================================
 
-uploaded_file = st.file_uploader(
-    "上傳 JPG / PNG / PDF 圖面",
-    type=["jpg", "jpeg", "png", "pdf"]
-)
+if mode == "🆕 新建預定進度表":
+
+    uploaded_file = st.file_uploader(
+
+        "上傳 JPG / PNG / PDF 圖面",
+
+        type=["jpg", "jpeg", "png", "pdf"],
+
+        key="new_schedule"
+
+    )
+
+# =====================================================
+# 模式：修正當前進度表
+# =====================================================
+
+else:
+
+    uploaded_file = st.file_uploader(
+
+        "上傳目前施工進度圖",
+
+        type=["jpg", "jpeg", "png", "pdf"],
+
+        key="modify_schedule"
+
+    )
+
+    st.info(
+
+        "📌 請上傳目前已編排施工日的圖面"
+
+    )
 
 # =====================================================
 # 主流程
