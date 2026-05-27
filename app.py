@@ -1186,7 +1186,7 @@ if uploaded_file:
                 best_total_score = -999999
                 
                 # AI 多次模擬
-                for sim in range(15):
+                for sim in range(5):
                 
                     schedule = create_schedule(
                 
