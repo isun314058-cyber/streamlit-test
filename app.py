@@ -1641,16 +1641,142 @@ elif mode == "🛠️ 修正當前進度表":
             ).convert("RGB")
 
         # ============================================
-        # AI辨識樁位
+        # 框選施工區域
         # ============================================
-
-        piles = detect_piles(image)
-
-        total_piles = len(piles)
-
-        st.success(
-            f"✅ AI辨識到 {total_piles} 支樁體"
+        
+        st.markdown("---")
+        
+        st.subheader("✏️ 框選施工區域")
+        
+        st.markdown("### ✏️ 點選順序")
+        
+        st.markdown("""
+        🔴 左上　　
+        🔵 左下　　
+        🟠 右上　　
+        🟢 右下
+        """)
+        
+        display_img = image.copy()
+        
+        display_img.thumbnail((1200, 1200))
+        
+        value = streamlit_image_coordinates(
+            display_img,
+            key="repair_roi"
         )
+        
+        # 初始化
+        if "repair_points" not in st.session_state:
+        
+            st.session_state.repair_points = []
+        
+        # 點擊新增
+        if value is not None:
+        
+            x = value["x"]
+            y = value["y"]
+        
+            point = (x, y)
+        
+            if point not in st.session_state.repair_points:
+        
+                if len(st.session_state.repair_points) < 4:
+        
+                    st.session_state.repair_points.append(point)
+        
+        # 顏色
+        point_colors = [
+            "red",
+            "blue",
+            "orange",
+            "green"
+        ]
+        
+        # 畫圖
+        draw_img = display_img.copy()
+        
+        draw = ImageDraw.Draw(draw_img)
+        
+        for idx, point in enumerate(st.session_state.repair_points):
+        
+            x, y = point
+        
+            draw.ellipse(
+                (x-8, y-8, x+8, y+8),
+                fill=point_colors[idx]
+            )
+        
+        # 畫框
+        if len(st.session_state.repair_points) == 4:
+        
+            pts = st.session_state.repair_points
+        
+            draw.line([pts[0], pts[2]], fill="lime", width=5)
+            draw.line([pts[2], pts[3]], fill="lime", width=5)
+            draw.line([pts[3], pts[1]], fill="lime", width=5)
+            draw.line([pts[1], pts[0]], fill="lime", width=5)
+        
+        st.image(draw_img, width=1000)
+        
+        # 重新選取
+        if st.button("🔄 重新選取施工區域"):
+        
+            st.session_state.repair_points = []
+        
+            st.rerun()
+        
+        # ============================================
+        # ROI完成
+        # ============================================
+        
+        if len(st.session_state.repair_points) == 4:
+        
+            st.success("✅ 已完成施工區域框選")
+        
+            pts = st.session_state.repair_points
+        
+            x1 = min(
+                pts[0][0],
+                pts[1][0]
+            )
+        
+            y1 = min(
+                pts[0][1],
+                pts[2][1]
+            )
+        
+            x2 = max(
+                pts[2][0],
+                pts[3][0]
+            )
+        
+            y2 = max(
+                pts[1][1],
+                pts[3][1]
+            )
+        
+            roi = (
+                int(x1),
+                int(y1),
+                int(x2),
+                int(y2)
+            )
+        
+            # ========================================
+            # AI辨識樁位
+            # ========================================
+        
+            piles = detect_piles(
+                image,
+                roi
+            )
+        
+            total_piles = len(piles)
+        
+            st.success(
+                f"✅ AI辨識到 {total_piles} 支樁體"
+            )
 
         # ============================================
         # 顯示辨識結果
