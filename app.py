@@ -1458,7 +1458,7 @@ if mode == "🆕 新建預定進度表":
 
                         day_font = ImageFont.truetype(
                             "arial.ttf",
-                            18
+                            40
                         )
                     
                         pile_font = ImageFont.truetype(
@@ -1536,19 +1536,7 @@ if mode == "🆕 新建預定進度表":
                             
                             cv_img = np.array(result_img)
                             
-                            cv2.putText(
-                                cv_img,
-                                pile_text,
-                                (int(pile_x), int(pile_y)),
-                                cv2.FONT_HERSHEY_SIMPLEX,
-                                1.8,
-                                (255, 0, 0),
-                                2,
-                                cv2.LINE_AA
-                            )
-                            
-                            result_img = Image.fromarray(cv_img)
-                            
+                                                       
                             # =====================================
                             # 樁號固定在圓正上方
                             # 不受圓大小影響
@@ -1576,7 +1564,7 @@ if mode == "🆕 新建預定進度表":
                                 ),
                                 pile_text,
                                 fill="red",
-                                font=pile_font,
+                                font=day_font,
                                 stroke_width=3,
                                 stroke_fill="white"
                             )
