@@ -1534,7 +1534,21 @@ if mode == "🆕 新建預定進度表":
                             # 日期往下移一點
                             day_y = y + 18
                             
-                            cv_img = np.array(result_img)
+                            # =====================================
+                            # 畫施工日期 D1 D2
+                            # =====================================
+                            
+                            draw.text(
+                                (
+                                    day_x,
+                                    day_y
+                                ),
+                                day_text,
+                                fill="black",
+                                font=day_font,
+                                stroke_width=2,
+                                stroke_fill="white"
+                            )
                             
                                                        
                             # =====================================
