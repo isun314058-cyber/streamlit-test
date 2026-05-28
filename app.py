@@ -1485,8 +1485,6 @@ if mode == "🆕 新建預定進度表":
 
                         FONT_NAME = "DejaVuSans-Bold.ttf"
                     
-                        print("開始載入字型")
-                    
                         day_font = ImageFont.truetype(
                             FONT_NAME,
                             40
@@ -1497,17 +1495,16 @@ if mode == "🆕 新建預定進度表":
                             90
                         )
                     
+                        st.warning("✅ pile_font 已成功載入")
+                    
                         legend_font = ImageFont.truetype(
                             FONT_NAME,
                             20
                         )
                     
-                        
-                        print("pile_font 已載入")
-                    
                     except Exception as e:
                     
-                        print(f"❌ 字型載入失敗: {e}")
+                        st.error(f"❌ 字型失敗: {e}")
                     
                         day_font = ImageFont.load_default()
                     
@@ -1685,7 +1682,7 @@ if mode == "🆕 新建預定進度表":
                     st.session_state.result_image = result_img
                     st.session_state.processed = True
         
-                    st.rerun()
+                    #st.rerun()
         
             # =====================================================
             # 顯示排程結果
