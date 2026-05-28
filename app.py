@@ -350,48 +350,21 @@ def detect_pile_numbers(image, piles):
             allowlist='0123456789',
             batch_size=4
         )
-
+        
         detected_no = ""
-
-        for text in results:
         
-            text = text.strip()
+        for result in results:
         
-            # ========================================
-            # 過濾 D1 D2 D3 類型
-            # ========================================
-        
-            if text.upper().startswith("D"):
-                continue
-        
-            # ========================================
-            # 只保留數字
-            # ========================================
+            text = str(result[1]).strip()
         
             text = ''.join(filter(str.isdigit, text))
         
-            # ========================================
-            # 必須是數字
-            # ========================================
-        
-            if not text.isdigit():
+            if not text:
                 continue
         
             value = int(text)
         
-            # ========================================
-            # 限制合理樁號
-            # ========================================
-        
             if 1 <= value <= 300:
-            
-                # ========================================
-                # AI位置合理性判定
-                # ========================================
-            
-                if abs((idx + 1) - value) > 3:
-            
-                    continue
             
                 detected_no = value
                 break
