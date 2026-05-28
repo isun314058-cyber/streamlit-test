@@ -1542,7 +1542,7 @@ if mode == "🆕 新建預定進度表":
                             pile_x = x - (pile_width // 2)
                             
                             # 樁號固定高度
-                            pile_y = y - 22
+                            pile_y = y - 25
                             
                             draw.text(
                                 (
