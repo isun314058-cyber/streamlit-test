@@ -188,15 +188,19 @@ def detect_piles(pil_image, roi=None):
 
         gray = gray[y1:y2, x1:x2]
 
-    gray = cv2.GaussianBlur(gray, (5, 5), 1.5)
-
-    circles = cv2.HoughCircles(
+    gray_blur = cv2.GaussianBlur(
         gray,
+        (5, 5),
+        1.5
+    )
+    
+    circles = cv2.HoughCircles(
+        gray_blur,
         cv2.HOUGH_GRADIENT,
         dp=1.2,
         minDist=25,
         param1=80,
-        param2=18,
+        param2=16,
         minRadius=8,
         maxRadius=22
     )
@@ -228,9 +232,9 @@ def detect_piles(pil_image, roi=None):
             if not duplicated:
                 filtered.append((x, y, r))
 
-        row_tolerance = 40
-
         filtered = sorted(filtered, key=lambda p: p[1])
+
+        row_tolerance = 40
 
         grouped_rows = []
 
@@ -266,8 +270,13 @@ def detect_piles(pil_image, roi=None):
             r for r in all_radius
             if 8 <= r <= 25
         ]
+
+        if len(valid_radius) == 0:
+        
+            return []
         
         median_radius = int(np.median(valid_radius))
+        row_tolerance = median_radius * 2.2
         
         # 避免極端值
         median_radius = max(10, median_radius)
@@ -302,6 +311,10 @@ def load_ocr():
 
 reader = load_ocr()
 
+@st.cache_data(
+    show_spinner=False,
+    hash_funcs={Image.Image: id}
+)
 def detect_pile_numbers(image, piles):
 
     img = np.array(image)
@@ -310,9 +323,9 @@ def detect_pile_numbers(image, piles):
 
     for idx, (x, y, r) in enumerate(piles):
 
-        OCR_WIDTH = 45
-        OCR_TOP = 42
-        OCR_BOTTOM = 8
+        OCR_WIDTH = 70
+        OCR_TOP = 60
+        OCR_BOTTOM = 12
         
         x1 = max(0, x - OCR_WIDTH)
         x2 = min(img.shape[1], x + OCR_WIDTH)
@@ -365,6 +378,12 @@ def detect_pile_numbers(image, piles):
             value = int(text)
         
             if 1 <= value <= 300:
+            
+                # 避免抓到 D1 D2
+                if value <= 20:
+                
+                    if abs((idx + 1) - value) > 5:
+                        continue
             
                 detected_no = value
                 break
@@ -465,11 +484,20 @@ def create_schedule(
     # =====================================================
     
     from scipy.spatial import Delaunay
-    
+
     points = np.array([
         [x, y]
         for (x, y, r) in pile_positions
     ])
+    
+    if len(points) < 3:
+    
+        return [{
+            "施工日": "Day 1",
+            "日期": pd.to_datetime(start_date).strftime("%Y-%m-%d"),
+            "日期顏色": "#ff6666",
+            "施工樁號": list(range(1, total_piles + 1))
+        }]
     
     tri = Delaunay(points)
     
@@ -1249,14 +1277,19 @@ if mode == "🆕 新建預定進度表":
                     st.success("✅ 已完成施工區域")
         
                 if st.button("🔄 重新選取"):
-        
+                
                     st.session_state.points = []
+                
                     st.session_state.last_clicked = None
+                
                     st.session_state.pile_positions = []
+                
                     st.session_state.schedule_df = None
+                
                     st.session_state.result_image = None
+                
                     st.session_state.processed = False
-        
+                
                     st.rerun()
         
             if roi:
@@ -1266,9 +1299,7 @@ if mode == "🆕 新建預定進度表":
                 st.session_state.pile_positions = piles
 
                 total_piles = len(piles)
-                        
-                st.session_state.repair_total_piles = total_piles
-        
+                                        
                 st.success(f"✅ AI 辨識到 {total_piles} 支樁體")
         
                 result_img = image.copy()
@@ -1836,10 +1867,11 @@ elif mode == "🛠️ 修正當前進度表":
         st.session_state.repair_points = []
     
         st.session_state.repair_last_clicked = None
-        
+    
         st.session_state.repair_piles = []
     
-        # 新增這行
+        st.session_state.excluded_piles = []
+    
         st.session_state.repair_canvas_key = 0
     
         st.session_state.repair_mode_init = True
@@ -2035,6 +2067,8 @@ elif mode == "🛠️ 修正當前進度表":
                 st.session_state.repair_last_clicked = None
             
                 st.session_state.repair_piles = []
+
+                st.session_state.excluded_piles = []
             
                 st.session_state.repair_canvas_key += 1
             
@@ -2114,6 +2148,8 @@ elif mode == "🛠️ 修正當前進度表":
 
             total_piles = len(piles)
 
+            st.session_state.repair_total_piles = total_piles
+
             st.success(
                 f"✅ AI辨識到 {total_piles} 支樁體"
             )
@@ -2123,6 +2159,13 @@ elif mode == "🛠️ 修正當前進度表":
             # ========================================
 
             result_img = image.copy()
+
+            display_result = result_img.copy()
+            
+            display_result.thumbnail((900,650))
+            
+            scale_x = result_img.width / display_result.width
+            scale_y = result_img.height / display_result.height
 
             draw_result = ImageDraw.Draw(result_img)
 
@@ -2138,9 +2181,26 @@ elif mode == "🛠️ 修正當前進度表":
                 font = ImageFont.load_default()
 
             for idx, (x, y, r) in enumerate(piles):
-
+            
                 pile_no = idx + 1
-
+            
+                # 已排除的樁
+                if pile_no in st.session_state.excluded_piles:
+            
+                    draw_result.line(
+                        (x-r, y-r, x+r, y+r),
+                        fill="red",
+                        width=5
+                    )
+            
+                    draw_result.line(
+                        (x+r, y-r, x-r, y+r),
+                        fill="red",
+                        width=5
+                    )
+            
+                    continue
+            
                 draw_result.ellipse(
                     (
                         x-r,
@@ -2156,10 +2216,70 @@ elif mode == "🛠️ 修正當前進度表":
             
             with left_result:
             
-                st.image(
-                    result_img,
-                    width=900
+                clicked = streamlit_image_coordinates(
+                    display_result,
+                    key="exclude_pile_click"
                 )
+            
+                if "exclude_last_click" not in st.session_state:
+            
+                    st.session_state.exclude_last_click = None
+            
+                if clicked is not None:
+            
+                    current_click = (
+                        clicked["x"],
+                        clicked["y"]
+                    )
+            
+                    if (
+                        st.session_state.exclude_last_click
+                        != current_click
+                    ):
+            
+                        st.session_state.exclude_last_click = current_click
+            
+                        click_x = clicked["x"] * scale_x
+                        click_y = clicked["y"] * scale_y
+            
+                        nearest_pile = None
+                        nearest_dist = 999999
+            
+                        for idx, (x, y, r) in enumerate(piles):
+            
+                            dist = (
+                                (click_x - x) ** 2
+                                +
+                                (click_y - y) ** 2
+                            ) ** 0.5
+            
+                            if dist < nearest_dist:
+            
+                                nearest_dist = dist
+                                nearest_pile = idx + 1
+            
+                        if nearest_dist < 30:
+            
+                            # 已排除 → 取消排除
+                            if (
+                                nearest_pile
+                                in st.session_state.excluded_piles
+                            ):
+            
+                                st.session_state.excluded_piles.remove(
+                                    nearest_pile
+                                )
+            
+                            # 未排除 → 排除
+                            else:
+            
+                                st.session_state.excluded_piles.append(
+                                    nearest_pile
+                                )
+            
+                            st.rerun()
+            
+                
             
             with right_result:
             
@@ -2177,10 +2297,37 @@ elif mode == "🛠️ 修正當前進度表":
          
             with st.spinner("AI正在辨識原圖樁號..."):
             
-                pile_mapping = detect_pile_numbers(
+                filtered_piles = []
+                
+                filtered_index_map = {}
+                
+                new_idx = 1
+                
+                for idx, pile in enumerate(st.session_state.repair_piles):
+                
+                    pile_no = idx + 1
+                
+                    if pile_no in st.session_state.excluded_piles:
+                        continue
+                
+                    filtered_piles.append(pile)
+                
+                    filtered_index_map[new_idx] = pile_no
+                
+                    new_idx += 1
+                
+                temp_mapping = detect_pile_numbers(
                     image,
-                    st.session_state.repair_piles
+                    filtered_piles
                 )
+                
+                pile_mapping = {}
+                
+                for temp_ai_no, original_no in temp_mapping.items():
+                
+                    real_ai_no = filtered_index_map[temp_ai_no]
+                
+                    pile_mapping[real_ai_no] = original_no
             
             mapping_rows = []
             
@@ -2249,7 +2396,9 @@ elif mode == "🛠️ 修正當前進度表":
             mapping_df = pd.DataFrame(mapping_rows)
 
             failed_ocr = mapping_df[
-                mapping_df["原圖樁號"] == ""
+                mapping_df["原圖樁號"].isna()
+                |
+                (mapping_df["原圖樁號"] == "")
             ]
             
             if len(failed_ocr) > 0:
@@ -2343,12 +2492,20 @@ elif mode == "🛠️ 修正當前進度表":
                                     reverse_mapping[original_no]
                                 )
 
-                remaining_piles = []
-
+                valid_piles = []
+                
                 for i in range(
                     1,
                     st.session_state.repair_total_piles + 1
                 ):
+                
+                    if i not in st.session_state.excluded_piles:
+                
+                        valid_piles.append(i)
+                        
+                remaining_piles = []
+                
+                for i in valid_piles:
                 
                     if i not in completed_piles:
                 
