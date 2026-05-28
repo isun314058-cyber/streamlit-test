@@ -1455,9 +1455,9 @@ if mode == "🆕 新建預定進度表":
                     pile_positions = piles
         
                     try:
-                        day_font = ImageFont.truetype("arial.ttf", 16)
+                        day_font = ImageFont.truetype("arial.ttf", 18)
                     
-                        pile_font = ImageFont.truetype("arial.ttf", 22)
+                        pile_font = ImageFont.truetype("arial.ttf", 30)
                     
                         legend_font = ImageFont.truetype("arial.ttf", 20)
                     
@@ -1542,7 +1542,7 @@ if mode == "🆕 新建預定進度表":
                             pile_bbox = draw.textbbox(
                                 (0, 0),
                                 pile_text,
-                                font=day_font
+                                font=pile_font
                             )
                             
                             pile_width = pile_bbox[2] - pile_bbox[0]
@@ -1559,7 +1559,9 @@ if mode == "🆕 新建預定進度表":
                                 ),
                                 pile_text,
                                 fill="red",
-                                font=pile_font
+                                font=pile_font,
+                                stroke_width=1,
+                                stroke_fill="white"
                             )
         
                     legend_x = image.width + 28
