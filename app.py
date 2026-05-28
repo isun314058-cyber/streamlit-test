@@ -2071,7 +2071,7 @@ elif mode == "🛠️ 修正當前進度表":
                 st.dataframe(
                     mapping_df,
                     use_container_width=True,
-                    height=700
+                    height=420
                 )
             
                 st.success("✅ AI已完成原圖樁號對應")
