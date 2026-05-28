@@ -1490,7 +1490,7 @@ if mode == "🆕 新建預定進度表":
                     
                         pile_font = ImageFont.truetype(
                             "arial.ttf",
-                            40
+                            56
                         )
                     
                         legend_font = ImageFont.truetype(
@@ -1583,6 +1583,10 @@ if mode == "🆕 新建預定進度表":
                             # 不受圓大小影響
                             # =====================================
                             
+                            # =====================================
+                            # 樁號固定在圓正上方
+                            # =====================================
+                            
                             pile_text = str(pile_no)
                             
                             pile_bbox = draw.textbbox(
@@ -1592,11 +1596,12 @@ if mode == "🆕 新建預定進度表":
                             )
                             
                             pile_width = pile_bbox[2] - pile_bbox[0]
+                            pile_height = pile_bbox[3] - pile_bbox[1]
                             
                             pile_x = x - (pile_width // 2)
                             
-                            # 樁號固定高度
-                            pile_y = y - 25
+                            # 自動依字體大小調整高度
+                            pile_y = y - r - pile_height - 6
                             
                             draw.text(
                                 (
@@ -1605,8 +1610,8 @@ if mode == "🆕 新建預定進度表":
                                 ),
                                 pile_text,
                                 fill="red",
-                                font=day_font,
-                                stroke_width=1,
+                                font=pile_font,
+                                stroke_width=2,
                                 stroke_fill="white"
                             )
         
