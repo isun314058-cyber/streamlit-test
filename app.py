@@ -1687,72 +1687,126 @@ elif mode == "🛠️ 修正當前進度表":
         # ============================================
         # 畫框
         # ============================================
-
+        
         if len(st.session_state.repair_points) == 4:
-
+        
             pts = st.session_state.repair_points
-
-            draw.line(
-                [pts[0], pts[2]],
-                fill="lime",
+        
+            xs = [p[0] for p in pts]
+            ys = [p[1] for p in pts]
+        
+            x1 = min(xs)
+            y1 = min(ys)
+        
+            x2 = max(xs)
+            y2 = max(ys)
+        
+            draw.rectangle(
+                (
+                    x1,
+                    y1,
+                    x2,
+                    y2
+                ),
+                outline="lime",
                 width=5
             )
 
-            draw.line(
-                [pts[2], pts[3]],
-                fill="lime",
-                width=5
-            )
 
-            draw.line(
-                [pts[3], pts[1]],
-                fill="lime",
-                width=5
-            )
 
-            draw.line(
-                [pts[1], pts[0]],
-                fill="lime",
-                width=5
-            )
-
+       # ============================================
+        # 左右欄位
         # ============================================
-        # 點擊座標
+        
+        left_col, right_col = st.columns([5, 1.3])
+        
         # ============================================
-
-        value = streamlit_image_coordinates(
-            draw_img,
-            key="repair_roi"
-        )
-
+        # 左側圖面
+        # ============================================
+        
+        with left_col:
+        
+            value = streamlit_image_coordinates(
+                draw_img,
+                key="repair_roi"
+            )
+        
+        # ============================================
+        # 右側資訊
+        # ============================================
+        
+        with right_col:
+        
+            st.subheader("📍 點位資訊")
+        
+            if len(st.session_state.repair_points) == 0:
+        
+                st.info("尚未點選")
+        
+            else:
+        
+                point_names = [
+                    ("左上", "紅色"),
+                    ("左下", "藍色"),
+                    ("右上", "橘色"),
+                    ("右下", "綠色")
+                ]
+        
+                for idx, point in enumerate(
+                    st.session_state.repair_points
+                ):
+        
+                    name, color = point_names[idx]
+        
+                    st.markdown(
+                        f"""
+        {name}
+        
+        顏色：{color}
+        """
+                    )
+        
+            st.markdown("---")
+        
+            if len(st.session_state.repair_points) == 4:
+        
+                st.success("✅ 已完成施工區域")
+        
+            if st.button("🔄 重新選取"):
+        
+                st.session_state.repair_points = []
+        
+                st.session_state.repair_last_clicked = None
+        
+                st.rerun()
+        
         # ============================================
         # 點擊新增
         # ============================================
-
+        
         if value is not None:
-
-            x = value["x"]
-            y = value["y"]
-
-            point = (x, y)
-
-            if point not in st.session_state.repair_points:
-
-                if len(st.session_state.repair_points) < 4:
-
-                    st.session_state.repair_points.append(point)
-
-                    st.rerun()
-
-        # ============================================
-        # 重新選取
-        # ============================================
-
-        if st.button("🔄 重新選取施工區域"):
-
-            st.session_state.repair_points = []
-
-            st.rerun()
+        
+            clicked_point = (
+                value["x"],
+                value["y"]
+            )
+        
+            if (
+                st.session_state.repair_last_clicked
+                != clicked_point
+            ):
+        
+                st.session_state.repair_last_clicked = clicked_point
+        
+                if clicked_point not in st.session_state.repair_points:
+        
+                    if len(st.session_state.repair_points) < 4:
+        
+                        st.session_state.repair_points.append(
+                            clicked_point
+                        )
+        
+                        st.rerun()
 
         # ============================================
         # ROI完成 → AI辨識
