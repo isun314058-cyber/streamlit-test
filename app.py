@@ -1290,9 +1290,21 @@ if mode == "🆕 新建預定進度表":
         
                 draw = ImageDraw.Draw(result_img)
         
+                FONT_NAME = "DejaVuSans.ttf"
+                
                 try:
-                    font = ImageFont.truetype("arial.ttf", 22)
-                except:
+                
+                    font = ImageFont.truetype(
+                        FONT_NAME,
+                        24
+                    )
+                
+                    st.success("AI辨識結果字體載入成功")
+                
+                except Exception as e:
+                
+                    st.error(f"AI辨識結果字體失敗: {e}")
+                
                     font = ImageFont.load_default()
         
                 for idx, (x, y, r) in enumerate(piles):
@@ -1312,8 +1324,8 @@ if mode == "🆕 新建預定進度表":
         
                     draw.text(
                         (
-                            x + r + 5,
-                            y - r - 5
+                            x - 15,
+                            y - 55
                         ),
                         str(pile_no),
                         fill="red",
@@ -1487,12 +1499,12 @@ if mode == "🆕 新建預定進度表":
                     
                         day_font = ImageFont.truetype(
                             FONT_NAME,
-                            14
+                            10
                         )
                     
                         pile_font = ImageFont.truetype(
                             FONT_NAME,
-                            18
+                            14
                         )
                     
                         legend_font = ImageFont.truetype(
