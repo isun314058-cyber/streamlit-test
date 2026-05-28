@@ -1487,7 +1487,7 @@ if mode == "🆕 新建預定進度表":
                     
                         day_font = ImageFont.truetype(
                             FONT_NAME,
-                            40
+                            24
                         )
                     
                         pile_font = ImageFont.truetype(
@@ -1497,7 +1497,7 @@ if mode == "🆕 新建預定進度表":
                     
                         legend_font = ImageFont.truetype(
                             FONT_NAME,
-                            20
+                            40
                         )
                     
                         st.success("✅ 字型載入成功")
@@ -1682,7 +1682,7 @@ if mode == "🆕 新建預定進度表":
                     st.session_state.result_image = result_img
                     st.session_state.processed = True
         
-                    #st.rerun()
+                    st.rerun()
         
             # =====================================================
             # 顯示排程結果
