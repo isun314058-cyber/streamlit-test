@@ -1437,7 +1437,7 @@ if mode == "🆕 新建預定進度表":
         
                     st.session_state.schedule_df = df
         
-                    LEGEND_WIDTH = 320
+                    LEGEND_WIDTH = 200
         
                     new_width = image.width + LEGEND_WIDTH
                     new_height = image.height
@@ -1512,7 +1512,7 @@ if mode == "🆕 新建預定進度表":
                             day_x = x - (day_width // 2)
                             
                             # 日期往下移一點
-                            day_y = y + 18
+                            day_y = y + 12
                             
                             draw.text(
                                 (
