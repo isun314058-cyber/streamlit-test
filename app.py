@@ -1296,7 +1296,7 @@ if mode == "🆕 新建預定進度表":
                 
                     font = ImageFont.truetype(
                         FONT_NAME,
-                        24
+                        18
                     )
                 
                     st.success("AI辨識結果字體載入成功")
@@ -1325,7 +1325,7 @@ if mode == "🆕 新建預定進度表":
                     draw.text(
                         (
                             x - 15,
-                            y - 55
+                            y - 38
                         ),
                         str(pile_no),
                         fill="red",
