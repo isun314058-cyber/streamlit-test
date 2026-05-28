@@ -1322,12 +1322,24 @@ if mode == "🆕 新建預定進度表":
                         width=4
                     )
         
+                    pile_text = str(pile_no)
+
+                    pile_bbox = draw.textbbox(
+                        (0, 0),
+                        pile_text,
+                        font=font
+                    )
+                    
+                    pile_width = pile_bbox[2] - pile_bbox[0]
+                    
+                    pile_x = x - (pile_width // 2) + 1
+                    
                     draw.text(
                         (
-                            x - 15,
+                            pile_x,
                             y - 38
                         ),
-                        str(pile_no),
+                        pile_text,
                         fill="red",
                         font=font
                     )
@@ -1617,7 +1629,7 @@ if mode == "🆕 新建預定進度表":
                             pile_x = x - (pile_width // 2)
                             
                             # 自動依字體大小調整高度
-                            pile_y = y - r - pile_height - 6
+                            pile_y = y - r - pile_height - 3
                             
                             draw.text(
                                 (
