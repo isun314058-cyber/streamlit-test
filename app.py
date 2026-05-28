@@ -283,7 +283,7 @@ def detect_pile_numbers(image, piles):
 
     for idx, (x, y, r) in enumerate(piles):
 
-        OCR_SIZE = 100
+        OCR_SIZE = 45
         
         x1 = max(0, x - OCR_SIZE)
         y1 = max(0, y - OCR_SIZE)
@@ -307,7 +307,7 @@ def detect_pile_numbers(image, piles):
         
         _, gray_crop = cv2.threshold(
             gray_crop,
-            170,
+            210,
             255,
             cv2.THRESH_BINARY
         )
@@ -316,21 +316,28 @@ def detect_pile_numbers(image, piles):
             gray_crop,
             detail=0,
             paragraph=False,
+            allowlist='0123456789',
             batch_size=4
         )
 
         detected_no = ""
 
         for text in results:
-
+        
             text = text.strip()
-
+        
             text = ''.join(filter(str.isdigit, text))
-            
-            if text != "":
-            
-                detected_no = text
-                break
+        
+            # 只允許合理樁號
+            if text.isdigit():
+        
+                value = int(text)
+        
+                # 過濾異常值
+                if 1 <= value <= 300:
+        
+                    detected_no = value
+                    break
 
         mapping[idx + 1] = detected_no
 
@@ -2010,21 +2017,19 @@ elif mode == "🛠️ 修正當前進度表":
                     outline="red",
                     width=4
                 )
-
-                draw_result.text(
-                    (
-                        x+r+5,
-                        y-r-5
-                    ),
-                    str(pile_no),
-                    fill="red",
-                    font=font
+                
+            left_result, right_result = st.columns([2.2, 1])
+            
+            with left_result:
+            
+                st.image(
+                    result_img,
+                    width=900
                 )
-
-            st.image(
-                result_img,
-                width=900
-            )
+            
+            with right_result:
+            
+                st.subheader("🤖 AI自動辨識原圖樁號")
 
         # ============================================
         # 有辨識到樁體才往下
@@ -2035,11 +2040,7 @@ elif mode == "🛠️ 修正當前進度表":
             # ========================================
             # OCR 自動辨識原圖樁號
             # ========================================
-            
-            st.markdown("---")
-            
-            st.subheader("🤖 AI自動辨識原圖樁號")
-            
+         
             with st.spinner("AI正在辨識原圖樁號..."):
             
                 pile_mapping = detect_pile_numbers(
@@ -2065,12 +2066,15 @@ elif mode == "🛠️ 修正當前進度表":
                     f"⚠️ 有 {len(failed_ocr)} 支樁 OCR辨識失敗，請確認圖面清晰度"
                 )
             
-            st.dataframe(
-                mapping_df,
-                use_container_width=True
-            )
+            with right_result:
             
-            st.success("✅ AI已完成原圖樁號對應")
+                st.dataframe(
+                    mapping_df,
+                    use_container_width=True,
+                    height=700
+                )
+            
+                st.success("✅ AI已完成原圖樁號對應")
 
             # ========================================
             # 已完成施工輸入
@@ -2228,7 +2232,4 @@ elif mode == "🛠️ 修正當前進度表":
                     
                 new_df = pd.DataFrame(new_schedule)
 
-                st.dataframe(
-                    new_df,
-                    use_container_width=True
-                )
+
