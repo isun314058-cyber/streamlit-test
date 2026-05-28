@@ -1484,17 +1484,17 @@ if mode == "🆕 新建預定進度表":
                     try:
 
                         day_font = ImageFont.truetype(
-                            "arial.ttf",
+                            "DejaVuSans-Bold.ttf",
                             40
                         )
-                    
+                        
                         pile_font = ImageFont.truetype(
-                            "arial.ttf",
-                            180
+                            "DejaVuSans-Bold.ttf",
+                            90
                         )
-                    
+                        
                         legend_font = ImageFont.truetype(
-                            "arial.ttf",
+                            "DejaVuSans-Bold.ttf",
                             20
                         )
                     
