@@ -1463,7 +1463,7 @@ if mode == "🆕 新建預定進度表":
                     
                         pile_font = ImageFont.truetype(
                             "arial.ttf",
-                            50
+                            40
                         )
                     
                         legend_font = ImageFont.truetype(
@@ -1555,7 +1555,7 @@ if mode == "🆕 新建預定進度表":
                             pile_x = x - (pile_width // 2)
                             
                             # 樁號固定高度
-                            pile_y = y - 25
+                            pile_y = y - 48
                             
                             draw.text(
                                 (
@@ -1564,8 +1564,8 @@ if mode == "🆕 新建預定進度表":
                                 ),
                                 pile_text,
                                 fill="red",
-                                font=day_font,
-                                stroke_width=3,
+                                font=pile_font,
+                                stroke_width=1,
                                 stroke_fill="white"
                             )
         
