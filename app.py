@@ -1483,7 +1483,7 @@ if mode == "🆕 新建預定進度表":
         
                     try:
 
-                        FONT_NAME = "DejaVuSans-Bold.ttf"
+                        FONT_NAME = "DejaVuSans.ttf"
                     
                         day_font = ImageFont.truetype(
                             FONT_NAME,
@@ -1492,15 +1492,15 @@ if mode == "🆕 新建預定進度表":
                     
                         pile_font = ImageFont.truetype(
                             FONT_NAME,
-                            90
+                            70
                         )
-                    
-                        st.warning("✅ pile_font 已成功載入")
                     
                         legend_font = ImageFont.truetype(
                             FONT_NAME,
                             20
                         )
+                    
+                        st.success("✅ 字型載入成功")
                     
                     except Exception as e:
                     
