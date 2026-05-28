@@ -1981,7 +1981,7 @@ elif mode == "🛠️ 修正當前進度表":
         
             value = streamlit_image_coordinates(
                 draw_img,
-                key="repair_roi"
+                key=f"repair_roi_{st.session_state.repair_canvas_key}"
             )
         
         # ============================================
@@ -2026,12 +2026,14 @@ elif mode == "🛠️ 修正當前進度表":
                 st.success("✅ 已完成施工區域")
         
             if st.button("🔄 重新選取"):
-            
+
                 st.session_state.repair_points = []
             
                 st.session_state.repair_last_clicked = None
             
                 st.session_state.repair_piles = []
+            
+                st.session_state.repair_canvas_key += 1
             
                 st.rerun()
         
