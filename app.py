@@ -327,9 +327,9 @@ def detect_pile_numbers(image, piles):
 
     for idx, (x, y, r) in enumerate(piles):
 
-        OCR_WIDTH = 70
-        OCR_TOP = 60
-        OCR_BOTTOM = 12
+        OCR_WIDTH = 85
+        OCR_TOP = 95
+        OCR_BOTTOM = 20
         
         x1 = max(0, x - OCR_WIDTH)
         x2 = min(img.shape[1], x + OCR_WIDTH)
@@ -352,8 +352,8 @@ def detect_pile_numbers(image, piles):
         gray_crop = cv2.resize(
             gray_crop,
             None,
-            fx=3,
-            fy=3,
+            fx=5,
+            fy=5,
             interpolation=cv2.INTER_CUBIC
         )
         
@@ -367,7 +367,7 @@ def detect_pile_numbers(image, piles):
         # 避免抓到 D1 D2
         h, w = gray_crop.shape
         
-        gray_crop = gray_crop[0:int(h * 0.72), :]
+        gray_crop = gray_crop[0:int(h * 0.88), :]
 
         results = reader.readtext(
             gray_crop,
