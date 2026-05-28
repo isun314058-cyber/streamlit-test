@@ -1437,7 +1437,7 @@ if mode == "🆕 新建預定進度表":
         
                     st.session_state.schedule_df = df
         
-                    LEGEND_WIDTH = 200
+                    LEGEND_WIDTH = 120
         
                     new_width = image.width + LEGEND_WIDTH
                     new_height = image.height
@@ -1512,7 +1512,7 @@ if mode == "🆕 新建預定進度表":
                             day_x = x - (day_width // 2)
                             
                             # 日期往下移一點
-                            day_y = y + 12
+                            day_y = y + 18
                             
                             draw.text(
                                 (
@@ -1567,13 +1567,13 @@ if mode == "🆕 新建預定進度表":
                         font=legend_font
                     )
         
-                    legend_height = (len(df) * 32) + 50
+                    legend_height = (len(df) * 32) + 10
         
                     draw.rectangle(
                         (
                             legend_x - 20,
                             legend_y - 10,
-                            legend_x + 220,
+                            legend_x + 120,
                             legend_y + legend_height
                         ),
                         outline="black",
