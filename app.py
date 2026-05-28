@@ -1487,17 +1487,17 @@ if mode == "🆕 新建預定進度表":
                     
                         day_font = ImageFont.truetype(
                             FONT_NAME,
-                            24
+                            18
                         )
                     
                         pile_font = ImageFont.truetype(
                             FONT_NAME,
-                            70
+                            28
                         )
                     
                         legend_font = ImageFont.truetype(
                             FONT_NAME,
-                            40
+                            28
                         )
                     
                         st.success("✅ 字型載入成功")
