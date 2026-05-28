@@ -1534,15 +1534,20 @@ if mode == "🆕 新建預定進度表":
                             # 日期往下移一點
                             day_y = y + 18
                             
-                            draw.text(
-                                (
-                                    day_x,
-                                    day_y
-                                ),
-                                day_text,
-                                fill="black",
-                                font=day_font
+                            cv_img = np.array(result_img)
+                            
+                            cv2.putText(
+                                cv_img,
+                                pile_text,
+                                (int(pile_x), int(pile_y)),
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                1.8,
+                                (255, 0, 0),
+                                2,
+                                cv2.LINE_AA
                             )
+                            
+                            result_img = Image.fromarray(cv_img)
                             
                             # =====================================
                             # 樁號固定在圓正上方
