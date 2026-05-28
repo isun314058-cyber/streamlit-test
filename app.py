@@ -2167,7 +2167,7 @@ elif mode == "🛠️ 修正當前進度表":
             scale_x = result_img.width / display_result.width
             scale_y = result_img.height / display_result.height
 
-            draw_result = ImageDraw.Draw(result_img)
+            draw_result = ImageDraw.Draw(display_result)
 
             try:
 
