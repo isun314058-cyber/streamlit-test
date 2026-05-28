@@ -12,6 +12,7 @@ import math
 import random
 import io
 import cv2
+import easyocr
 import math
 import random
 
@@ -258,6 +259,65 @@ def detect_piles(pil_image, roi=None):
         positions = final_sorted
 
     return positions
+    
+# =====================================================
+# OCR 自動辨識原圖樁號
+# =====================================================
+
+reader = easyocr.Reader(
+    ['en', 'ch_tra'],
+    gpu=False
+)
+
+def detect_pile_numbers(image, piles):
+
+    img = np.array(image)
+
+    mapping = {}
+
+    for idx, (x, y, r) in enumerate(piles):
+
+        OCR_SIZE = 70
+        
+        x1 = max(0, x - OCR_SIZE)
+        y1 = max(0, y - OCR_SIZE)
+        
+        x2 = min(img.shape[1], x + OCR_SIZE)
+        y2 = min(img.shape[0], y + OCR_SIZE)
+
+        crop = img[y1:y2, x1:x2]
+
+        gray_crop = cv2.cvtColor(
+            crop,
+            cv2.COLOR_RGB2GRAY
+        )
+        
+        _, gray_crop = cv2.threshold(
+            gray_crop,
+            180,
+            255,
+            cv2.THRESH_BINARY
+        )
+
+        results = reader.readtext(
+            gray_crop,
+            detail=0
+        )
+
+        detected_no = ""
+
+        for text in results:
+
+            text = text.strip()
+
+            if text.isdigit():
+
+                detected_no = text
+                break
+
+        mapping[idx + 1] = detected_no
+
+    return mapping
 
 # =====================================================
 # 智慧避鄰排程
@@ -1750,7 +1810,7 @@ elif mode == "🛠️ 修正當前進度表":
 
 
 
-       # ============================================
+        # ============================================
         # 左右欄位
         # ============================================
         
@@ -1923,7 +1983,7 @@ elif mode == "🛠️ 修正當前進度表":
 
             st.image(
                 result_img,
-                width=900
+                use_container_width=True
             )
 
         # ============================================
@@ -1933,31 +1993,44 @@ elif mode == "🛠️ 修正當前進度表":
         if len(piles) > 0:
 
             # ========================================
-            # 原圖樁號對應
+            # OCR 自動辨識原圖樁號
             # ========================================
-
+            
             st.markdown("---")
+            
+            st.subheader("🤖 AI自動辨識原圖樁號")
+            
+            with st.spinner("AI正在辨識原圖樁號..."):
+            
+                pile_mapping = detect_pile_numbers(
+                    image,
+                    piles
+                )
+            
+            mapping_df = pd.DataFrame({
+            
+                "AI辨識樁號": list(pile_mapping.keys()),
+            
+                "原圖樁號": list(pile_mapping.values())
+            
+            })
 
-            st.subheader("🔢 原圖樁號對應")
-
-            st.info(
-                "請輸入 AI辨識樁號 對應 原圖樁號"
+            failed_ocr = mapping_df[
+                mapping_df["原圖樁號"] == ""
+            ]
+            
+            if len(failed_ocr) > 0:
+            
+                st.warning(
+                    f"⚠️ 有 {len(failed_ocr)} 支樁 OCR辨識失敗，請確認圖面清晰度"
+                )
+            
+            st.dataframe(
+                mapping_df,
+                use_container_width=True
             )
-
-            mapping_data = []
-
-            cols = st.columns(4)
-
-            for idx in range(total_piles):
-
-                with cols[idx % 4]:
-
-                    original_no = st.text_input(
-                        f"AI樁號 {idx+1}",
-                        key=f"map_{idx}"
-                    )
-
-                    mapping_data.append(original_no)
+            
+            st.success("✅ AI已完成原圖樁號對應")
 
             # ========================================
             # 已完成施工輸入
@@ -2008,13 +2081,13 @@ elif mode == "🛠️ 修正當前進度表":
                 use_container_width=True
             ):
 
-                pile_mapping = {}
+                reverse_mapping = {}
 
-                for idx, val in enumerate(mapping_data):
-
-                    if val.strip().isdigit():
-
-                        pile_mapping[int(val)] = idx + 1
+                for ai_no, original_no in pile_mapping.items():
+                
+                    if str(original_no).isdigit():
+                
+                        reverse_mapping[int(original_no)] = ai_no
 
                 completed_piles = []
 
@@ -2028,10 +2101,10 @@ elif mode == "🛠️ 修正當前進度表":
 
                             original_no = int(x)
 
-                            if original_no in pile_mapping:
+                            if original_no in reverse_mapping:
 
                                 completed_piles.append(
-                                    pile_mapping[original_no]
+                                    reverse_mapping[original_no]
                                 )
 
                 remaining_piles = []
@@ -2042,13 +2115,28 @@ elif mode == "🛠️ 修正當前進度表":
 
                         remaining_piles.append(i)
 
-                remaining_positions = []
-
+                remaining_data = []
+                
                 for pile_no in remaining_piles:
-
-                    remaining_positions.append(
-                        piles[pile_no - 1]
-                    )
+                
+                    remaining_data.append({
+                    
+                        "original_no": int(
+                            pile_mapping[pile_no]
+                        ) if str(
+                            pile_mapping[pile_no]
+                        ).isdigit() else pile_no,
+                    
+                        "position": piles[pile_no - 1]
+                    
+                    })
+                
+                remaining_positions = [
+                
+                    x["position"]
+                
+                    for x in remaining_data
+                ]
 
                 with st.spinner(
                     "🤖 AI正在重新分析後續施工..."
@@ -2076,6 +2164,25 @@ elif mode == "🛠️ 修正當前進度表":
                     "✅ AI已完成後續最佳化排程"
                 )
 
+                # ============================================
+                # AI樁號 轉回 原圖樁號
+                # ============================================
+                
+                new_no_mapping = {}
+                
+                for idx, data in enumerate(remaining_data):
+                
+                    new_no_mapping[idx + 1] = data["original_no"]
+                
+                for row in new_schedule:
+                
+                    row["施工樁號"] = [
+                
+                        new_no_mapping[p]
+                
+                        for p in row["施工樁號"]
+                    ]
+                    
                 new_df = pd.DataFrame(new_schedule)
 
                 st.dataframe(
