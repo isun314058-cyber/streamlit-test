@@ -1615,9 +1615,19 @@ elif mode == "🛠️ 修正當前進度表":
 
     if uploaded_file:
 
+        piles = []
+
         st.markdown("---")
 
         st.subheader("🛠️ 修正當前施工進度")
+
+        # ============================================
+        # 初始化
+        # ============================================
+
+        if "repair_points" not in st.session_state:
+
+            st.session_state.repair_points = []
 
         # ============================================
         # 讀取圖面
@@ -1641,360 +1651,344 @@ elif mode == "🛠️ 修正當前進度表":
             ).convert("RGB")
 
         # ============================================
-        # 框選施工區域
+        # 顯示圖面
         # ============================================
-        
-        st.markdown("---")
-        
-        st.subheader("✏️ 框選施工區域")
-        
-        st.markdown("### ✏️ 點選順序")
-        
-        st.markdown("""
-        🔴 左上　　
-        🔵 左下　　
-        🟠 右上　　
-        🟢 右下
-        """)
-        
+
         display_img = image.copy()
-        
+
         display_img.thumbnail((1200, 1200))
-        
-        value = streamlit_image_coordinates(
-            display_img,
-            key="repair_roi"
-        )
-        
-        # 初始化
-        if "repair_points" not in st.session_state:
-        
-            st.session_state.repair_points = []
-        
-        # 點擊新增
-        if value is not None:
-        
-            x = value["x"]
-            y = value["y"]
-        
-            point = (x, y)
-        
-            if point not in st.session_state.repair_points:
-        
-                if len(st.session_state.repair_points) < 4:
-        
-                    st.session_state.repair_points.append(point)
-        
-        # 顏色
+
+        draw_img = display_img.copy()
+
+        draw = ImageDraw.Draw(draw_img)
+
         point_colors = [
             "red",
             "blue",
             "orange",
-            "green"
+            "lime"
         ]
-        
-        # 畫圖
-        draw_img = display_img.copy()
-        
-        draw = ImageDraw.Draw(draw_img)
-        
-        for idx, point in enumerate(st.session_state.repair_points):
-        
+
+        # ============================================
+        # 畫點
+        # ============================================
+
+        for idx, point in enumerate(
+            st.session_state.repair_points
+        ):
+
             x, y = point
-        
+
             draw.ellipse(
                 (x-8, y-8, x+8, y+8),
                 fill=point_colors[idx]
             )
-        
+
+        # ============================================
         # 畫框
+        # ============================================
+
         if len(st.session_state.repair_points) == 4:
-        
+
             pts = st.session_state.repair_points
-        
-            draw.line([pts[0], pts[2]], fill="lime", width=5)
-            draw.line([pts[2], pts[3]], fill="lime", width=5)
-            draw.line([pts[3], pts[1]], fill="lime", width=5)
-            draw.line([pts[1], pts[0]], fill="lime", width=5)
-        
-        st.image(draw_img, width=1000)
-        
+
+            draw.line(
+                [pts[0], pts[2]],
+                fill="lime",
+                width=5
+            )
+
+            draw.line(
+                [pts[2], pts[3]],
+                fill="lime",
+                width=5
+            )
+
+            draw.line(
+                [pts[3], pts[1]],
+                fill="lime",
+                width=5
+            )
+
+            draw.line(
+                [pts[1], pts[0]],
+                fill="lime",
+                width=5
+            )
+
+        # ============================================
+        # 點擊座標
+        # ============================================
+
+        value = streamlit_image_coordinates(
+            draw_img,
+            key="repair_roi"
+        )
+
+        # ============================================
+        # 點擊新增
+        # ============================================
+
+        if value is not None:
+
+            x = value["x"]
+            y = value["y"]
+
+            point = (x, y)
+
+            if point not in st.session_state.repair_points:
+
+                if len(st.session_state.repair_points) < 4:
+
+                    st.session_state.repair_points.append(point)
+
+                    st.rerun()
+
+        # ============================================
         # 重新選取
+        # ============================================
+
         if st.button("🔄 重新選取施工區域"):
-        
+
             st.session_state.repair_points = []
-        
+
             st.rerun()
-        
+
         # ============================================
-        # ROI完成
+        # ROI完成 → AI辨識
         # ============================================
-        
+
         if len(st.session_state.repair_points) == 4:
-        
-            st.success("✅ 已完成施工區域框選")
-        
+
             pts = st.session_state.repair_points
-        
-            x1 = min(
-                pts[0][0],
-                pts[1][0]
-            )
-        
-            y1 = min(
-                pts[0][1],
-                pts[2][1]
-            )
-        
-            x2 = max(
-                pts[2][0],
-                pts[3][0]
-            )
-        
-            y2 = max(
-                pts[1][1],
-                pts[3][1]
-            )
-        
+
+            x1 = min(pts[0][0], pts[1][0])
+            y1 = min(pts[0][1], pts[2][1])
+
+            x2 = max(pts[2][0], pts[3][0])
+            y2 = max(pts[1][1], pts[3][1])
+
             roi = (
                 int(x1),
                 int(y1),
                 int(x2),
                 int(y2)
             )
-        
-            # ========================================
-            # AI辨識樁位
-            # ========================================
-        
+
+            # AI辨識
             piles = detect_piles(
                 image,
                 roi
             )
-        
+
             total_piles = len(piles)
-        
+
             st.success(
                 f"✅ AI辨識到 {total_piles} 支樁體"
             )
 
-        # ============================================
-        # 顯示辨識結果
-        # ============================================
+            # ========================================
+            # 顯示辨識結果
+            # ========================================
 
-        result_img = image.copy()
+            result_img = image.copy()
 
-        draw = ImageDraw.Draw(result_img)
+            draw_result = ImageDraw.Draw(result_img)
 
-        try:
-            font = ImageFont.truetype(
-                "arial.ttf",
-                20
-            )
-        except:
-            font = ImageFont.load_default()
+            try:
 
-        for idx, (x, y, r) in enumerate(piles):
-
-            pile_no = idx + 1
-
-            draw.ellipse(
-                (
-                    x-r,
-                    y-r,
-                    x+r,
-                    y+r
-                ),
-                outline="red",
-                width=4
-            )
-
-            draw.text(
-                (
-                    x+r+5,
-                    y-r-5
-                ),
-                str(pile_no),
-                fill="red",
-                font=font
-            )
-
-        st.image(
-            result_img,
-            width=900
-        )
-
-        # ============================================
-        # 原圖樁號對應
-        # ============================================
-
-        st.markdown("---")
-
-        st.subheader("🔢 原圖樁號對應")
-
-        st.info(
-            "請輸入 AI辨識樁號 對應 原圖樁號"
-        )
-
-        mapping_data = []
-
-        cols = st.columns(4)
-
-        for idx in range(total_piles):
-
-            with cols[idx % 4]:
-
-                original_no = st.text_input(
-                    f"AI樁號 {idx+1}",
-                    key=f"map_{idx}"
+                font = ImageFont.truetype(
+                    "arial.ttf",
+                    20
                 )
 
-                mapping_data.append(original_no)
+            except:
 
-        # ============================================
-        # 已完成施工輸入
-        # ============================================
+                font = ImageFont.load_default()
 
-        st.markdown("---")
+            for idx, (x, y, r) in enumerate(piles):
 
-        st.subheader("✅ 已完成施工")
+                pile_no = idx + 1
 
-        completed_text = st.text_area(
+                draw_result.ellipse(
+                    (
+                        x-r,
+                        y-r,
+                        x+r,
+                        y+r
+                    ),
+                    outline="red",
+                    width=4
+                )
 
-            "輸入已完成樁號（原圖樁號）",
+                draw_result.text(
+                    (
+                        x+r+5,
+                        y-r-5
+                    ),
+                    str(pile_no),
+                    fill="red",
+                    font=font
+                )
 
-            placeholder="例如：35,36,40"
-
-        )
-
-        # ============================================
-        # 修正施工條件
-        # ============================================
-
-        st.markdown("---")
-
-        st.subheader("📅 修正施工條件")
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-
-            start_date = st.date_input(
-                "後續施工開始日期"
-            )
-
-        with col2:
-
-            daily_count = st.number_input(
-                "修正後每日施工支數",
-                min_value=1,
-                value=10
+            st.image(
+                result_img,
+                width=900
             )
 
         # ============================================
-        # AI重新分析
+        # 有辨識到樁體才往下
         # ============================================
 
-        if st.button(
-            "🧠 AI重新分析後續排程",
-            use_container_width=True
-        ):
+        if len(piles) > 0:
 
             # ========================================
-            # 建立 mapping
+            # 原圖樁號對應
             # ========================================
 
-            pile_mapping = {}
+            st.markdown("---")
 
-            for idx, val in enumerate(mapping_data):
+            st.subheader("🔢 原圖樁號對應")
 
-                if val.strip().isdigit():
+            st.info(
+                "請輸入 AI辨識樁號 對應 原圖樁號"
+            )
 
-                    pile_mapping[int(val)] = idx + 1
+            mapping_data = []
 
-            # ========================================
-            # 已完成轉換
-            # ========================================
+            cols = st.columns(4)
 
-            completed_piles = []
+            for idx in range(total_piles):
 
-            if completed_text.strip():
+                with cols[idx % 4]:
 
-                for x in completed_text.split(","):
+                    original_no = st.text_input(
+                        f"AI樁號 {idx+1}",
+                        key=f"map_{idx}"
+                    )
 
-                    x = x.strip()
-
-                    if x.isdigit():
-
-                        original_no = int(x)
-
-                        if original_no in pile_mapping:
-
-                            completed_piles.append(
-                                pile_mapping[original_no]
-                            )
+                    mapping_data.append(original_no)
 
             # ========================================
-            # 剩餘樁
+            # 已完成施工輸入
             # ========================================
 
-            remaining_piles = []
+            st.markdown("---")
 
-            for i in range(1, total_piles + 1):
+            st.subheader("✅ 已完成施工")
 
-                if i not in completed_piles:
+            completed_text = st.text_area(
 
-                    remaining_piles.append(i)
+                "輸入已完成樁號（原圖樁號）",
+
+                placeholder="例如：35,36,40"
+
+            )
 
             # ========================================
-            # 建立剩餘 pile_positions
+            # 修正施工條件
             # ========================================
 
-            remaining_positions = []
+            st.markdown("---")
 
-            for pile_no in remaining_piles:
+            st.subheader("📅 修正施工條件")
 
-                remaining_positions.append(
-                    piles[pile_no - 1]
+            col1, col2 = st.columns(2)
+
+            with col1:
+
+                start_date = st.date_input(
+                    "後續施工開始日期"
+                )
+
+            with col2:
+
+                daily_count = st.number_input(
+                    "修正後每日施工支數",
+                    min_value=1,
+                    value=10
                 )
 
             # ========================================
-            # AI重新排程
+            # AI重新分析
             # ========================================
 
-            with st.spinner(
-                "🤖 AI正在重新分析後續施工..."
+            if st.button(
+                "🧠 AI重新分析後續排程",
+                use_container_width=True
             ):
 
-                new_schedule = create_schedule(
+                pile_mapping = {}
 
-                    pile_positions=remaining_positions,
+                for idx, val in enumerate(mapping_data):
 
-                    total_piles=len(
-                        remaining_positions
-                    ),
+                    if val.strip().isdigit():
 
-                    daily_count=daily_count,
+                        pile_mapping[int(val)] = idx + 1
 
-                    start_date=start_date,
+                completed_piles = []
 
-                    start_no=1,
+                if completed_text.strip():
 
-                    cooldown_days=1
+                    for x in completed_text.split(","):
 
+                        x = x.strip()
+
+                        if x.isdigit():
+
+                            original_no = int(x)
+
+                            if original_no in pile_mapping:
+
+                                completed_piles.append(
+                                    pile_mapping[original_no]
+                                )
+
+                remaining_piles = []
+
+                for i in range(1, total_piles + 1):
+
+                    if i not in completed_piles:
+
+                        remaining_piles.append(i)
+
+                remaining_positions = []
+
+                for pile_no in remaining_piles:
+
+                    remaining_positions.append(
+                        piles[pile_no - 1]
+                    )
+
+                with st.spinner(
+                    "🤖 AI正在重新分析後續施工..."
+                ):
+
+                    new_schedule = create_schedule(
+
+                        pile_positions=remaining_positions,
+
+                        total_piles=len(
+                            remaining_positions
+                        ),
+
+                        daily_count=daily_count,
+
+                        start_date=start_date,
+
+                        start_no=1,
+
+                        cooldown_days=1
+
+                    )
+
+                st.success(
+                    "✅ AI已完成後續最佳化排程"
                 )
 
-            st.success(
-                "✅ AI已完成後續最佳化排程"
-            )
+                new_df = pd.DataFrame(new_schedule)
 
-            # ========================================
-            # 顯示結果
-            # ========================================
-
-            new_df = pd.DataFrame(new_schedule)
-
-            st.dataframe(
-                new_df,
-                use_container_width=True
-            )
+                st.dataframe(
+                    new_df,
+                    use_container_width=True
+                )
