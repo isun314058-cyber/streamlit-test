@@ -316,7 +316,7 @@ def detect_pile_numbers(image, piles):
             gray_crop,
             detail=0,
             paragraph=False,
-            allowlist='0123456789',
+            allowlist='D0123456789',
             batch_size=4
         )
 
@@ -326,18 +326,36 @@ def detect_pile_numbers(image, piles):
         
             text = text.strip()
         
+            # ========================================
+            # 過濾 D1 D2 D3 類型
+            # ========================================
+        
+            if text.upper().startswith("D"):
+                continue
+        
+            # ========================================
+            # 只保留數字
+            # ========================================
+        
             text = ''.join(filter(str.isdigit, text))
         
-            # 只允許合理樁號
-            if text.isdigit():
+            # ========================================
+            # 必須是數字
+            # ========================================
         
-                value = int(text)
+            if not text.isdigit():
+                continue
         
-                # 過濾異常值
-                if 1 <= value <= 300:
+            value = int(text)
         
-                    detected_no = value
-                    break
+            # ========================================
+            # 限制合理樁號
+            # ========================================
+        
+            if 1 <= value <= 300:
+        
+                detected_no = value
+                break
 
         mapping[idx + 1] = detected_no
 
@@ -2048,13 +2066,71 @@ elif mode == "🛠️ 修正當前進度表":
                     st.session_state.repair_piles
                 )
             
-            mapping_df = pd.DataFrame({
+            mapping_rows = []
             
-                "AI辨識樁號": list(pile_mapping.keys()),
+            for ai_no, original_no in pile_mapping.items():
             
-                "原圖樁號": list(pile_mapping.values())
+                # =========================
+                # 預設正常
+                # =========================
             
-            })
+                status = "✅ 正常"
+            
+                # =========================
+                # 空白
+                # =========================
+            
+                if (
+                    original_no == ""
+                    or
+                    original_no is None
+                ):
+            
+                    status = "❌ OCR失敗"
+            
+                # =========================
+                # 非數字
+                # =========================
+            
+                elif not str(original_no).isdigit():
+            
+                    status = "⚠️ 非數字"
+            
+                else:
+            
+                    value = int(original_no)
+            
+                    # =========================
+                    # 超出合理範圍
+                    # =========================
+            
+                    if (
+                        value < 1
+                        or
+                        value > total_piles
+                    ):
+            
+                        status = "⚠️ 超出範圍"
+            
+                    # =========================
+                    # 與AI排序差距過大
+                    # =========================
+            
+                    elif abs(ai_no - value) > 3:
+            
+                        status = "⚠️ 疑似錯誤"
+            
+                mapping_rows.append({
+            
+                    "AI辨識樁號": ai_no,
+            
+                    "原圖樁號": original_no,
+            
+                    "錯誤標記": status
+            
+                })
+            
+            mapping_df = pd.DataFrame(mapping_rows)
 
             failed_ocr = mapping_df[
                 mapping_df["原圖樁號"] == ""
