@@ -200,9 +200,9 @@ def detect_piles(pil_image, roi=None):
         dp=1.2,
         minDist=25,
         param1=80,
-        param2=16,
-        minRadius=8,
-        maxRadius=22
+        param2=24,
+        minRadius=10,
+        maxRadius=18
     )
 
     positions = []
@@ -214,6 +214,10 @@ def detect_piles(pil_image, roi=None):
         filtered = []
 
         for (x, y, r) in circles:
+            circle_area = math.pi * (r ** 2)
+            
+            if circle_area < 250:
+                continue
 
             if roi:
                 x += x1
@@ -336,6 +340,10 @@ def detect_pile_numbers(image, piles):
 
         crop = img[y1:y2, x1:x2]
 
+        if crop.size == 0:
+            mapping[idx + 1] = ""
+            continue
+
         gray_crop = cv2.cvtColor(
             crop,
             cv2.COLOR_RGB2GRAY
@@ -355,6 +363,11 @@ def detect_pile_numbers(image, piles):
             255,
             cv2.THRESH_BINARY + cv2.THRESH_OTSU
         )
+        
+        # 避免抓到 D1 D2
+        h, w = gray_crop.shape
+        
+        gray_crop = gray_crop[0:int(h * 0.72), :]
 
         results = reader.readtext(
             gray_crop,
@@ -2125,11 +2138,14 @@ elif mode == "🛠️ 修正當前進度表":
 
             pts = st.session_state.repair_points
 
-            x1 = min(pts[0][0], pts[1][0])
-            y1 = min(pts[0][1], pts[2][1])
-
-            x2 = max(pts[2][0], pts[3][0])
-            y2 = max(pts[1][1], pts[3][1])
+            xs = [p[0] for p in pts]
+            ys = [p[1] for p in pts]
+            
+            x1 = min(xs)
+            y1 = min(ys)
+            
+            x2 = max(xs)
+            y2 = max(ys)
 
             roi = (
                 int(x1 * scale_x),
@@ -2138,13 +2154,20 @@ elif mode == "🛠️ 修正當前進度表":
                 int(y2 * scale_y)
             )
 
-            # AI辨識
-            piles = detect_piles(
-                image,
-                roi
-            )
+            # AI辨識（只執行一次）
+
+            if len(st.session_state.repair_piles) == 0:
             
-            st.session_state.repair_piles = piles
+                piles = detect_piles(
+                    image,
+                    roi
+                )
+            
+                st.session_state.repair_piles = piles
+            
+            else:
+            
+                piles = st.session_state.repair_piles
 
             total_piles = len(piles)
 
@@ -2181,6 +2204,10 @@ elif mode == "🛠️ 修正當前進度表":
                 font = ImageFont.load_default()
 
             for idx, (x, y, r) in enumerate(piles):
+            
+                x = int(x / scale_x)
+                y = int(y / scale_y)
+                r = int(r / scale_x)
             
                 pile_no = idx + 1
             
