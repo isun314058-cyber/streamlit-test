@@ -1455,22 +1455,25 @@ if mode == "🆕 新建預定進度表":
                     pile_positions = piles
         
                     try:
-                            day_font = ImageFont.truetype(
-                                "msjh.ttc",
-                                18
-                            )
-                        
-                            pile_font = ImageFont.truetype(
-                                "msjh.ttc",
-                                80
-                            )
-                        
-                            legend_font = ImageFont.truetype(
-                                "msjh.ttc",
-                                20
-                            )
+
+                        day_font = ImageFont.truetype(
+                            "arial.ttf",
+                            18
+                        )
+                    
+                        pile_font = ImageFont.truetype(
+                            "arial.ttf",
+                            50
+                        )
+                    
+                        legend_font = ImageFont.truetype(
+                            "arial.ttf",
+                            20
+                        )
                     
                     except:
+                    
+                        st.error("字型載入失敗")
                     
                         day_font = ImageFont.load_default()
                     
