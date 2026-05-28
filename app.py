@@ -1437,7 +1437,7 @@ if mode == "🆕 新建預定進度表":
         
                     st.session_state.schedule_df = df
         
-                    LEGEND_WIDTH = 120
+                    LEGEND_WIDTH = 115
         
                     new_width = image.width + LEGEND_WIDTH
                     new_height = image.height
@@ -1456,9 +1456,17 @@ if mode == "🆕 新建預定進度表":
         
                     try:
                         day_font = ImageFont.truetype("arial.ttf", 16)
+                    
+                        pile_font = ImageFont.truetype("arial.ttf", 22)
+                    
                         legend_font = ImageFont.truetype("arial.ttf", 20)
+                    
                     except:
+                    
                         day_font = ImageFont.load_default()
+                    
+                        pile_font = ImageFont.load_default()
+                    
                         legend_font = ImageFont.load_default()
         
                     for i, row in df.iterrows():
@@ -1554,7 +1562,7 @@ if mode == "🆕 新建預定進度表":
                                 font=day_font
                             )
         
-                    legend_x = image.width + 40
+                    legend_x = image.width + 8
                     legend_y = 80
         
                     draw.text(
@@ -1573,7 +1581,7 @@ if mode == "🆕 新建預定進度表":
                         (
                             legend_x - 20,
                             legend_y - 10,
-                            legend_x + 120,
+                            legend_x + 92,
                             legend_y + legend_height
                         ),
                         outline="black",
