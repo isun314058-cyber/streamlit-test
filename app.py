@@ -1462,7 +1462,7 @@ if mode == "🆕 新建預定進度表":
                         
                             pile_font = ImageFont.truetype(
                                 "msjh.ttc",
-                                50
+                                80
                             )
                         
                             legend_font = ImageFont.truetype(
@@ -1569,7 +1569,7 @@ if mode == "🆕 新建預定進度表":
                                 pile_text,
                                 fill="red",
                                 font=pile_font,
-                                stroke_width=1,
+                                stroke_width=3,
                                 stroke_fill="white"
                             )
         
