@@ -1832,12 +1832,15 @@ elif mode == "🛠️ 修正當前進度表":
     # ============================================
     
     if "repair_mode_init" not in st.session_state:
-    
+
         st.session_state.repair_points = []
     
         st.session_state.repair_last_clicked = None
         
         st.session_state.repair_piles = []
+    
+        # 新增這行
+        st.session_state.repair_canvas_key = 0
     
         st.session_state.repair_mode_init = True
     
