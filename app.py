@@ -1492,7 +1492,7 @@ if mode == "🆕 新建預定進度表":
                     
                         pile_font = ImageFont.truetype(
                             FONT_NAME,
-                            20
+                            18
                         )
                     
                         legend_font = ImageFont.truetype(
