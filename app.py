@@ -1497,22 +1497,59 @@ if mode == "🆕 新建預定進度表":
                                 width=1
                             )
         
+                            # =====================================
+                            # 日期固定在圓下方
+                            # =====================================
+                            
+                            day_bbox = draw.textbbox(
+                                (0, 0),
+                                day_text,
+                                font=day_font
+                            )
+                            
+                            day_width = day_bbox[2] - day_bbox[0]
+                            
+                            day_x = x - (day_width // 2)
+                            
+                            # 日期往下移一點
+                            day_y = y + 18
+                            
                             draw.text(
                                 (
-                                    x - 10,
-                                    y + rr + 5
+                                    day_x,
+                                    day_y
                                 ),
                                 day_text,
                                 fill="black",
                                 font=day_font
                             )
-        
+                            
+                            # =====================================
+                            # 樁號固定在圓正上方
+                            # 不受圓大小影響
+                            # =====================================
+                            
+                            pile_text = str(pile_no)
+                            
+                            pile_bbox = draw.textbbox(
+                                (0, 0),
+                                pile_text,
+                                font=day_font
+                            )
+                            
+                            pile_width = pile_bbox[2] - pile_bbox[0]
+                            
+                            pile_x = x - (pile_width // 2)
+                            
+                            # 樁號固定高度
+                            pile_y = y - 30
+                            
                             draw.text(
                                 (
-                                    x - 8,
-                                    y - rr - 18
+                                    pile_x,
+                                    pile_y
                                 ),
-                                str(pile_no),
+                                pile_text,
                                 fill="red",
                                 font=day_font
                             )
