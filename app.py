@@ -1612,8 +1612,42 @@ if mode == "🆕 新建預定進度表":
                             use_container_width=True
                         )
 elif mode == "🛠️ 修正當前進度表":
-
+    # ============================================
+    # 初始化修正模式
+    # ============================================
+    
+    if "repair_mode_init" not in st.session_state:
+    
+        st.session_state.repair_points = []
+    
+        st.session_state.repair_last_clicked = None
+    
+        st.session_state.repair_mode_init = True
+    
+    # ============================================
+    # 上傳圖面
+    # ============================================
+    
     if uploaded_file:
+        current_file_name = uploaded_file.name
+    
+        if (
+            "repair_current_file"
+            not in st.session_state
+        ):
+    
+            st.session_state.repair_current_file = current_file_name
+    
+        elif (
+            st.session_state.repair_current_file
+            != current_file_name
+        ):
+    
+            st.session_state.repair_points = []
+    
+            st.session_state.repair_last_clicked = None
+    
+            st.session_state.repair_current_file = current_file_name
 
         piles = []
 
@@ -1657,6 +1691,8 @@ elif mode == "🛠️ 修正當前進度表":
         display_img = image.copy()
 
         display_img.thumbnail((1200, 1200))
+        scale_x = image.width / display_img.width
+        scale_y = image.height / display_img.height
 
         draw_img = display_img.copy()
 
@@ -1823,10 +1859,10 @@ elif mode == "🛠️ 修正當前進度表":
             y2 = max(pts[1][1], pts[3][1])
 
             roi = (
-                int(x1),
-                int(y1),
-                int(x2),
-                int(y2)
+                int(x1 * scale_x),
+                int(y1 * scale_y),
+                int(x2 * scale_x),
+                int(y2 * scale_y)
             )
 
             # AI辨識
