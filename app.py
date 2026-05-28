@@ -256,7 +256,34 @@ def detect_piles(pil_image, roi=None):
 
             final_sorted.extend(row)
 
-        positions = final_sorted
+        # =====================================
+        # AI 自動統一樁半徑
+        # =====================================
+        
+        all_radius = [r for (_, _, r) in final_sorted]
+        
+        valid_radius = [
+            r for r in all_radius
+            if 8 <= r <= 25
+        ]
+        
+        median_radius = int(np.median(valid_radius))
+        
+        # 避免極端值
+        median_radius = max(10, median_radius)
+        median_radius = min(22, median_radius)
+        
+        positions = []
+        
+        for (x, y, r) in final_sorted:
+        
+            positions.append(
+                (
+                    x,
+                    y,
+                    median_radius
+                )
+            )
 
     return positions
     
