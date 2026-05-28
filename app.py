@@ -310,13 +310,16 @@ def detect_pile_numbers(image, piles):
 
     for idx, (x, y, r) in enumerate(piles):
 
-        OCR_SIZE = 45
+        OCR_WIDTH = 45
+        OCR_TOP = 42
+        OCR_BOTTOM = 8
         
-        x1 = max(0, x - OCR_SIZE)
-        y1 = max(0, y - OCR_SIZE)
+        x1 = max(0, x - OCR_WIDTH)
+        x2 = min(img.shape[1], x + OCR_WIDTH)
         
-        x2 = min(img.shape[1], x + OCR_SIZE)
-        y2 = min(img.shape[0], y + OCR_SIZE)
+        # 只抓圓圈上方
+        y1 = max(0, y - OCR_TOP)
+        y2 = max(0, y - OCR_BOTTOM)
 
         crop = img[y1:y2, x1:x2]
 
@@ -328,22 +331,23 @@ def detect_pile_numbers(image, piles):
         gray_crop = cv2.resize(
             gray_crop,
             None,
-            fx=2,
-            fy=2
+            fx=3,
+            fy=3,
+            interpolation=cv2.INTER_CUBIC
         )
         
         _, gray_crop = cv2.threshold(
             gray_crop,
-            210,
+            180,
             255,
-            cv2.THRESH_BINARY
+            cv2.THRESH_BINARY + cv2.THRESH_OTSU
         )
 
         results = reader.readtext(
             gray_crop,
-            detail=0,
+            detail=1,
             paragraph=False,
-            allowlist='D0123456789',
+            allowlist='0123456789',
             batch_size=4
         )
 
@@ -380,7 +384,15 @@ def detect_pile_numbers(image, piles):
             # ========================================
         
             if 1 <= value <= 300:
-        
+            
+                # ========================================
+                # AI位置合理性判定
+                # ========================================
+            
+                if abs((idx + 1) - value) > 3:
+            
+                    continue
+            
                 detected_no = value
                 break
 
