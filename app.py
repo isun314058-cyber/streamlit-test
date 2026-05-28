@@ -264,10 +264,16 @@ def detect_piles(pil_image, roi=None):
 # OCR 自動辨識原圖樁號
 # =====================================================
 
-reader = easyocr.Reader(
-    ['en', 'ch_tra'],
-    gpu=False
-)
+@st.cache_resource
+def load_ocr():
+
+    return easyocr.Reader(
+        ['en'],
+        gpu=False,
+        download_enabled=True
+    )
+
+reader = load_ocr()
 
 def detect_pile_numbers(image, piles):
 
@@ -277,7 +283,7 @@ def detect_pile_numbers(image, piles):
 
     for idx, (x, y, r) in enumerate(piles):
 
-        OCR_SIZE = 70
+        OCR_SIZE = 100
         
         x1 = max(0, x - OCR_SIZE)
         y1 = max(0, y - OCR_SIZE)
@@ -292,16 +298,25 @@ def detect_pile_numbers(image, piles):
             cv2.COLOR_RGB2GRAY
         )
         
+        gray_crop = cv2.resize(
+            gray_crop,
+            None,
+            fx=2,
+            fy=2
+        )
+        
         _, gray_crop = cv2.threshold(
             gray_crop,
-            180,
+            170,
             255,
             cv2.THRESH_BINARY
         )
 
         results = reader.readtext(
             gray_crop,
-            detail=0
+            detail=0,
+            paragraph=False,
+            batch_size=4
         )
 
         detected_no = ""
@@ -310,8 +325,10 @@ def detect_pile_numbers(image, piles):
 
             text = text.strip()
 
-            if text.isdigit():
-
+            text = ''.join(filter(str.isdigit, text))
+            
+            if text != "":
+            
                 detected_no = text
                 break
 
@@ -1210,8 +1227,10 @@ if mode == "🆕 新建預定進度表":
                 piles = detect_piles(image, roi)
         
                 st.session_state.pile_positions = piles
-        
+
                 total_piles = len(piles)
+                        
+                st.session_state.repair_total_piles = total_piles
         
                 st.success(f"✅ AI 辨識到 {total_piles} 支樁體")
         
@@ -1681,6 +1700,8 @@ elif mode == "🛠️ 修正當前進度表":
         st.session_state.repair_points = []
     
         st.session_state.repair_last_clicked = None
+        
+        st.session_state.repair_piles = []
     
         st.session_state.repair_mode_init = True
     
@@ -1750,7 +1771,7 @@ elif mode == "🛠️ 修正當前進度表":
 
         display_img = image.copy()
 
-        display_img.thumbnail((1200, 1200))
+        display_img.thumbnail((900, 650))
         scale_x = image.width / display_img.width
         scale_y = image.height / display_img.height
 
@@ -1869,11 +1890,13 @@ elif mode == "🛠️ 修正當前進度表":
                 st.success("✅ 已完成施工區域")
         
             if st.button("🔄 重新選取"):
-        
+            
                 st.session_state.repair_points = []
-        
+            
                 st.session_state.repair_last_clicked = None
-        
+            
+                st.session_state.repair_piles = []
+            
                 st.rerun()
         
         # ============================================
@@ -1894,15 +1917,30 @@ elif mode == "🛠️ 修正當前進度表":
         
                 st.session_state.repair_last_clicked = clicked_point
         
-                if clicked_point not in st.session_state.repair_points:
-        
-                    if len(st.session_state.repair_points) < 4:
-        
-                        st.session_state.repair_points.append(
-                            clicked_point
-                        )
-        
-                        st.rerun()
+                duplicated = False
+                
+                for old_point in st.session_state.repair_points:
+                
+                    dist = (
+                        (clicked_point[0] - old_point[0]) ** 2
+                        +
+                        (clicked_point[1] - old_point[1]) ** 2
+                    ) ** 0.5
+                
+                    if dist < 10:
+                        duplicated = True
+                        break
+                
+                if (
+                    not duplicated
+                    and len(st.session_state.repair_points) < 4
+                ):
+                
+                    st.session_state.repair_points.append(
+                        clicked_point
+                    )
+                
+                    st.rerun()
 
         # ============================================
         # ROI完成 → AI辨識
@@ -1930,6 +1968,8 @@ elif mode == "🛠️ 修正當前進度表":
                 image,
                 roi
             )
+            
+            st.session_state.repair_piles = piles
 
             total_piles = len(piles)
 
@@ -1983,14 +2023,14 @@ elif mode == "🛠️ 修正當前進度表":
 
             st.image(
                 result_img,
-                use_container_width=True
+                width=900
             )
 
         # ============================================
         # 有辨識到樁體才往下
         # ============================================
 
-        if len(piles) > 0:
+        if len(st.session_state.repair_piles) > 0:
 
             # ========================================
             # OCR 自動辨識原圖樁號
@@ -2004,7 +2044,7 @@ elif mode == "🛠️ 修正當前進度表":
             
                 pile_mapping = detect_pile_numbers(
                     image,
-                    piles
+                    st.session_state.repair_piles
                 )
             
             mapping_df = pd.DataFrame({
@@ -2109,12 +2149,15 @@ elif mode == "🛠️ 修正當前進度表":
 
                 remaining_piles = []
 
-                for i in range(1, total_piles + 1):
-
+                for i in range(
+                    1,
+                    st.session_state.repair_total_piles + 1
+                ):
+                
                     if i not in completed_piles:
-
+                
                         remaining_piles.append(i)
-
+                
                 remaining_data = []
                 
                 for pile_no in remaining_piles:
@@ -2127,7 +2170,7 @@ elif mode == "🛠️ 修正當前進度表":
                             pile_mapping[pile_no]
                         ).isdigit() else pile_no,
                     
-                        "position": piles[pile_no - 1]
+                        "position": st.session_state.repair_piles[pile_no - 1]
                     
                     })
                 
