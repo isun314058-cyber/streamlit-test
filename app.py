@@ -1455,11 +1455,11 @@ if mode == "🆕 新建預定進度表":
                     pile_positions = piles
         
                     try:
-                        day_font = ImageFont.truetype("arial.ttf", 18)
+                        day_font = ImageFont.truetype("C:/Windows/Fonts/msjh.ttc",18)
                     
-                        pile_font = ImageFont.truetype("arial.ttf", 30)
+                        pile_font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 30)
                     
-                        legend_font = ImageFont.truetype("arial.ttf", 20)
+                        legend_font = ImageFont.truetype("C:/Windows/Fonts/msjh.ttc",20)
                     
                     except:
                     
