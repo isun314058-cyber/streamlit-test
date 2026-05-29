@@ -323,6 +323,8 @@ def detect_pile_numbers(image, piles):
 
     img = np.array(image)
 
+    img_h, img_w = img.shape[:2]
+
     mapping = {}
 
     for idx, (x, y, r) in enumerate(piles):
@@ -330,24 +332,19 @@ def detect_pile_numbers(image, piles):
         OCR_WIDTH = int(r * 2.0)
         
         x1 = max(0, x - OCR_WIDTH)
-        x2 = min(w, x + OCR_WIDTH)
+        x2 = min(img_w, x + OCR_WIDTH)
         
         # 圓上方1.5倍半徑
-        y1 = max(0, y - int(r * 2.5))
-        y2 = max(0, y - int(r * 1.0))
+        y1 = max(0, y - int(r * 1.8))
+        y2 = min(img_h, y - int(r * 0.2))
         
         crop = img[y1:y2, x1:x2]
 
-        if idx < 10:
+        if idx < 20:
             cv2.imwrite(
                 f"debug_{idx+1}.png",
                 cv2.cvtColor(crop, cv2.COLOR_RGB2BGR)
             )
-
-        cv2.imwrite(
-            f"debug/{idx+1}.png",
-            crop
-        )
 
         if crop.size == 0:
             mapping[idx + 1] = ""
@@ -361,13 +358,21 @@ def detect_pile_numbers(image, piles):
         gray_crop = cv2.resize(
             gray_crop,
             None,
-            fx=4,
-            fy=4,
+            fx=2,
+            fy=2,
             interpolation=cv2.INTER_CUBIC
         )
         
         gray_crop = cv2.equalizeHist(
             gray_crop
+        )
+        
+        # 新增這段
+        _, gray_crop = cv2.threshold(
+            gray_crop,
+            180,
+            255,
+            cv2.THRESH_BINARY
         )
         
         # 避免抓到 D1 D2
@@ -377,21 +382,20 @@ def detect_pile_numbers(image, piles):
 
         results = reader.readtext(
             gray_crop,
-            detail=1,
+            detail=0,
             paragraph=False,
-            allowlist='0123456789',
-            width_ths=0.1,
-            height_ths=0.1,
-            batch_size=8
+            allowlist='0123456789'
         )
         
         detected_no = ""
         
-        for result in results:
+        for text in results:
+
+            text = str(text).strip()
         
-            text = str(result[1]).strip()
-        
-            text = ''.join(filter(str.isdigit, text))
+            text = ''.join(
+                filter(str.isdigit, text)
+            )
         
             if not text:
                 continue
