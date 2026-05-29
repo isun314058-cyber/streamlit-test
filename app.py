@@ -1360,7 +1360,7 @@ if mode == "🆕 新建預定進度表":
                             y + r
                         ),
                         outline="red",
-                        width=4
+                        width=2
                     )
         
                     pile_text = str(pile_no)
