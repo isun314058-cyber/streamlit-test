@@ -329,14 +329,11 @@ def detect_pile_numbers(image, piles):
 
     for idx, (x, y, r) in enumerate(piles):
 
-        OCR_WIDTH = int(r * 2.0)
+        x1 = max(0, x - int(r * 3))
+        x2 = min(img_w, x + int(r * 3))
         
-        x1 = max(0, x - OCR_WIDTH)
-        x2 = min(img_w, x + OCR_WIDTH)
-        
-        # 圓上方1.5倍半徑
-        y1 = max(0, y - int(r * 1.8))
-        y2 = min(img_h, y - int(r * 0.2))
+        y1 = max(0, y - int(r * 4))
+        y2 = max(0, y - int(r * 0.5))
         
         crop = img[y1:y2, x1:x2]
 
@@ -368,11 +365,10 @@ def detect_pile_numbers(image, piles):
         )
         
         # 新增這段
-        _, gray_crop = cv2.threshold(
+        gray_crop = cv2.GaussianBlur(
             gray_crop,
-            180,
-            255,
-            cv2.THRESH_BINARY
+            (3,3),
+            0
         )
         
         # 避免抓到 D1 D2
@@ -405,10 +401,10 @@ def detect_pile_numbers(image, piles):
             if 1 <= value <= 300:
             
                 # 避免抓到 D1 D2
-                if value <= 20:
+                #if value <= 20:
                 
-                    if abs((idx + 1) - value) > 20:
-                        continue
+                    #if abs((idx + 1) - value) > 20:
+                        #continue
             
                 detected_no = value
                 break
