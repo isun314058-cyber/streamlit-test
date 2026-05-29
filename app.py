@@ -1360,7 +1360,7 @@ if mode == "🆕 新建預定進度表":
                             y + r
                         ),
                         outline="red",
-                        width=2
+                        width=4
                     )
         
                     pile_text = str(pile_no)
@@ -2248,7 +2248,7 @@ elif mode == "🛠️ 修正當前進度表":
                         y+r
                     ),
                     outline="red",
-                    width=4
+                    width=2
                 )
                 
             left_result, right_result = st.columns([2.2, 1])
