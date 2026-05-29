@@ -1552,12 +1552,12 @@ if mode == "🆕 新建預定進度表":
                     
                         day_font = ImageFont.truetype(
                             FONT_NAME,
-                            14
+                            15
                         )
                     
                         pile_font = ImageFont.truetype(
                             FONT_NAME,
-                            17
+                            16
                         )
                     
                         legend_font = ImageFont.truetype(
