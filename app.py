@@ -327,9 +327,11 @@ def detect_pile_numbers(image, piles):
 
     for idx, (x, y, r) in enumerate(piles):
 
-        OCR_WIDTH = 85
-        OCR_TOP = 95
-        OCR_BOTTOM = 20
+        OCR_WIDTH = int(r * 1.5)
+        
+        OCR_TOP = int(r * 3.0)
+        
+        OCR_BOTTOM = int(r * 1.8)
         
         x1 = max(0, x - OCR_WIDTH)
         x2 = min(img.shape[1], x + OCR_WIDTH)
@@ -339,6 +341,11 @@ def detect_pile_numbers(image, piles):
         y2 = max(0, y - OCR_BOTTOM)
 
         crop = img[y1:y2, x1:x2]
+
+        cv2.imwrite(
+            f"debug/{idx+1}.png",
+            crop
+        )
 
         if crop.size == 0:
             mapping[idx + 1] = ""
@@ -352,29 +359,28 @@ def detect_pile_numbers(image, piles):
         gray_crop = cv2.resize(
             gray_crop,
             None,
-            fx=5,
-            fy=5,
+            fx=4,
+            fy=4,
             interpolation=cv2.INTER_CUBIC
         )
         
-        _, gray_crop = cv2.threshold(
-            gray_crop,
-            180,
-            255,
-            cv2.THRESH_BINARY + cv2.THRESH_OTSU
+        gray_crop = cv2.equalizeHist(
+            gray_crop
         )
         
         # 避免抓到 D1 D2
         h, w = gray_crop.shape
         
-        gray_crop = gray_crop[0:int(h * 0.88), :]
+        gray_crop = gray_crop[0:int(h * 0.70), :]
 
         results = reader.readtext(
             gray_crop,
             detail=1,
             paragraph=False,
             allowlist='0123456789',
-            batch_size=4
+            width_ths=0.1,
+            height_ths=0.1,
+            batch_size=8
         )
         
         detected_no = ""
@@ -395,7 +401,7 @@ def detect_pile_numbers(image, piles):
                 # 避免抓到 D1 D2
                 if value <= 20:
                 
-                    if abs((idx + 1) - value) > 5:
+                    if abs((idx + 1) - value) > 20:
                         continue
             
                 detected_no = value
@@ -2406,7 +2412,7 @@ elif mode == "🛠️ 修正當前進度表":
                     # 與AI排序差距過大
                     # =========================
             
-                    elif abs(ai_no - value) > 3:
+                    elif abs(ai_no - value) > 10:
             
                         status = "⚠️ 疑似錯誤"
             
