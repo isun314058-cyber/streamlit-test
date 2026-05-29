@@ -1475,7 +1475,7 @@ if mode == "🆕 新建預定進度表":
                         best_total_score = -999999
                         
                         # AI 多次模擬
-                        for sim in range(30):
+                        for sim in range(50):
                         
                             schedule = create_schedule(
                             
