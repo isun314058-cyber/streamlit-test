@@ -329,14 +329,16 @@ def detect_pile_numbers(image, piles):
 
     for idx, (x, y, r) in enumerate(piles):
 
-        OCR_WIDTH = int(r * 2.0)
+        OCR_WIDTH = int(r * 2.5)
         
         x1 = max(0, x - OCR_WIDTH)
         x2 = min(img_w, x + OCR_WIDTH)
         
-        # 圓上方1.5倍半徑
-        y1 = max(0, y - int(r * 1.8))
-        y2 = min(img_h, y - int(r * 0.2))
+        # 上面抓樁號
+        y1 = max(0, y - int(r * 4.0))
+        
+        # 下面抓 D1 D2
+        y2 = min(img_h, y + int(r * 3.0))
         
         crop = img[y1:y2, x1:x2]
 
@@ -347,7 +349,15 @@ def detect_pile_numbers(image, piles):
             )
 
         if crop.size == 0:
-            mapping[idx + 1] = ""
+        
+            mapping[idx + 1] = {
+        
+                "pile_no": "",
+        
+                "day_no": ""
+        
+            }
+        
             continue
 
         gray_crop = cv2.cvtColor(
@@ -384,36 +394,46 @@ def detect_pile_numbers(image, piles):
             gray_crop,
             detail=0,
             paragraph=False,
-            allowlist='0123456789'
+            allowlist='Dd0123456789'
         )
         
-        detected_no = ""
+        pile_no = ""
+        day_no = ""
         
         for text in results:
-
-            text = str(text).strip()
         
-            text = ''.join(
+            text = str(text).strip().upper()
+        
+            # D5
+            if text.startswith("D"):
+        
+                digits = ''.join(
+                    filter(str.isdigit, text)
+                )
+        
+                if digits:
+        
+                    day_no = f"D{digits}"
+        
+                continue
+        
+            # 樁號
+            digits = ''.join(
                 filter(str.isdigit, text)
             )
         
-            if not text:
-                continue
+            if digits:
         
-            value = int(text)
+                value = int(digits)
         
-            if 1 <= value <= 300:
-            
-                # 避免抓到 D1 D2
-                if value <= 20:
-                
-                    if abs((idx + 1) - value) > 20:
-                        continue
-            
-                detected_no = value
-                break
+                if 1 <= value <= 300:
+        
+                    pile_no = value
 
-        mapping[idx + 1] = detected_no
+        mapping[idx + 1] = {
+            "pile_no": pile_no,
+            "day_no": day_no
+        }
 
     return mapping
 
@@ -2369,58 +2389,40 @@ elif mode == "🛠️ 修正當前進度表":
                     pile_mapping[real_ai_no] = original_no
             
             mapping_rows = []
+
+            for ai_no, info in pile_mapping.items():
             
-            for ai_no, original_no in pile_mapping.items():
+                original_no = info["pile_no"]
             
-                # =========================
-                # 預設正常
-                # =========================
+                day_no = info["day_no"]
             
                 status = "✅ 正常"
             
-                # =========================
-                # 空白
-                # =========================
-            
-                if (
-                    original_no == ""
-                    or
-                    original_no is None
-                ):
+                if original_no == "":
             
                     status = "❌ OCR失敗"
             
-                # =========================
-                # 非數字
-                # =========================
-            
-                elif not str(original_no).isdigit():
-            
-                    status = "⚠️ 非數字"
-            
                 else:
             
-                    value = int(original_no)
+                    try:
             
-                    # =========================
-                    # 超出合理範圍
-                    # =========================
+                        value = int(original_no)
             
-                    if (
-                        value < 1
-                        or
-                        value > total_piles
-                    ):
+                        if (
+                            value < 1
+                            or
+                            value > total_piles
+                        ):
             
-                        status = "⚠️ 超出範圍"
+                            status = "⚠️ 超出範圍"
             
-                    # =========================
-                    # 與AI排序差距過大
-                    # =========================
+                        elif abs(ai_no - value) > 10:
             
-                    elif abs(ai_no - value) > 10:
+                            status = "⚠️ 疑似錯誤"
             
-                        status = "⚠️ 疑似錯誤"
+                    except:
+            
+                        status = "⚠️ 非數字"
             
                 mapping_rows.append({
             
@@ -2428,11 +2430,61 @@ elif mode == "🛠️ 修正當前進度表":
             
                     "原圖樁號": original_no,
             
+                    "施工日": day_no,
+            
                     "錯誤標記": status
             
                 })
             
+
             mapping_df = pd.DataFrame(mapping_rows)
+            
+            # ====================================
+            # 施工日統計
+            # ====================================
+            
+            completed_days = {}
+            
+            for info in pile_mapping.values():
+            
+                day_no = info["day_no"]
+            
+                if not day_no:
+                    continue
+            
+                if day_no not in completed_days:
+            
+                    completed_days[day_no] = 0
+            
+                completed_days[day_no] += 1
+            
+            if completed_days:
+            
+                st.subheader("📊 施工日辨識統計")
+            
+                day_df = pd.DataFrame(
+            
+                    [
+                        {
+                            "施工日": k,
+                            "辨識數量": v
+                        }
+                        for k, v in completed_days.items()
+                    ]
+            
+                )
+            
+                # D1、D2、D10 正確排序
+                day_df["排序"] = day_df["施工日"].str.extract(r'(\d+)').astype(int)
+            
+                day_df = day_df.sort_values("排序")
+            
+                day_df = day_df.drop(columns=["排序"])
+            
+                st.dataframe(
+                    day_df,
+                    use_container_width=True
+                )
 
             failed_ocr = mapping_df[
                 mapping_df["原圖樁號"].isna()
@@ -2507,9 +2559,11 @@ elif mode == "🛠️ 修正當前進度表":
 
                 reverse_mapping = {}
 
-                for ai_no, original_no in pile_mapping.items():
+                for ai_no, info in pile_mapping.items():
                 
-                    if str(original_no).isdigit():
+                    original_no = info["pile_no"]
+                
+                    if original_no:
                 
                         reverse_mapping[int(original_no)] = ai_no
 
@@ -2554,15 +2608,17 @@ elif mode == "🛠️ 修正當前進度表":
                 
                 for pile_no in remaining_piles:
                 
+                    pile_info = pile_mapping[pile_no]
+                    
                     remaining_data.append({
                     
-                        "original_no": int(
-                            pile_mapping[pile_no]
-                        ) if str(
-                            pile_mapping[pile_no]
-                        ).isdigit() else pile_no,
+                        "original_no":
+                            pile_info["pile_no"]
+                            if pile_info["pile_no"]
+                            else pile_no,
                     
-                        "position": st.session_state.repair_piles[pile_no - 1]
+                        "position":
+                            st.session_state.repair_piles[pile_no - 1]
                     
                     })
                 
