@@ -582,7 +582,7 @@ def create_schedule(
     
             neighbor_map = build_neighbor_map(
                 pile_positions,
-                safe_distance=base_distance * 1.2
+                safe_distance=base_distance * 1.1
             )
     
         if neighbor_map is None:
@@ -938,7 +938,7 @@ def create_schedule(
                 # 2. 孤立樁重罰
                 # ==================================================
                 
-                score -= isolated_count * 80
+                score -= isolated_count * 50
                 
                 # ==================================================
                 # 3. 未來平均施工量
@@ -1467,7 +1467,7 @@ if mode == "🆕 新建預定進度表":
                         
                         neighbor_map = build_neighbor_map(
                             piles,
-                            safe_distance=120
+                            safe_distance=100
                         )
             
                         best_schedule = None
@@ -1475,7 +1475,7 @@ if mode == "🆕 新建預定進度表":
                         best_total_score = -999999
                         
                         # AI 多次模擬
-                        for sim in range(20):
+                        for sim in range(30):
                         
                             schedule = create_schedule(
                             
@@ -1501,7 +1501,7 @@ if mode == "🆕 新建預定進度表":
                             schedule_score = 0
                         
                             # 天數越少越好
-                            schedule_score -= len(schedule) * 120
+                            schedule_score -= len(schedule) * 1000
                         
                             # 最後三天不要太少
                             last_days = schedule[-3:]
