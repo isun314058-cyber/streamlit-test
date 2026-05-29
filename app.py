@@ -337,6 +337,10 @@ def detect_pile_numbers(image, piles):
         
         crop = img[y1:y2, x1:x2]
 
+        import os
+        
+        os.makedirs("debug", exist_ok=True)
+        
         if idx < 20:
             cv2.imwrite(
                 f"debug/{idx+1}.png",
@@ -506,12 +510,17 @@ def build_neighbor_map(
 # =====================================================
 
 def create_schedule(
+
     pile_positions,
     total_piles,
     daily_count,
     start_date,
+
     start_no=1,
-    cooldown_days=1
+
+    cooldown_days=1,
+
+    neighbor_map=None
 ):
 
     import random
@@ -547,93 +556,79 @@ def create_schedule(
     # Delaunay AI 鄰樁判定
     # =====================================================
     
-    from scipy.spatial import Delaunay
-
-    points = np.array([
-        [x, y]
-        for (x, y, r) in pile_positions
-    ])
+    if neighbor_map is None:
     
-    if len(points) < 3:
+        from scipy.spatial import Delaunay
     
-        return [{
-            "施工日": "Day 1",
-            "日期": pd.to_datetime(start_date).strftime("%Y-%m-%d"),
-            "日期顏色": "#ff6666",
-            "施工樁號": list(range(1, total_piles + 1))
-        }]
+        points = np.array([
+            [x, y]
+            for (x, y, r) in pile_positions
+        ])
     
-    tri = Delaunay(points)
+        if len(points) < 3:
     
-    neighbor_map = {}
+            return [{
+                "施工日": "Day 1",
+                "日期": pd.to_datetime(start_date).strftime("%Y-%m-%d"),
+                "日期顏色": "#ff6666",
+                "施工樁號": list(range(1, total_piles + 1))
+            }]
     
-    for i in range(len(points)):
+        try:
     
-        neighbor_map[i + 1] = set()
+            tri = Delaunay(points)
     
-    # 建立三角形鄰接
-    for simplex in tri.simplices:
+        except Exception:
     
-        for i in range(3):
-    
-            for j in range(3):
-    
-                if i != j:
-    
-                    p1 = simplex[i] + 1
-                    p2 = simplex[j] + 1
-    
-                    # 計算真實距離
-                    dist = calculate_distance(
-                        pile_positions[p1 - 1],
-                        pile_positions[p2 - 1]
-                    )
-    
-                    if dist <= base_distance * 1.15:
-                        # 避免超長斜角
-                        dx = abs(
-                            pile_positions[p1 - 1][0]
-                            -
-                            pile_positions[p2 - 1][0]
-                        )
-                    
-                        dy = abs(
-                            pile_positions[p1 - 1][1]
-                            -
-                            pile_positions[p2 - 1][1]
-                        )
-                    
-                        # 過長斜角不算鄰樁
-                        if (
-                            dx > base_distance * 1.2
-                            or
-                            dy > base_distance * 1.2
-                        ):
-                        
-                            continue
-                        
-                        neighbor_map[p1].add(p2)
-    
-    # set 轉 list
-    MAX_NEIGHBORS = 8
-    
-    for p in neighbor_map:
-    
-        neighbors = list(neighbor_map[p])
-    
-        neighbors = sorted(
-    
-            neighbors,
-    
-            key=lambda n:
-            calculate_distance(
-                pile_positions[p - 1],
-                pile_positions[n - 1]
+            neighbor_map = build_neighbor_map(
+                pile_positions,
+                safe_distance=base_distance * 1.2
             )
     
-        )
+        if neighbor_map is None:
     
-        neighbor_map[p] = neighbors[:MAX_NEIGHBORS]
+            neighbor_map = {}
+    
+            for i in range(len(points)):
+    
+                neighbor_map[i + 1] = set()
+    
+            for simplex in tri.simplices:
+    
+                for i in range(3):
+    
+                    for j in range(3):
+    
+                        if i != j:
+    
+                            p1 = simplex[i] + 1
+                            p2 = simplex[j] + 1
+    
+                            dist = calculate_distance(
+                                pile_positions[p1 - 1],
+                                pile_positions[p2 - 1]
+                            )
+    
+                            if dist <= base_distance * 1.15:
+    
+                                neighbor_map[p1].add(p2)
+    
+            MAX_NEIGHBORS = 8
+    
+            for p in neighbor_map:
+    
+                neighbors = list(neighbor_map[p])
+    
+                neighbors = sorted(
+                    neighbors,
+                    key=lambda n:
+                    calculate_distance(
+                        pile_positions[p - 1],
+                        pile_positions[n - 1]
+                    )
+                )
+    
+                neighbor_map[p] = neighbors[:MAX_NEIGHBORS]
 
     # =====================================================
     # 顏色
@@ -1466,27 +1461,37 @@ if mode == "🆕 新建預定進度表":
         
                 if execute:
                     with st.spinner("🤖 AI 正在分析最佳施工排程中，請稍候..."):
+                        # ============================
+                        # 只計算一次鄰樁
+                        # ============================
+                        
+                        neighbor_map = build_neighbor_map(
+                            piles,
+                            safe_distance=120
+                        )
             
                         best_schedule = None
             
                         best_total_score = -999999
                         
                         # AI 多次模擬
-                        for sim in range(10):
+                        for sim in range(20):
                         
                             schedule = create_schedule(
-                        
+                            
                                 pile_positions=piles,
-                        
+                            
                                 total_piles=total_piles,
-                        
+                            
                                 daily_count=daily_count,
-                        
+                            
                                 start_date=start_date,
-                        
+                            
                                 start_no=start_no,
-                        
-                                cooldown_days=1
+                            
+                                cooldown_days=1,
+                            
+                                neighbor_map=neighbor_map
                             )
                         
                             # =====================================
@@ -1549,6 +1554,38 @@ if mode == "🆕 新建預定進度表":
                             if last_day_count <= 2:
                             
                                 schedule_score -= 300
+
+                            # =====================================
+                            # 尾盤遞減檢查（加強版）
+                            # =====================================
+                            
+                            tail_counts = [
+                            
+                                len(x["施工樁號"])
+                            
+                                for x in schedule[-5:]
+                            
+                            ]
+                            
+                            for i in range(len(tail_counts)-1):
+                            
+                                if tail_counts[i] < tail_counts[i+1]:
+                            
+                                    schedule_score -= 300
+
+                            # 最後一天不要太少
+                            
+                            if tail_counts[-1] <= 2:
+                            
+                                schedule_score -= 500
+                            
+                            # 倒數第二天不要比最後一天多太多
+                            
+                            if len(tail_counts) >= 2:
+                            
+                                if tail_counts[-2] - tail_counts[-1] > 5:
+                            
+                                    schedule_score -= 200
                             
                             
                             # =====================================
@@ -2672,3 +2709,4 @@ elif mode == "🛠️ 修正當前進度表":
                     ]
                     
                 new_df = pd.DataFrame(new_schedule)
+                st.session_state.repair_schedule_df = new_df
