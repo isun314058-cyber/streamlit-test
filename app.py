@@ -339,7 +339,7 @@ def detect_pile_numbers(image, piles):
 
         if idx < 20:
             cv2.imwrite(
-                f"debug_{idx+1}.png",
+                f"debug/{idx+1}.png",
                 cv2.cvtColor(crop, cv2.COLOR_RGB2BGR)
             )
 
@@ -355,8 +355,8 @@ def detect_pile_numbers(image, piles):
         gray_crop = cv2.resize(
             gray_crop,
             None,
-            fx=2,
-            fy=2,
+            fx=4,
+            fy=4,
             interpolation=cv2.INTER_CUBIC
         )
         
