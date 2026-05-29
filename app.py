@@ -1670,7 +1670,7 @@ if mode == "🆕 新建預定進度表":
                             pile_x = x - (pile_width // 2)
                             
                             # 自動依字體大小調整高度
-                            pile_y = y - r - pile_height - 8
+                            pile_y = y - r - pile_height - 7
                             
                             draw.text(
                                 (
