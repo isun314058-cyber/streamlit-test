@@ -327,19 +327,15 @@ def detect_pile_numbers(image, piles):
 
     for idx, (x, y, r) in enumerate(piles):
 
-        OCR_WIDTH = int(r * 2.5)
-        
-        OCR_TOP = int(r * 3.0)
-        
-        OCR_BOTTOM = int(r * 1.8)
+        OCR_WIDTH = int(r * 2.0)
         
         x1 = max(0, x - OCR_WIDTH)
-        x2 = min(img.shape[1], x + OCR_WIDTH)
+        x2 = min(w, x + OCR_WIDTH)
         
-        # 只抓圓圈上方
-        y1 = max(0, y - OCR_TOP)
-        y2 = max(0, y - OCR_BOTTOM)
-
+        # 圓上方1.5倍半徑
+        y1 = max(0, y - int(r * 2.5))
+        y2 = max(0, y - int(r * 1.0))
+        
         crop = img[y1:y2, x1:x2]
 
         if idx < 10:
