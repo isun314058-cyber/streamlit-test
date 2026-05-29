@@ -125,7 +125,8 @@ DEFAULT_STATES = {
     "processed": False,
     "original_image": None,
     "points": [],
-    "last_clicked": None
+    "last_clicked": None,
+    "new_canvas_key": 0
 }
 
 for key, value in DEFAULT_STATES.items():
@@ -1256,7 +1257,7 @@ if mode == "🆕 新建預定進度表":
         
                 coords = streamlit_image_coordinates(
                     preview_canvas,
-                    key="pile_roi_selector"
+                    key=f"pile_roi_selector_{st.session_state.new_canvas_key}"
                 )
         
             if coords is not None:
@@ -1290,6 +1291,10 @@ if mode == "🆕 新建預定進度表":
                     ):
         
                         st.session_state.points.append(clicked_point)
+
+                        st.session_state.new_canvas_key += 1
+
+                        st.rerun()
                 
             with right_col:
         
@@ -1332,6 +1337,8 @@ if mode == "🆕 新建預定進度表":
                     st.session_state.result_image = None
                 
                     st.session_state.processed = False
+                
+                    st.session_state.new_canvas_key += 1
                 
                     st.rerun()
         
@@ -1937,11 +1944,17 @@ elif mode == "🛠️ 修正當前進度表":
             st.session_state.repair_current_file
             != current_file_name
         ):
-    
+        
             st.session_state.repair_points = []
-    
+        
             st.session_state.repair_last_clicked = None
-    
+        
+            st.session_state.repair_piles = []
+        
+            st.session_state.excluded_piles = []
+        
+            st.session_state.repair_canvas_key += 1
+        
             st.session_state.repair_current_file = current_file_name
 
         piles = []
@@ -2157,7 +2170,7 @@ elif mode == "🛠️ 修正當前進度表":
                     st.session_state.repair_points.append(
                         clicked_point
                     )
-                
+                    st.session_state.repair_canvas_key += 1
                     st.rerun()
 
         # ============================================
