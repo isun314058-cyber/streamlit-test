@@ -2268,7 +2268,7 @@ elif mode == "🛠️ 修正當前進度表":
                         y+r
                     ),
                     outline="red",
-                    width=4
+                    width=2
                 )
                 
             left_result, right_result = st.columns([2.2, 1])
