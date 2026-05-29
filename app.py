@@ -417,6 +417,49 @@ def detect_pile_numbers(image, piles):
 
     return mapping
 
+@st.cache_data(show_spinner=False)
+def detect_pile_day(image, piles):
+
+    img = np.array(image)
+
+    mapping = {}
+
+    for idx,(x,y,r) in enumerate(piles):
+
+        x1 = max(0, x-int(r*2))
+        x2 = x+int(r*2)
+
+        y1 = y+int(r*0.3)
+        y2 = y+int(r*2.5)
+
+        crop = img[y1:y2,x1:x2]
+
+        if crop.size == 0:
+            mapping[idx+1] = ""
+            continue
+
+        result = reader.readtext(
+            crop,
+            detail=0,
+            paragraph=False,
+            allowlist="D0123456789"
+        )
+
+        day_text = ""
+
+        for txt in result:
+
+            txt = str(txt).upper().replace(" ","")
+
+            if txt.startswith("D"):
+
+                day_text = txt
+                break
+
+        mapping[idx+1] = day_text
+
+    return mapping
+
 # =====================================================
 # 智慧避鄰排程
 # =====================================================
@@ -2359,14 +2402,26 @@ elif mode == "🛠️ 修正當前進度表":
                     image,
                     filtered_piles
                 )
+
+                temp_day_mapping = detect_pile_day(
+                    image,
+                    filtered_piles
+                )
                 
                 pile_mapping = {}
+
+                pile_day_mapping = {}
                 
                 for temp_ai_no, original_no in temp_mapping.items():
                 
                     real_ai_no = filtered_index_map[temp_ai_no]
                 
                     pile_mapping[real_ai_no] = original_no
+                
+                    pile_day_mapping[real_ai_no] = temp_day_mapping.get(
+                        temp_ai_no,
+                        ""
+                    )
             
             mapping_rows = []
             
@@ -2423,13 +2478,15 @@ elif mode == "🛠️ 修正當前進度表":
                         status = "⚠️ 疑似錯誤"
             
                 mapping_rows.append({
-            
+                
                     "AI辨識樁號": ai_no,
-            
+                
                     "原圖樁號": original_no,
-            
+                
+                    "施工日": pile_day_mapping.get(ai_no,""),
+                
                     "錯誤標記": status
-            
+                
                 })
             
             mapping_df = pd.DataFrame(mapping_rows)
