@@ -1256,7 +1256,7 @@ if mode == "🆕 新建預定進度表":
         
                 coords = streamlit_image_coordinates(
                     preview_canvas,
-                    key=f"pile_roi_selector_{len(st.session_state.points)}"
+                    key="pile_roi_selector"
                 )
         
             if coords is not None:
@@ -1290,9 +1290,7 @@ if mode == "🆕 新建預定進度表":
                     ):
         
                         st.session_state.points.append(clicked_point)
-        
-                        st.rerun()
-        
+                
             with right_col:
         
                 st.subheader("📍 點位資訊")
