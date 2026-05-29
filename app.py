@@ -1115,6 +1115,12 @@ def create_schedule(
         
             break
 
+    result = optimize_tail_days(
+        result,
+        neighbor_map,
+        daily_count
+    )
+
     return result
 
 # =====================================================
@@ -1499,9 +1505,21 @@ if mode == "🆕 新建預定進度表":
                             # =====================================
                         
                             schedule_score = 0
+
+                            # =====================================
+                            # 滿載獎勵
+                            # =====================================
+                            
+                            full_days = sum(
+                                1
+                                for day in schedule
+                                if len(day["施工樁號"]) >= daily_count
+                            )
+                            
+                            schedule_score += full_days * 500
                         
                             # 天數越少越好
-                            schedule_score -= len(schedule) * 1000
+                            schedule_score -= len(schedule) * 5000
                         
                             # 最後三天不要太少
                             last_days = schedule[-3:]
