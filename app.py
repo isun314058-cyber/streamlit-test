@@ -13,9 +13,6 @@ import random
 import io
 import cv2
 import easyocr
-import math
-import random
-
 from streamlit_image_coordinates import streamlit_image_coordinates
 
 # =====================================================
@@ -150,27 +147,6 @@ COLOR_TEXT = {
     "orange": "橘色",
     "lime": "綠色"
 }
-
-# =====================================================
-# 隨機顏色
-# =====================================================
-
-def generate_unique_colors(n):
-
-    colors = []
-
-    while len(colors) < n:
-
-        color = (
-            random.randint(50, 255),
-            random.randint(50, 255),
-            random.randint(50, 255)
-        )
-
-        if color not in colors:
-            colors.append(color)
-
-    return colors
 
 # =====================================================
 # AI辨識樁位
@@ -374,9 +350,6 @@ def detect_pile_numbers(image, piles):
             (3,3),
             0
         )
-        
-        # 避免抓到 D1 D2
-        h, w = gray_crop.shape
         
         #gray_crop = gray_crop[0:int(h * 0.70), :]
 
