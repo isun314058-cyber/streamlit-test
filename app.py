@@ -99,6 +99,7 @@ mode = st.radio(
         "新建預定進度表",
         "修正當前進度表"
     ],
+    horizontal=True,
     key="mode_selector"
 )
 if "last_mode" not in st.session_state:
