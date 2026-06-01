@@ -1810,9 +1810,56 @@ if mode == "🆕 新建預定進度表":
             if st.session_state.processed:
             
                 st.markdown("---")
-            
-                st.subheader("📋 施工排程結果")
-            
+                
+                title_col, excel_col = st.columns([8,2])
+                
+                with title_col:
+                
+                    st.subheader("📋 施工排程結果")
+                
+                with excel_col:
+                
+                    if st.session_state.schedule_df is not None:
+                
+                        excel_df = st.session_state.schedule_df.copy()
+                
+                        excel_df["施工數量"] = excel_df["施工樁號"].apply(len)
+                
+                        excel_df["施工樁號"] = excel_df["施工樁號"].apply(
+                            lambda x: ",".join(map(str, x))
+                        )
+                
+                        excel_df = excel_df[
+                            [
+                                "施工日",
+                                "日期",
+                                "日期顏色",
+                                "施工數量",
+                                "施工樁號"
+                            ]
+                        ]
+                
+                        excel_buffer = io.BytesIO()
+                
+                        with pd.ExcelWriter(
+                            excel_buffer,
+                            engine="openpyxl"
+                        ) as writer:
+                
+                            excel_df.to_excel(
+                                writer,
+                                sheet_name="施工排程",
+                                index=False
+                            )
+                
+                        st.download_button(
+                            "📊下載Excel",
+                            excel_buffer.getvalue(),
+                            file_name="施工排程.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True
+                        )
+                
                 df = st.session_state.schedule_df
             
                 if df is not None:
