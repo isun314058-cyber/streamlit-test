@@ -350,8 +350,6 @@ def detect_pile_numbers(image, piles):
             (3,3),
             0
         )
-        
-        #gray_crop = gray_crop[0:int(h * 0.70), :]
 
         results = reader.readtext(
             gray_crop,
@@ -376,12 +374,6 @@ def detect_pile_numbers(image, piles):
             value = int(text)
         
             if 1 <= value <= 300:
-            
-                # 避免抓到 D1 D2
-                #if value <= 20:
-                
-                    #if abs((idx + 1) - value) > 20:
-                        #continue
             
                 detected_no = value
                 break
@@ -1718,11 +1710,6 @@ if mode == "🆕 新建預定進度表":
                             # 樁號固定在圓正上方
                             # 不受圓大小影響
                             # =====================================
-                            
-                            # =====================================
-                            # 樁號固定在圓正上方
-                            # =====================================
-                            
                             pile_text = str(pile_no)
                             
                             pile_bbox = draw.textbbox(
@@ -1998,14 +1985,6 @@ elif mode == "🛠️ 修正當前進度表":
         st.markdown("---")
 
         st.subheader("🛠️ 修正當前施工進度")
-
-        # ============================================
-        # 初始化
-        # ============================================
-
-        if "repair_points" not in st.session_state:
-
-            st.session_state.repair_points = []
 
         # ============================================
         # 讀取圖面
