@@ -1851,7 +1851,7 @@ if mode == "🆕 新建預定進度表":
                                 sheet_name="施工排程",
                                 index=False
                             )
-                
+                        today_str = pd.Timestamp.today().strftime("%Y%m%d")
                         st.download_button(
                             "📊下載Excel",
                             excel_buffer.getvalue(),
