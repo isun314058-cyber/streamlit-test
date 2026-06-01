@@ -94,21 +94,46 @@ st.title("🏗️ AI 排樁施工系統")
 # =====================================================
 
 mode = st.radio(
-
     "請選擇功能模式",
-
     [
-
-        "🆕 新建預定進度表",
-
-        "🛠️ 修正當前進度表"
-
+        "新建預定進度表",
+        "修正當前進度表"
     ],
-
-    horizontal=True
-
+    key="mode_selector"
 )
+if "last_mode" not in st.session_state:
+    st.session_state.last_mode = mode
 
+if st.session_state.last_mode != mode:
+
+    # 清除框選資料
+    st.session_state.points = []
+    st.session_state.corner_points = []
+
+    # 重建畫布
+    if "new_canvas_key" not in st.session_state:
+        st.session_state.new_canvas_key = 0
+    
+    if st.session_state.last_mode != mode:
+    
+        # 新建模式
+        st.session_state.points = []
+        st.session_state.last_clicked = None
+    
+        # 修正模式
+        st.session_state.repair_points = []
+        st.session_state.repair_piles = []
+        st.session_state.excluded_piles = []
+        st.session_state.repair_last_clicked = None
+    
+        st.session_state.repair_canvas_key = (
+            st.session_state.get("repair_canvas_key",0) + 1
+        )
+    
+        st.session_state.last_mode = mode
+    
+        st.rerun()
+        
 st.markdown("---")
 
 # =====================================================
@@ -1092,7 +1117,7 @@ def create_schedule(
 # 模式：新建預定進度表
 # =====================================================
 
-if mode == "🆕 新建預定進度表":
+if mode == "新建預定進度表":
 
     uploaded_file = st.file_uploader(
 
@@ -1129,7 +1154,7 @@ else:
 # =====================================================
 # 主流程
 # =====================================================
-if mode == "🆕 新建預定進度表":
+if mode == "新建預定進度表":
         if uploaded_file:
         
             if uploaded_file.type == "application/pdf":
@@ -1983,7 +2008,7 @@ if mode == "🆕 新建預定進度表":
                             mime="application/pdf",
                             use_container_width=True
                         )
-elif mode == "🛠️ 修正當前進度表":
+elif mode == "修正當前進度表":
     # ============================================
     # 初始化修正模式
     # ============================================
