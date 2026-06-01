@@ -1855,7 +1855,7 @@ if mode == "🆕 新建預定進度表":
                         st.download_button(
                             "📊下載Excel",
                             excel_buffer.getvalue(),
-                            file_name=f"{today_str}_施工排程.xlsx",
+                            file_name=f"{today_str}_AI排樁施工計畫.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                             use_container_width=True
                         )
