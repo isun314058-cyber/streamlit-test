@@ -1115,11 +1115,11 @@ def create_schedule(
         
             break
 
-    result = optimize_tail_days(
-        result,
-        neighbor_map,
-        daily_count
-    )
+    #result = optimize_tail_days(
+        #result,
+        #neighbor_map,
+        #daily_count
+    #)
 
     return result
 
