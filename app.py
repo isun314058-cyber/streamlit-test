@@ -106,33 +106,43 @@ if "last_mode" not in st.session_state:
 
 if st.session_state.last_mode != mode:
 
-    # 清除框選資料
-    st.session_state.points = []
-    st.session_state.corner_points = []
+    keys_to_reset = [
+    
+        "points",
+        "last_clicked",
+    
+        "repair_points",
+        "repair_piles",
+        "excluded_piles",
+        "repair_last_clicked",
+        "exclude_last_click",
+    
+        "repair_canvas_key",
+        "repair_current_file",
+    
+        "schedule_df",
+        "repair_schedule_df",
+    
+        "result_image",
+        "original_image",
+    
+        "pile_positions"
+    ]
 
-    # 重建畫布
-    if "new_canvas_key" not in st.session_state:
-        st.session_state.new_canvas_key = 0
-    
-    if st.session_state.last_mode != mode:
-    
-        # 新建模式
-        st.session_state.points = []
-        st.session_state.last_clicked = None
-    
-        # 修正模式
-        st.session_state.repair_points = []
-        st.session_state.repair_piles = []
-        st.session_state.excluded_piles = []
-        st.session_state.repair_last_clicked = None
-    
-        st.session_state.repair_canvas_key = (
-            st.session_state.get("repair_canvas_key",0) + 1
-        )
-    
-        st.session_state.last_mode = mode
-    
-        st.rerun()
+    for k in keys_to_reset:
+
+        if k in st.session_state:
+
+            if isinstance(st.session_state[k], list):
+                st.session_state[k] = []
+            else:
+                st.session_state[k] = None
+
+    st.session_state.processed = False
+
+    st.session_state.last_mode = mode
+
+    st.rerun()
         
 st.markdown("---")
 
