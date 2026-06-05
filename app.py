@@ -325,7 +325,6 @@ def load_ocr():
         download_enabled=True
     )
 
-reader = load_ocr()
 
 @st.cache_data(
     show_spinner=False,
