@@ -1335,9 +1335,11 @@ if mode == "新建預定進度表":
                         best_schedule = None
             
                         best_total_score = -999999
+
+                        SIMULATION_COUNT = 5
                         
                         # AI 多次模擬
-                        for sim in range(50):
+                        for sim in range(10):
                         
                             schedule = create_schedule(
                             
