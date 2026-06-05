@@ -6,5 +6,4 @@ numpy
 opencv-python-headless
 streamlit-image-coordinates
 scipy
-easyocr
 openpyxl
