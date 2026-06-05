@@ -12,6 +12,7 @@ import math
 import random
 import io
 import cv2
+import easyocr
 from streamlit_image_coordinates import streamlit_image_coordinates
 
 # =====================================================
@@ -113,12 +114,15 @@ if st.session_state.last_mode != mode:
     
         "repair_points",
         "repair_piles",
+        "excluded_piles",
         "repair_last_clicked",
+        "exclude_last_click",
     
         "repair_canvas_key",
         "repair_current_file",
     
         "schedule_df",
+        "repair_schedule_df",
     
         "result_image",
         "original_image",
@@ -307,14 +311,155 @@ def detect_piles(pil_image, roi=None):
             )
 
     return positions
+    
+# =====================================================
+# OCR 自動辨識原圖樁號
+# =====================================================
 
+@st.cache_resource
+def load_ocr():
+
+    return easyocr.Reader(
+        ['en'],
+        gpu=False,
+        download_enabled=True
+    )
+
+reader = load_ocr()
 
 @st.cache_data(
     show_spinner=False,
     hash_funcs={Image.Image: id}
 )
+def detect_pile_numbers(image, piles):
+
+    img = np.array(image)
+
+    img_h, img_w = img.shape[:2]
+
+    mapping = {}
+
+    for idx, (x, y, r) in enumerate(piles):
+
+        x1 = max(0, x - int(r * 3))
+        x2 = min(img_w, x + int(r * 3))
+        
+        y1 = max(0, y - int(r * 4))
+        y2 = max(0, y - int(r * 0.5))
+        
+        crop = img[y1:y2, x1:x2]
+
+        import os
+        
+        os.makedirs("debug", exist_ok=True)
+        
+        if idx < 20:
+            cv2.imwrite(
+                f"debug/{idx+1}.png",
+                cv2.cvtColor(crop, cv2.COLOR_RGB2BGR)
+            )
+
+        if crop.size == 0:
+            mapping[idx + 1] = ""
+            continue
+
+        gray_crop = cv2.cvtColor(
+            crop,
+            cv2.COLOR_RGB2GRAY
+        )
+        
+        gray_crop = cv2.resize(
+            gray_crop,
+            None,
+            fx=4,
+            fy=4,
+            interpolation=cv2.INTER_CUBIC
+        )
+        
+        gray_crop = cv2.equalizeHist(
+            gray_crop
+        )
+        
+        # 新增這段
+        gray_crop = cv2.GaussianBlur(
+            gray_crop,
+            (3,3),
+            0
+        )
+
+        results = reader.readtext(
+            gray_crop,
+            detail=0,
+            paragraph=False,
+            allowlist='0123456789'
+        )
+        
+        detected_no = ""
+        
+        for text in results:
+
+            text = str(text).strip()
+        
+            text = ''.join(
+                filter(str.isdigit, text)
+            )
+        
+            if not text:
+                continue
+        
+            value = int(text)
+        
+            if 1 <= value <= 300:
+            
+                detected_no = value
+                break
+
+        mapping[idx + 1] = detected_no
+
+    return mapping
 
 @st.cache_data(show_spinner=False)
+def detect_pile_day(image, piles):
+
+    img = np.array(image)
+
+    mapping = {}
+
+    for idx,(x,y,r) in enumerate(piles):
+
+        x1 = max(0, x-int(r*2))
+        x2 = x+int(r*2)
+
+        y1 = y+int(r*0.3)
+        y2 = y+int(r*2.5)
+
+        crop = img[y1:y2,x1:x2]
+
+        if crop.size == 0:
+            mapping[idx+1] = ""
+            continue
+
+        result = reader.readtext(
+            crop,
+            detail=0,
+            paragraph=False,
+            allowlist="D0123456789"
+        )
+
+        day_text = ""
+
+        for txt in result:
+
+            txt = str(txt).upper().replace(" ","")
+
+            if txt.startswith("D"):
+
+                day_text = txt
+                break
+
+        mapping[idx+1] = day_text
+
+    return mapping
 
 # =====================================================
 # 智慧避鄰排程
@@ -1245,18 +1390,18 @@ if mode == "新建預定進度表":
                     font = ImageFont.load_default()
         
                 for idx, (x, y, r) in enumerate(piles):
-                
+        
                     pile_no = idx + 1
-                
+        
                     draw.ellipse(
                         (
-                            x-r,
-                            y-r,
-                            x+r,
-                            y+r
+                            x - r,
+                            y - r,
+                            x + r,
+                            y + r
                         ),
                         outline="red",
-                        width=2
+                        width=4
                     )
         
                     pile_text = str(pile_no)
@@ -1335,11 +1480,9 @@ if mode == "新建預定進度表":
                         best_schedule = None
             
                         best_total_score = -999999
-
-                        SIMULATION_COUNT = 5
                         
                         # AI 多次模擬
-                        for sim in range(10):
+                        for sim in range(50):
                         
                             schedule = create_schedule(
                             
@@ -1888,7 +2031,9 @@ elif mode == "修正當前進度表":
         st.session_state.repair_last_clicked = None
     
         st.session_state.repair_piles = []
-
+    
+        st.session_state.excluded_piles = []
+    
         st.session_state.repair_canvas_key = 0
     
         st.session_state.repair_mode_init = True
@@ -1917,6 +2062,8 @@ elif mode == "修正當前進度表":
             st.session_state.repair_last_clicked = None
     
             st.session_state.repair_current_file = current_file_name
+
+        piles = []
 
         st.markdown("---")
 
@@ -2074,6 +2221,8 @@ elif mode == "修正當前進度表":
                 st.session_state.repair_last_clicked = None
             
                 st.session_state.repair_piles = []
+
+                st.session_state.excluded_piles = []
             
                 st.session_state.repair_canvas_key += 1
             
@@ -2163,6 +2312,8 @@ elif mode == "修正當前進度表":
 
             total_piles = len(piles)
 
+            st.session_state.repair_total_piles = total_piles
+
             st.success(
                 f"✅ AI辨識到 {total_piles} 支樁體"
             )
@@ -2182,6 +2333,17 @@ elif mode == "修正當前進度表":
 
             draw_result = ImageDraw.Draw(display_result)
 
+            try:
+
+                font = ImageFont.truetype(
+                    "arial.ttf",
+                    20
+                )
+
+            except:
+
+                font = ImageFont.load_default()
+
             for idx, (x, y, r) in enumerate(piles):
             
                 x = int(x / scale_x)
@@ -2189,6 +2351,23 @@ elif mode == "修正當前進度表":
                 r = int(r / scale_x)
             
                 pile_no = idx + 1
+            
+                # 已排除的樁
+                if pile_no in st.session_state.excluded_piles:
+            
+                    draw_result.line(
+                        (x-r, y-r, x+r, y+r),
+                        fill="red",
+                        width=5
+                    )
+            
+                    draw_result.line(
+                        (x+r, y-r, x-r, y+r),
+                        fill="red",
+                        width=5
+                    )
+            
+                    continue
             
                 draw_result.ellipse(
                     (
@@ -2200,6 +2379,80 @@ elif mode == "修正當前進度表":
                     outline="red",
                     width=2
                 )
+                
+            left_result, right_result = st.columns([2.2, 1])
+            
+            with left_result:
+            
+                clicked = streamlit_image_coordinates(
+                    display_result,
+                    key="exclude_pile_click"
+                )
+            
+                if "exclude_last_click" not in st.session_state:
+            
+                    st.session_state.exclude_last_click = None
+            
+                if clicked is not None:
+            
+                    current_click = (
+                        clicked["x"],
+                        clicked["y"]
+                    )
+            
+                    if (
+                        st.session_state.exclude_last_click
+                        != current_click
+                    ):
+            
+                        st.session_state.exclude_last_click = current_click
+            
+                        click_x = clicked["x"] * scale_x
+                        click_y = clicked["y"] * scale_y
+            
+                        nearest_pile = None
+                        nearest_dist = 999999
+            
+                        for idx, (x, y, r) in enumerate(piles):
+            
+                            dist = (
+                                (click_x - x) ** 2
+                                +
+                                (click_y - y) ** 2
+                            ) ** 0.5
+            
+                            if dist < nearest_dist:
+            
+                                nearest_dist = dist
+                                nearest_pile = idx + 1
+            
+                        if nearest_dist < 30:
+            
+                            # 已排除 → 取消排除
+                            if (
+                                nearest_pile
+                                in st.session_state.excluded_piles
+                            ):
+            
+                                st.session_state.excluded_piles.remove(
+                                    nearest_pile
+                                )
+            
+                            # 未排除 → 排除
+                            else:
+            
+                                st.session_state.excluded_piles.append(
+                                    nearest_pile
+                                )
+            
+                            st.rerun()
+            
+                
+            
+            with right_result:
+            
+                st.subheader("🤖 AI自動辨識原圖樁號")
+
         # ============================================
         # 有辨識到樁體才往下
         # ============================================
@@ -2207,16 +2460,168 @@ elif mode == "修正當前進度表":
         if len(st.session_state.repair_piles) > 0:
 
             # ========================================
+            # OCR 自動辨識原圖樁號
+            # ========================================
+         
+            with st.spinner("AI正在辨識原圖樁號..."):
+            
+                filtered_piles = []
+                
+                filtered_index_map = {}
+                
+                new_idx = 1
+                
+                for idx, pile in enumerate(st.session_state.repair_piles):
+                
+                    pile_no = idx + 1
+                
+                    if pile_no in st.session_state.excluded_piles:
+                        continue
+                
+                    filtered_piles.append(pile)
+                
+                    filtered_index_map[new_idx] = pile_no
+                
+                    new_idx += 1
+                
+                temp_mapping = detect_pile_numbers(
+                    image,
+                    filtered_piles
+                )
+
+                temp_day_mapping = detect_pile_day(
+                    image,
+                    filtered_piles
+                )
+                
+                pile_mapping = {}
+
+                pile_day_mapping = {}
+                
+                for temp_ai_no, original_no in temp_mapping.items():
+                
+                    real_ai_no = filtered_index_map[temp_ai_no]
+                
+                    pile_mapping[real_ai_no] = original_no
+                
+                    pile_day_mapping[real_ai_no] = temp_day_mapping.get(
+                        temp_ai_no,
+                        ""
+                    )
+            
+            mapping_rows = []
+            
+            for ai_no, original_no in pile_mapping.items():
+            
+                # =========================
+                # 預設正常
+                # =========================
+            
+                status = "✅ 正常"
+            
+                # =========================
+                # 空白
+                # =========================
+            
+                if (
+                    original_no == ""
+                    or
+                    original_no is None
+                ):
+            
+                    status = "❌ OCR失敗"
+            
+                # =========================
+                # 非數字
+                # =========================
+            
+                elif not str(original_no).isdigit():
+            
+                    status = "⚠️ 非數字"
+            
+                else:
+            
+                    value = int(original_no)
+            
+                    # =========================
+                    # 超出合理範圍
+                    # =========================
+            
+                    if (
+                        value < 1
+                        or
+                        value > total_piles
+                    ):
+            
+                        status = "⚠️ 超出範圍"
+            
+                    # =========================
+                    # 與AI排序差距過大
+                    # =========================
+            
+                    elif abs(ai_no - value) > 10:
+            
+                        status = "⚠️ 疑似錯誤"
+            
+                mapping_rows.append({
+                
+                    "AI辨識樁號": ai_no,
+                
+                    "原圖樁號": original_no,
+                
+                    "施工日": pile_day_mapping.get(ai_no,""),
+                
+                    "錯誤標記": status
+                
+                })
+            
+            mapping_df = pd.DataFrame(mapping_rows)
+
+            failed_ocr = mapping_df[
+                mapping_df["原圖樁號"].isna()
+                |
+                (mapping_df["原圖樁號"] == "")
+            ]
+            
+            if len(failed_ocr) > 0:
+            
+                st.warning(
+                    f"⚠️ 有 {len(failed_ocr)} 支樁 OCR辨識失敗，請確認圖面清晰度"
+                )
+            
+            with right_result:
+            
+                st.dataframe(
+                    mapping_df,
+                    use_container_width=True,
+                    height=420
+                )
+            
+                st.success("✅ AI已完成原圖樁號對應")
+
+            # ========================================
             # 已完成施工輸入
             # ========================================
 
             st.markdown("---")
+
+            st.subheader("✅ 已完成施工")
+
+            completed_text = st.text_area(
+
+                "輸入已完成樁號（原圖樁號）",
+
+                placeholder="例如：35,36,40"
+
+            )
 
             # ========================================
             # 修正施工條件
             # ========================================
 
             st.markdown("---")
+
+            st.subheader("📅 修正施工條件")
 
             col1, col2 = st.columns(2)
 
@@ -2233,3 +2638,128 @@ elif mode == "修正當前進度表":
                     min_value=1,
                     value=10
                 )
+
+            # ========================================
+            # AI重新分析
+            # ========================================
+
+            if st.button(
+                "🧠 AI重新分析後續排程",
+                use_container_width=True
+            ):
+
+                reverse_mapping = {}
+
+                for ai_no, original_no in pile_mapping.items():
+                
+                    if str(original_no).isdigit():
+                
+                        reverse_mapping[int(original_no)] = ai_no
+
+                completed_piles = []
+
+                if completed_text.strip():
+
+                    for x in completed_text.split(","):
+
+                        x = x.strip()
+
+                        if x.isdigit():
+
+                            original_no = int(x)
+
+                            if original_no in reverse_mapping:
+
+                                completed_piles.append(
+                                    reverse_mapping[original_no]
+                                )
+
+                valid_piles = []
+                
+                for i in range(
+                    1,
+                    st.session_state.repair_total_piles + 1
+                ):
+                
+                    if i not in st.session_state.excluded_piles:
+                
+                        valid_piles.append(i)
+                        
+                remaining_piles = []
+                
+                for i in valid_piles:
+                
+                    if i not in completed_piles:
+                
+                        remaining_piles.append(i)
+                
+                remaining_data = []
+                
+                for pile_no in remaining_piles:
+                
+                    remaining_data.append({
+                    
+                        "original_no": int(
+                            pile_mapping[pile_no]
+                        ) if str(
+                            pile_mapping[pile_no]
+                        ).isdigit() else pile_no,
+                    
+                        "position": st.session_state.repair_piles[pile_no - 1]
+                    
+                    })
+                
+                remaining_positions = [
+                
+                    x["position"]
+                
+                    for x in remaining_data
+                ]
+
+                with st.spinner(
+                    "🤖 AI正在重新分析後續施工..."
+                ):
+
+                    new_schedule = create_schedule(
+
+                        pile_positions=remaining_positions,
+
+                        total_piles=len(
+                            remaining_positions
+                        ),
+
+                        daily_count=daily_count,
+
+                        start_date=start_date,
+
+                        start_no=1,
+
+                        cooldown_days=1
+
+                    )
+
+                st.success(
+                    "✅ AI已完成後續最佳化排程"
+                )
+
+                # ============================================
+                # AI樁號 轉回 原圖樁號
+                # ============================================
+                
+                new_no_mapping = {}
+                
+                for idx, data in enumerate(remaining_data):
+                
+                    new_no_mapping[idx + 1] = data["original_no"]
+                
+                for row in new_schedule:
+                
+                    row["施工樁號"] = [
+                
+                        new_no_mapping[p]
+                
+                        for p in row["施工樁號"]
+                    ]
+                    
+                new_df = pd.DataFrame(new_schedule)
+                st.session_state.repair_schedule_df = new_df
