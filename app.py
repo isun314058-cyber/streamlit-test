@@ -119,7 +119,6 @@ if st.session_state.last_mode != mode:
         "repair_current_file",
     
         "schedule_df",
-        "repair_schedule_df",
     
         "result_image",
         "original_image",
@@ -1917,8 +1916,6 @@ elif mode == "修正當前進度表":
     
             st.session_state.repair_current_file = current_file_name
 
-        piles = []
-
         st.markdown("---")
 
         st.subheader("🛠️ 修正當前施工進度")
@@ -2164,8 +2161,6 @@ elif mode == "修正當前進度表":
 
             total_piles = len(piles)
 
-            st.session_state.repair_total_piles = total_piles
-
             st.success(
                 f"✅ AI辨識到 {total_piles} 支樁體"
             )
@@ -2184,17 +2179,6 @@ elif mode == "修正當前進度表":
             scale_y = result_img.height / display_result.height
 
             draw_result = ImageDraw.Draw(display_result)
-
-            try:
-
-                font = ImageFont.truetype(
-                    "arial.ttf",
-                    20
-                )
-
-            except:
-
-                font = ImageFont.load_default()
 
             for idx, (x, y, r) in enumerate(piles):
             
