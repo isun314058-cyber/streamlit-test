@@ -682,14 +682,16 @@ def create_schedule(
 
                 isolated_count = 0
 
+                future_set = set(future_remaining_list)
+                
                 for p in future_remaining_list:
-
+                
                     available_neighbors = [
-
+                
                         n for n in neighbor_map[p]
-
-                        if n in future_remaining_list
-
+                
+                        if n in future_set
+                
                     ]
 
                     if len(available_neighbors) == 0:
@@ -1329,7 +1331,7 @@ if mode == "新建預定進度表":
                         
                         neighbor_map = build_neighbor_map(
                             piles,
-                            safe_distance=100
+                            safe_distance=55
                         )
             
                         best_schedule = None
