@@ -1249,7 +1249,7 @@ if mode == "新建預定進度表":
                 
                     pile_no = idx + 1
                 
-                    draw_result.ellipse(
+                    draw.ellipse(
                         (
                             x-r,
                             y-r,
