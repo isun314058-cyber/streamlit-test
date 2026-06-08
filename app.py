@@ -2409,15 +2409,7 @@ elif mode == "修正當前進度表":
                         
                         display_df["日期顏色"] = display_df["日期顏色"].apply(
                             lambda c:
-                            f'''
-                            <div style="
-                                background:{c};
-                                width:80px;
-                                height:25px;
-                                border-radius:5px;
-                                margin:auto;
-                            "></div>
-                            '''
+                            f'<div style="background:{c};width:80px;height:25px;border-radius:5px;"></div>'
                         )
                         
                         st.markdown(
