@@ -39,6 +39,18 @@ h1,h2,h3,h4,h5,h6,p,span,label{
     color:white;
 }
 
+/* Data Editor 內容字體 */
+[data-testid="stDataEditor"] td{
+    font-size:20px !important;
+    font-weight:500 !important;
+}
+
+/* Data Editor 標題列 */
+[data-testid="stDataEditor"] th{
+    font-size:22px !important;
+    font-weight:bold !important;
+}
+
 .stButton>button{
     border-radius:12px;
     height:50px;
