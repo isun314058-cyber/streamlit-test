@@ -2196,7 +2196,7 @@ elif mode == "修正當前進度表":
                 
                 font = ImageFont.truetype(
                     FONT_NAME,
-                    18
+                    14
                 )
 
             except:
@@ -2245,19 +2245,20 @@ elif mode == "修正當前進度表":
                 # ===================
             
                 pile_text = str(pile_no)
-            
+                
                 pile_bbox = draw_result.textbbox(
                     (0,0),
                     pile_text,
                     font=font
                 )
-            
+                
                 pile_width = pile_bbox[2] - pile_bbox[0]
-            
+                pile_height = pile_bbox[3] - pile_bbox[1]
+                
                 draw_result.text(
                     (
                         x - pile_width // 2,
-                        y - 35
+                        y - r - pile_height - 2
                     ),
                     pile_text,
                     fill="red",
