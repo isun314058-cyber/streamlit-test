@@ -2402,24 +2402,7 @@ elif mode == "修正當前進度表":
                         )
         
                     else:
-        
-                        st.success("✅ Excel載入成功")
-                        
-                        display_df = original_df.copy()
-                        
-                        display_df["日期顏色"] = display_df["日期顏色"].apply(
-                            lambda c:
-                            f'<div style="background:{c};width:80px;height:25px;border-radius:5px;"></div>'
-                        )
-                        
-                        st.markdown(
-                            display_df.to_html(
-                                escape=False,
-                                index=False
-                            ),
-                            unsafe_allow_html=True
-                        )
-                        
+                                                     
                         st.markdown("---")
                         st.write("✏️ 請於下方修改施工樁號")
                         
