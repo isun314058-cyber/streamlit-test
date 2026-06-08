@@ -2422,7 +2422,26 @@ elif mode == "修正當前進度表":
                         
                         st.markdown("---")
                         st.write("✏️ 請於下方修改施工樁號")
-        
+                        
+                        edited_df = st.data_editor(
+                        
+                            original_df,
+                        
+                            use_container_width=True,
+                        
+                            height=500,
+                        
+                            disabled=[
+                                "施工日",
+                                "日期",
+                                "日期顏色",
+                                "施工數量"
+                            ],
+                        
+                            key="repair_editor"
+                        
+                        )
+                        
                         st.session_state.repair_edit_df = edited_df
 
                         # ============================================
