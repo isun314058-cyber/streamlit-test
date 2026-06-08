@@ -2404,25 +2404,32 @@ elif mode == "修正當前進度表":
                     else:
         
                         st.success("✅ Excel載入成功")
-        
-                        edited_df = st.data_editor(
                         
-                            original_df,
+                        display_df = original_df.copy()
                         
-                            use_container_width=True,
-                        
-                            num_rows="fixed",
-                        
-                            disabled=[
-                                "施工日",
-                                "日期",
-                                "日期顏色",
-                                "施工數量"
-                            ],
-                        
-                            key="repair_editor"
-                        
+                        display_df["日期顏色"] = display_df["日期顏色"].apply(
+                            lambda c:
+                            f'''
+                            <div style="
+                                background:{c};
+                                width:80px;
+                                height:25px;
+                                border-radius:5px;
+                                margin:auto;
+                            "></div>
+                            '''
                         )
+                        
+                        st.markdown(
+                            display_df.to_html(
+                                escape=False,
+                                index=False
+                            ),
+                            unsafe_allow_html=True
+                        )
+                        
+                        st.markdown("---")
+                        st.write("✏️ 請於下方修改施工樁號")
         
                         st.session_state.repair_edit_df = edited_df
 
