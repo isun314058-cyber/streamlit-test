@@ -2192,9 +2192,11 @@ elif mode == "修正當前進度表":
 
             try:
 
+                FONT_NAME = "DejaVuSans.ttf"
+                
                 font = ImageFont.truetype(
-                    "arial.ttf",
-                    20
+                    FONT_NAME,
+                    18
                 )
 
             except:
@@ -2209,7 +2211,7 @@ elif mode == "修正當前進度表":
             
                 pile_no = idx + 1
             
-                # 已排除的樁
+                # 已排除樁
                 if pile_no in st.session_state.excluded_piles:
             
                     draw_result.line(
@@ -2226,6 +2228,7 @@ elif mode == "修正當前進度表":
             
                     continue
             
+                # 畫圓
                 draw_result.ellipse(
                     (
                         x-r,
@@ -2235,6 +2238,30 @@ elif mode == "修正當前進度表":
                     ),
                     outline="red",
                     width=2
+                )
+            
+                # ===================
+                # 新增樁號
+                # ===================
+            
+                pile_text = str(pile_no)
+            
+                pile_bbox = draw_result.textbbox(
+                    (0,0),
+                    pile_text,
+                    font=font
+                )
+            
+                pile_width = pile_bbox[2] - pile_bbox[0]
+            
+                draw_result.text(
+                    (
+                        x - pile_width // 2,
+                        y - 35
+                    ),
+                    pile_text,
+                    fill="red",
+                    font=font
                 )
                 
             left_result, right_result = st.columns([2.2, 1])
