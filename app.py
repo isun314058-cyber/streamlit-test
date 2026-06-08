@@ -2258,7 +2258,7 @@ elif mode == "修正當前進度表":
                 draw_result.text(
                     (
                         x - pile_width // 2,
-                        y - r - pile_height - 2
+                        y - 25
                     ),
                     pile_text,
                     fill="red",
