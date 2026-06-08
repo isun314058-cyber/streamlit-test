@@ -2418,6 +2418,8 @@ elif mode == "修正當前進度表":
                         
                             height=500,
                         
+                            hide_index=True,
+                        
                             disabled=[
                                 "施工日",
                                 "日期",
