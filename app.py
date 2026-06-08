@@ -1734,16 +1734,38 @@ if mode == "新建預定進度表":
                 
                         excel_buffer = io.BytesIO()
                 
-                        with pd.ExcelWriter(
-                            excel_buffer,
-                            engine="openpyxl"
-                        ) as writer:
-                
-                            excel_df.to_excel(
-                                writer,
-                                sheet_name="施工排程",
-                                index=False
-                            )
+                        from openpyxl.styles import PatternFill
+                            
+                            with pd.ExcelWriter(
+                                excel_buffer,
+                                engine="openpyxl"
+                            ) as writer:
+                            
+                                excel_df.to_excel(
+                                    writer,
+                                    sheet_name="施工排程",
+                                    index=False
+                                )
+                            
+                                ws = writer.book["施工排程"]
+                            
+                                # 日期顏色欄位(C欄)
+                                for row in range(2, ws.max_row + 1):
+                            
+                                    hex_color = ws[f"C{row}"].value
+                            
+                                    if hex_color:
+                            
+                                        fill = PatternFill(
+                                            fill_type="solid",
+                                            start_color=hex_color.replace("#",""),
+                                            end_color=hex_color.replace("#","")
+                                        )
+                            
+                                        ws[f"C{row}"].fill = fill
+                            
+                                        # 不顯示色碼
+                                        ws[f"C{row}"].value = ""
                         today_str = pd.Timestamp.today().strftime("%Y%m%d")
                         st.download_button(
                             "📊下載Excel",
@@ -2384,15 +2406,22 @@ elif mode == "修正當前進度表":
                         st.success("✅ Excel載入成功")
         
                         edited_df = st.data_editor(
-        
+                        
                             original_df,
-        
+                        
                             use_container_width=True,
-        
-                            num_rows="dynamic",
-        
+                        
+                            num_rows="fixed",
+                        
+                            disabled=[
+                                "施工日",
+                                "日期",
+                                "日期顏色",
+                                "施工數量"
+                            ],
+                        
                             key="repair_editor"
-        
+                        
                         )
         
                         st.session_state.repair_edit_df = edited_df
