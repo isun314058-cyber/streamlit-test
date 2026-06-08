@@ -39,16 +39,26 @@ h1,h2,h3,h4,h5,h6,p,span,label{
     color:white;
 }
 
-/* Data Editor 內容字體 */
-[data-testid="stDataEditor"] td{
-    font-size:20px !important;
-    font-weight:500 !important;
+/* Data Editor 內容 */
+[data-testid="stDataEditor"] *{
+    font-size:22px !important;
 }
 
-/* Data Editor 標題列 */
-[data-testid="stDataEditor"] th{
+/* 輸入框 */
+[data-testid="stDataEditor"] input{
     font-size:22px !important;
     font-weight:bold !important;
+}
+
+/* 表頭 */
+[data-testid="stDataEditor"] div[role="columnheader"]{
+    font-size:24px !important;
+    font-weight:bold !important;
+}
+
+/* 資料列 */
+[data-testid="stDataEditor"] div[role="gridcell"]{
+    font-size:22px !important;
 }
 
 .stButton>button{
@@ -2423,23 +2433,22 @@ elif mode == "修正當前進度表":
                         )
                         
                         edited_df = st.data_editor(
-                        
                             editor_df,
-                        
                             use_container_width=True,
-                        
-                            height=500,
-                        
+                            height=700,
                             hide_index=True,
-                        
+                            column_config={
+                                "施工日": st.column_config.TextColumn(width="medium"),
+                                "日期": st.column_config.TextColumn(width="medium"),
+                                "施工數量": st.column_config.NumberColumn(width="small"),
+                                "施工樁號": st.column_config.TextColumn(width="large")
+                            },
                             disabled=[
                                 "施工日",
                                 "日期",
                                 "施工數量"
                             ],
-                        
                             key="repair_editor"
-                        
                         )
                         
                         st.session_state.repair_edit_df = edited_df
