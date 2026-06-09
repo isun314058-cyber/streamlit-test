@@ -811,8 +811,7 @@ def create_schedule(
                     day + cooldown_days
                 )
 
-                for neighbor in neighbor_map[start_no]:
-
+                for neighbor in neighbor_map.get(start_no, []):
                     blocked_until[neighbor] = (
                         day + cooldown_days
                     )
@@ -854,7 +853,9 @@ def create_schedule(
             #random.shuffle(candidate_piles)
             sorted_remaining = sorted(
                 candidate_piles,
-                key=lambda p: len(neighbor_map[p]),
+                key=lambda p: len(
+                    neighbor_map.get(p, [])
+                ),
                 reverse=True
             )
             
@@ -933,49 +934,46 @@ def create_schedule(
                 # 靠近起始樁
                 
                 score -= abs(pile - start_no) * 0.03
-
+                
                 # =========================================
-                # 未來剩餘數量
+                # 未來剩餘數量 (安全版)
                 # =========================================
                 
-                future_count = max(
-                    0,
-                    len(remaining) - 1
-                )
+                try:
                 
-                st.write("future_count =", future_count)
-                st.write("daily_count =", daily_count)
+                    future_count = len(remaining)
                 
-                safe_daily_count = max(
-                    1,
-                    daily_count
-                )
+                    safe_daily_count = max(
+                        1,
+                        int(daily_count)
+                    )
                 
-                future_days = max(
-                    1,
-                    math.ceil(
+                    future_days = math.ceil(
                         future_count / safe_daily_count
                     )
-                )
                 
-                future_avg = (
-                    future_count / future_days
-                )
+                    future_days = max(
+                        1,
+                        future_days
+                    )
+                
+                    future_avg = (
+                        future_count / future_days
+                    )
+                
+                except Exception:
+                
+                    future_count = 0
+                
+                    future_days = 1
+                
+                    future_avg = 0
                 
                 score += future_avg * 25
-                
-                # ==================================================
-                # 4. 如果未來平均太低
-                # 代表後面會崩盤
-                # ==================================================
                 
                 if future_avg < daily_count * 0.8:
                 
                     score -= 400
-                
-                # ==================================================
-                # 5. 最後幾天避免只剩單支
-                # ==================================================
                 
                 if (
                     future_count > 0
@@ -1037,7 +1035,7 @@ def create_schedule(
             # 立即更新封鎖
             blocked_until[best_pile] = day + cooldown_days
             
-            for neighbor in neighbor_map[best_pile]:
+            for neighbor in neighbor_map.get(best_pile, []):
             
                 blocked_until[neighbor] = day + cooldown_days
 
@@ -1069,7 +1067,7 @@ def create_schedule(
 
             )
 
-            for neighbor in neighbor_map[pile]:
+            for neighbor in neighbor_map.get(pile, []):
 
                 blocked_until[neighbor] = (
 
