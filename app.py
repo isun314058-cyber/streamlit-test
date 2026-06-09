@@ -642,6 +642,11 @@ def create_schedule(
     neighbor_map=None
 ):
 
+    # 避免 NameError
+    future_count = 0
+    future_days = 1
+    future_avg = 0
+
     import random
     import pandas as pd
 
@@ -891,11 +896,11 @@ def create_schedule(
 
                     if (
 
-                        pile in neighbor_map[existing]
+                        pile in neighbor_map.get(existing, [])
 
                         or
 
-                        existing in neighbor_map[pile]
+                        existing in neighbor_map.get(pile, [])
 
                     ):
 
@@ -913,7 +918,9 @@ def create_schedule(
                 
                 # 鄰居越多越優先
                 
-                score += len(neighbor_map[pile]) * 50
+                score += len(
+                    neighbor_map.get(pile, [])
+                ) * 50
                 
                 # 避免集中同區域
                 
@@ -936,49 +943,40 @@ def create_schedule(
                 score -= abs(pile - start_no) * 0.03
                 
                 # =========================================
-                # 未來剩餘數量 (安全版)
+                # 未來剩餘數量
                 # =========================================
                 
-                try:
+                future_count = max(
+                    0,
+                    len(remaining)
+                )
                 
-                    future_count = len(remaining)
+                safe_daily_count = max(
+                    1,
+                    int(daily_count)
+                )
                 
-                    safe_daily_count = max(
-                        1,
-                        int(daily_count)
-                    )
-                
-                    future_days = math.ceil(
+                future_days = max(
+                    1,
+                    math.ceil(
                         future_count / safe_daily_count
                     )
+                )
                 
-                    future_days = max(
-                        1,
-                        future_days
-                    )
-                
-                    future_avg = (
-                        future_count / future_days
-                    )
-                
-                except Exception:
-                
-                    future_count = 0
-                
-                    future_days = 1
-                
-                    future_avg = 0
+                future_avg = (
+                    future_count / future_days
+                )
                 
                 score += future_avg * 25
                 
-                if future_avg < daily_count * 0.8:
+                if future_avg < safe_daily_count * 0.8:
                 
                     score -= 400
                 
                 if (
                     future_count > 0
                     and
-                    future_count < daily_count * 0.5
+                    future_count < safe_daily_count * 0.5
                 ):
                 
                     score -= 150
