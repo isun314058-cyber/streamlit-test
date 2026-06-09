@@ -2562,46 +2562,38 @@ elif mode == "修正當前進度表":
                         editor_df = original_df.drop(
                             columns=["日期顏色"]
                         )
+
+                        edited_df = st.data_editor(
+                            editor_df,
+                            use_container_width=True,
+                            height=500,
+                            hide_index=True,
+                            disabled=[
+                                "施工日",
+                                "日期",
+                                "施工數量"
+                            ],
+                            key="repair_editor"
+                        )
+
+                        validated_df, error_messages = validate_pile_input(
+                            edited_df,
+                            st.session_state.repair_total_piles
+                        )
                         
-                        left_col, right_col = st.columns([1.5, 1])
+                        st.session_state.repair_edit_df = validated_df
                         
-                        with left_col:
+                        st.markdown("### 🔍 驗證結果")
                         
-                            st.markdown("### ✏️ 修改施工樁號")
+                        if error_messages:
                         
-                            edited_df = st.data_editor(
-                                editor_df,
-                                use_container_width=True,
-                                height=500,
-                                hide_index=True,
-                                disabled=[
-                                    "施工日",
-                                    "日期",
-                                    "施工數量"
-                                ],
-                                key="repair_editor"
-                            )
+                            for msg in error_messages:
                         
-                        with right_col:
+                                st.error(msg)
                         
-                            validated_df, error_messages = validate_pile_input(
-                                edited_df,
-                                st.session_state.repair_total_piles
-                            )
+                        else:
                         
-                            st.session_state.repair_edit_df = validated_df
-                        
-                            st.markdown("### 🔍 驗證結果")
-                        
-                            if error_messages:
-                        
-                                for msg in error_messages:
-                        
-                                    st.error(msg)
-                        
-                            else:
-                        
-                                st.success("✅ 更改完成")
+                            st.success("✅ 更改完成")
 
                         # ============================================
                         # 重新排程
