@@ -367,10 +367,6 @@ def validate_pile_input(edit_df, total_piles):
 
     result_df = edit_df.copy()
 
-    result_df["施工數量"] = (
-        result_df["施工數量"].astype(str)
-    )
-
     all_piles = []
 
     duplicated_piles = set()
@@ -2594,13 +2590,18 @@ elif mode == "修正當前進度表":
                             st.session_state.repair_total_piles
                         
                         )
+                        display_df = validated_df.copy()
+                        
+                        display_df["施工數量"] = (
+                            display_df["施工數量"].astype(str)
+                        )
                         
                         st.session_state.repair_edit_df = validated_df
 
                         st.markdown("### 驗證結果")
                         
                         st.dataframe(
-                            validated_df,
+                            display_df,
                             use_container_width=True
                         )
                         
