@@ -364,16 +364,6 @@ def build_neighbor_map(
 def validate_pile_input(edit_df, total_piles):
 
     import re
-
-    result_df = edit_df.copy()
-
-    # 最後統一轉文字
-    result_df["施工數量"] = (
-        result_df["施工數量"]
-        .astype(str)
-    )
-    
-    return result_df, error_messages
     
     all_piles = []
 
@@ -517,16 +507,22 @@ def validate_pile_input(edit_df, total_piles):
             ]
         
             for dup_pile in dup_list:
-        
+            
                 if dup_pile in reported:
                     continue
-        
+            
                 reported.add(dup_pile)
-        
+            
                 error_messages.append(
                     f"樁號 {dup_pile} 重複，出現在："
                     f"{','.join(duplicate_detail[dup_pile])}"
                 )
+            
+            # 最後統一轉字串
+            result_df["施工數量"] = (
+                result_df["施工數量"]
+                .astype(str)
+            )
 
     return result_df, error_messages
 # =====================================================
