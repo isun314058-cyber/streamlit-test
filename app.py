@@ -2598,14 +2598,9 @@ elif mode == "修正當前進度表":
                         
                             disabled=[
                                 "施工日",
-                                "日期"
+                                "日期",
+                                "施工數量"
                             ],
-                        
-                            column_config={
-                                "施工數量": st.column_config.TextColumn(
-                                    "施工數量"
-                                )
-                            },
                         
                             key="repair_editor"
                         )
