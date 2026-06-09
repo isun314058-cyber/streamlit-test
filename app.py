@@ -421,9 +421,9 @@ def build_neighbor_map(
             # 上
 
             if row_idx > 0:
-
+            
                 upper_row = rows[row_idx - 1]
-
+            
                 nearest_upper = min(
                     upper_row,
                     key=lambda p:
@@ -431,10 +431,16 @@ def build_neighbor_map(
                         p["x"] - pile["x"]
                     )
                 )
-
-                neighbor_map[pile_no].append(
-                    nearest_upper["pile"]
-                )
+            
+                if abs(
+                    nearest_upper["x"]
+                    -
+                    pile["x"]
+                ) < row_tolerance:
+                
+                    neighbor_map[pile_no].append(
+                        nearest_upper["pile"]
+                    )
 
             # 下
 
@@ -449,10 +455,16 @@ def build_neighbor_map(
                         p["x"] - pile["x"]
                     )
                 )
-
-                neighbor_map[pile_no].append(
-                    nearest_lower["pile"]
-                )
+                
+                if abs(
+                    nearest_lower["x"]
+                    -
+                    pile["x"]
+                ) < row_tolerance:
+                
+                    neighbor_map[pile_no].append(
+                        nearest_lower["pile"]
+                    )
 
     return neighbor_map
 
@@ -627,6 +639,73 @@ def validate_pile_input(edit_df, total_piles):
 # =====================================================
 # AI 智慧避鄰排程
 # =====================================================
+
+def optimize_tail_days(
+    schedule,
+    neighbor_map,
+    daily_count
+):
+
+    if len(schedule) < 3:
+        return schedule
+
+    max_loop = 20
+
+    for _ in range(max_loop):
+
+        changed = False
+
+        for i in range(len(schedule)-2):
+
+            today = schedule[i]
+            last_day = schedule[-1]
+
+            # 最後一天已達目標
+            if len(last_day["施工樁號"]) >= daily_count * 0.7:
+                return schedule
+
+            # 今日只剩少量不能搬
+            if len(today["施工樁號"]) <= 3:
+                continue
+
+            move_candidate = None
+
+            for pile in reversed(today["施工樁號"]):
+
+                conflict = False
+
+                for existing in last_day["施工樁號"]:
+
+                    if (
+                        pile in neighbor_map.get(existing, [])
+                        or
+                        existing in neighbor_map.get(pile, [])
+                    ):
+                        conflict = True
+                        break
+
+                if not conflict:
+                    move_candidate = pile
+                    break
+
+            if move_candidate:
+
+                today["施工樁號"].remove(
+                    move_candidate
+                )
+
+                last_day["施工樁號"].append(
+                    move_candidate
+                )
+
+                last_day["施工樁號"].sort()
+
+                changed = True
+
+        if not changed:
+            break
+
+    return schedule
 
 def create_schedule(
 
@@ -1025,8 +1104,9 @@ def create_schedule(
                 
                     for existing in today_piles:
                 
-                        cluster_score += abs(
-                            pile - existing
+                        cluster_score += distance_cache.get(
+                            (pile, existing),
+                            0
                         )
                 
                     score -= cluster_score * 0.08
@@ -1507,12 +1587,17 @@ if mode == "新建預定進度表":
                         )
             
                         best_schedule = None
-            
+                        
                         best_total_score = -999999
                         
-                        # AI 多次模擬
-                        for sim in range(5):
+                        backup_schedule = None
                         
+                        # AI 多次模擬
+                        for sim in range(15):
+
+                            if backup_schedule is None:
+                                backup_schedule = schedule
+                            
                             schedule = create_schedule(
                             
                                 pile_positions=piles,
@@ -1529,6 +1614,13 @@ if mode == "新建預定進度表":
                             
                                 neighbor_map=neighbor_map
                             )
+
+                            last_day_count = len(
+                                schedule[-1]["施工樁號"]
+                            )
+                            
+                            if last_day_count <= 2:
+                                continue
                         
                             # =====================================
                             # AI 總體評分
@@ -1683,6 +1775,20 @@ if mode == "新建預定進度表":
                             tail_avg = np.mean(tail_counts)
                             
                             schedule_score += tail_avg * 200
+
+                            # ======================
+                            # 尾盤平衡度
+                            # ======================
+                            
+                            tail_balance_score = 0
+                            
+                            for count in tail_counts:
+                            
+                                tail_balance_score -= abs(
+                                    count - tail_avg
+                                ) * 300
+                            
+                            schedule_score += tail_balance_score
                             
                             if schedule_score > best_total_score:
                             
@@ -1690,7 +1796,11 @@ if mode == "新建預定進度表":
                             
                                 best_schedule = schedule
                         
-                        # 最終最佳排程
+                        # 最終最佳排程                        
+                        if best_schedule is None:
+                        
+                            best_schedule = backup_schedule
+                        
                         schedule = best_schedule
         
                     df = pd.DataFrame(schedule)
