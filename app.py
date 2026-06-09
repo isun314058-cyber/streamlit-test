@@ -636,7 +636,16 @@ def create_schedule(
     
                                 neighbor_map[p1].add(p2)
     
-            MAX_NEIGHBORS = 8
+            for pile in neighbor_map:
+            
+                neighbor_map[pile] = sorted(
+                    neighbor_map[pile],
+                    key=lambda n:
+                    calculate_distance(
+                        pile_positions[pile-1],
+                        pile_positions[n-1]
+                    )
+                )[:8]
     
             for p in neighbor_map:
     
@@ -1498,7 +1507,7 @@ if mode == "新建預定進度表":
                         
                         neighbor_map = build_neighbor_map(
                             piles,
-                            safe_distance=55
+                            safe_distance=110
                         )
             
                         best_schedule = None
