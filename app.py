@@ -106,40 +106,10 @@ if "last_mode" not in st.session_state:
 
 if st.session_state.last_mode != mode:
 
-    keys_to_reset = [
-    
-        "points",
-        "last_clicked",
-    
-        "repair_points",
-        "repair_piles",
-        "excluded_piles",
-        "repair_last_clicked",
-        "exclude_last_click",
-    
-        "repair_canvas_key",
-        "repair_current_file",
-    
-        "schedule_df",
-        "repair_schedule_df",
-    
-        "result_image",
-        "original_image",
-    
-        "pile_positions"
-    ]
+    # 全部重置
+    st.session_state.clear()
 
-    for k in keys_to_reset:
-
-        if k in st.session_state:
-
-            if isinstance(st.session_state[k], list):
-                st.session_state[k] = []
-            else:
-                st.session_state[k] = None
-
-    st.session_state.processed = False
-
+    # 記錄目前模式
     st.session_state.last_mode = mode
 
     st.rerun()
@@ -2747,30 +2717,12 @@ elif mode == "修正當前進度表":
                                     piles[p-1]
                                     for p in remaining_piles
                                 ]
-                                
-                                st.write("已完成樁體")
-                                st.write(completed_piles)
-                                
-                                st.write("剩餘未施工樁體")
-                                st.write(remaining_piles)
-                                
-                                st.write("續排開始日期")
-                                st.write(start_date)
 
-                                # ==================================
-                                # 建立樁號對照表
-                                # ==================================
-                                
                                 pile_mapping = {}
                                 
-                                for new_no, old_no in enumerate(remaining_piles, start=1):
+                                for idx, pile_no in enumerate(remaining_piles):
+                                    pile_mapping[idx + 1] = pile_no
                                 
-                                    pile_mapping[new_no] = old_no
-                                
-                                st.write("樁號對照表")
-                                
-                                st.write(pile_mapping)
-
                                 # ==================================
                                 # 剩餘樁體鄰樁分析
                                 # ==================================
@@ -2817,6 +2769,8 @@ elif mode == "修正當前進度表":
                                 
                                 new_df = edit_df.copy()
                                 
+                                new_df["施工數量"] = new_df["施工數量"].astype(str)
+                                
                                 for i, day_data in enumerate(new_schedule):
                                 
                                     target_row = first_empty_index + i
@@ -2831,20 +2785,17 @@ elif mode == "修正當前進度表":
                                 
                                     new_df.at[target_row, "施工樁號"] = pile_text
                                 
-                                    new_df.at[target_row, "施工數量"] = len(
-                                        day_data["施工樁號"]
+                                    new_df.at[target_row, "施工數量"] = str(
+                                        len(day_data["施工樁號"])
                                     )
 
                                 st.session_state.repair_schedule_df = new_df
                                 
-                                st.success("✅ AI續排完成")
+                                st.write("續排完成")
+                                
+                                st.dataframe(new_df)
 
-                                st.dataframe(
-                                    st.session_state.repair_schedule_df,
-                                    use_container_width=True
-                                )
-
-                                st.write(st.session_state.repair_schedule_df.head())
+                                st.rerun()
         
                 except Exception as e:
         
