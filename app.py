@@ -700,8 +700,7 @@ def create_schedule(
         except Exception:
     
             neighbor_map = build_neighbor_map(
-                pile_positions,
-                safe_distance=base_distance * 1.1
+                pile_positions
             )
     
         if neighbor_map is None:
@@ -911,6 +910,7 @@ def create_schedule(
                 # =========================================
                 
                 score = 0
+                future_count = len(remaining) - 1
                 
                 # 鄰居越多越優先
                 
