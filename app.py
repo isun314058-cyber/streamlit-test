@@ -106,10 +106,12 @@ if "last_mode" not in st.session_state:
 
 if st.session_state.last_mode != mode:
 
-    # 全部重置
-    st.session_state.clear()
+    keys_to_keep = ["last_mode"]
 
-    # 記錄目前模式
+    for k in list(st.session_state.keys()):
+        if k not in keys_to_keep:
+            del st.session_state[k]
+
     st.session_state.last_mode = mode
 
     st.rerun()
@@ -2059,6 +2061,7 @@ elif mode == "修正當前進度表":
     # ============================================
     
     if uploaded_file:
+        st.success("已進入修正模式")
         current_file_name = uploaded_file.name
     
         if (
