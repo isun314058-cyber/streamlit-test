@@ -939,11 +939,10 @@ def create_schedule(
                 # 未來剩餘數量
                 # =========================================
                 
-                future_count = len(remaining) - 1
+                future_count = len(remaining)-1
                 
-                # ==================================================
-                # 3. 未來平均施工量
-                # ==================================================
+                st.write("future_count =", future_count)
+                st.write("daily_count =", daily_count)
                 
                 future_days = max(
                     1,
