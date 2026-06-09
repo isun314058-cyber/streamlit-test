@@ -367,153 +367,165 @@ def validate_pile_input(edit_df, total_piles):
 
     result_df = edit_df.copy()
 
+    result_df["施工數量"] = (
+        result_df["施工數量"]
+        .astype("object")
+    )
+
     all_piles = []
 
-    duplicated_piles = set()
+    pile_day_map = {}
 
     error_messages = []
 
-    # ==========================
-    # 第一輪檢查格式
-    # ==========================
-
     for idx, row in result_df.iterrows():
 
-        pile_text = str(row["施工樁號"]).strip()
-        
+        pile_text = str(
+            row["施工樁號"]
+        ).strip()
+
         pile_text = pile_text.replace("，", ",")
-        
-        # 先判斷空白
-        
+
+        # 空白允許
         if pile_text == "":
-        
+
             result_df.at[idx, "施工數量"] = 0
-        
+
             continue
-        
-        # 再判斷格式
-        
+
+        # 格式檢查
         if not re.fullmatch(
             r"\d+(\s*,\s*\d+)*",
             pile_text
         ):
-        
+
             result_df.at[idx, "施工數量"] = "輸入錯誤"
-        
+
             error_messages.append(
                 f"{row['施工日']} 輸入格式錯誤"
             )
-        
+
             continue
-            
+
         pile_list = [
-
             int(x.strip())
-
             for x in pile_text.split(",")
-
         ]
 
-        # ==========================
-        # 同一天重複檢查
-        # ==========================
-        
+        # 同一天重複
         if len(pile_list) != len(set(pile_list)):
-        
+
             result_df.at[idx, "施工數量"] = "重複樁號"
-        
+
             error_messages.append(
                 f"{row['施工日']} 同一天有重複樁號"
             )
-        
+
             continue
 
+        # 範圍檢查
+        out_range = False
+
         for p in pile_list:
-        
+
             if p < 1 or p > total_piles:
-        
+
                 result_df.at[idx, "施工數量"] = "樁號超出範圍"
-        
+
                 error_messages.append(
                     f"{row['施工日']} 樁號 {p} 超出範圍"
                 )
-        
-                pile_list = []
-        
+
+                out_range = True
+
                 break
-        
-        if len(pile_list) == 0:
-        
+
+        if out_range:
+
             continue
 
         result_df.at[idx, "施工數量"] = len(pile_list)
 
+        for p in pile_list:
+
+            if p not in pile_day_map:
+
+                pile_day_map[p] = []
+
+            pile_day_map[p].append(
+                row["施工日"]
+            )
+
         all_piles.extend(pile_list)
 
-    # ==========================
-    # 第二輪檢查重複
-    # ==========================
+    # =================================
+    # 跨天重複檢查
+    # =================================
 
-    seen = set()
+    duplicated_piles = {
 
-    for pile in all_piles:
+        pile
 
-        if pile in seen:
+        for pile, days
 
-            duplicated_piles.add(pile)
+        in pile_day_map.items()
 
-        else:
+        if len(days) > 1
+    }
 
-            seen.add(pile)
+    duplicate_detail = {}
+    
+    for pile, days in pile_day_map.items():
+    
+        if len(days) > 1:
+    
+            duplicate_detail[pile] = days
 
     if duplicated_piles:
 
         for idx, row in result_df.iterrows():
 
-            pile_text = str(row["施工樁號"]).strip()
+            pile_text = str(
+                row["施工樁號"]
+            ).strip()
 
             if pile_text == "":
+
                 continue
 
             try:
-            
+
                 pile_list = [
                     int(x.strip())
                     for x in pile_text.split(",")
                 ]
-            
-            except Exception:
-            
+
+            except:
+
                 continue
 
-            for p in pile_list:
-            
-                if p < 1 or p > total_piles:
-            
-                    result_df.at[idx, "施工數量"] = "樁號超出範圍"
-            
-                    error_messages.append(
-                        f"{row['施工日']} 樁號 {p} 超出範圍"
-                    )
-            
-                    pile_list = []
-            
-                    break
+            dup_list = [
 
-            if any(
-                p in duplicated_piles
+                str(p)
+
                 for p in pile_list
-            ):
-            
+
+                if p in duplicated_piles
+
+            ]
+
+            if dup_list:
+
                 result_df.at[idx, "施工數量"] = "重複樁號"
-            
-                error_messages.append(
-                    f"{row['施工日']} 發現重複樁號"
-                )
+
+                for dup_pile in dup_list:
+                
+                    error_messages.append(
+                        f"{row['施工日']} 樁號 {dup_pile} 重複，出現在："
+                        f"{','.join(duplicate_detail[int(dup_pile)])}"
+                    )
 
     return result_df, error_messages
-
-
 # =====================================================
 # AI 智慧避鄰排程
 # =====================================================
@@ -2563,19 +2575,37 @@ elif mode == "修正當前進度表":
                             columns=["日期顏色"]
                         )
 
-                        edited_df = st.data_editor(
-                            editor_df,
-                            use_container_width=True,
-                            height=500,
-                            hide_index=True,
-                            disabled=[
-                                "施工日",
-                                "日期",
-                                "施工數量"
-                            ],
-                            key="repair_editor"
+                        editor_df["施工數量"] = (
+                            editor_df["施工數量"]
+                            .astype(str)
                         )
 
+                        edited_df = st.data_editor(
+                        
+                            editor_df,
+                        
+                            use_container_width=True,
+                        
+                            height=500,
+                        
+                            hide_index=True,
+                        
+                            disabled=[
+                                "施工日",
+                                "日期"
+                            ],
+                        
+                            column_config={
+                        
+                                "施工數量": st.column_config.TextColumn(
+                                    "施工數量"
+                                )
+                        
+                            },
+                        
+                            key="repair_editor"
+                        )
+                        
                         validated_df, error_messages = validate_pile_input(
                             edited_df,
                             st.session_state.repair_total_piles
@@ -2589,11 +2619,17 @@ elif mode == "修正當前進度表":
                         
                             for msg in error_messages:
                         
-                                st.error(msg)
+                                if error_messages:
+                                
+                                    st.error(
+                                        "\n".join(error_messages)
+                                    )
                         
                         else:
                         
-                            st.success("✅ 更改完成")
+                            if len(error_messages) == 0:
+                            
+                                st.success("✅ 更改完成")
 
                         # ============================================
                         # 重新排程
