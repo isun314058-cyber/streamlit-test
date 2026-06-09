@@ -483,51 +483,47 @@ def validate_pile_input(edit_df, total_piles):
 
     if duplicated_piles:
         reported = set()
-        for idx, row in result_df.iterrows():
-
+        
+        for idx,row in result_df.iterrows():
+        
             pile_text = str(
                 row["施工樁號"]
             ).strip()
-
+        
             if pile_text == "":
-
                 continue
-
+        
             try:
-
+        
                 pile_list = [
                     int(x.strip())
                     for x in pile_text.split(",")
                 ]
-
+        
             except:
-
                 continue
-
+        
             dup_list = [
-
-                str(p)
-
+        
+                p
+        
                 for p in pile_list
-
+        
                 if p in duplicated_piles
-
+        
             ]
-
-            if dup_list:
-
-                result_df.at[idx, "施工數量"] = "重複樁號"
-                
-                for dup_pile in dup_list:
-                
-                    if dup_pile not in reported:
-                
-                        reported.add(dup_pile)
-                
-                        error_messages.append(
-                            f"樁號 {dup_pile} 重複，出現在："
-                            f"{','.join(duplicate_detail[int(dup_pile)])}"
-                        )
+        
+            for dup_pile in dup_list:
+        
+                if dup_pile in reported:
+                    continue
+        
+                reported.add(dup_pile)
+        
+                error_messages.append(
+                    f"樁號 {dup_pile} 重複，出現在："
+                    f"{','.join(duplicate_detail[dup_pile])}"
+                )
 
     return result_df, error_messages
 # =====================================================
@@ -2609,8 +2605,12 @@ elif mode == "修正當前進度表":
                             edited_df,
                             st.session_state.repair_total_piles
                         )
-
-                        st.session_state.repair_edit_df = validated_df.copy()
+                        
+                        # 只有結果不同才更新
+                        if not validated_df.equals(
+                            st.session_state.repair_edit_df
+                        ):
+                            st.session_state.repair_edit_df = validated_df.copy()
                         
                         st.markdown("### 🔍 驗證結果")
                         
