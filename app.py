@@ -2646,11 +2646,6 @@ elif mode == "修正當前進度表":
                                 key="repair_daily_count"
                             )
                         
-                            start_date = st.date_input(
-                                "重新排程開始日期",
-                                key="repair_start_date"
-                            )
-                        
                             if st.button(
                                 "🚀重新產出排程",
                                 use_container_width=True
