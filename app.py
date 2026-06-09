@@ -517,8 +517,6 @@ def validate_pile_input(edit_df, total_piles):
             if dup_list:
 
                 result_df.at[idx, "施工數量"] = "重複樁號"
-
-                reported = set()
                 
                 for dup_pile in dup_list:
                 
