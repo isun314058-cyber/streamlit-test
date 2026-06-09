@@ -2654,12 +2654,56 @@ elif mode == "修正當前進度表":
                                 edit_df = st.session_state.repair_edit_df
                                 
                                 completed_piles = []
+
+                                first_empty_index = None
+                                
+                                for idx,row in edit_df.iterrows():
+                                
+                                    pile_text = str(
+                                        row["施工樁號"]
+                                    ).strip()
+                                
+                                    if (
+                                        pile_text == ""
+                                        or pile_text.lower() == "nan"
+                                    ):
+                                
+                                        first_empty_index = idx
+                                
+                                        break
+
+                                # 找不到空白列
+
+                                if first_empty_index is None:
+                                
+                                    st.error("全部施工日都有樁號，沒有可續排的施工日")
+                                
+                                    st.stop()
+                                
+                                
+                                # 自動抓續排開始日期
+                                
+                                start_date = pd.to_datetime(
+                                
+                                    edit_df.iloc[first_empty_index]["日期"]
+                                
+                                )
+                                
+                                st.write("續排開始日期")
+                                
+                                st.write(start_date)
                                 
                                 for _, row in edit_df.iterrows():
+                                    if idx >= first_empty_index:
+                                        break
+                                    pile_text = str(
+                                        row["施工樁號"]
+                                    ).strip()
                                 
-                                    pile_text = str(row["施工樁號"])
-                                
-                                    if pile_text.strip():
+                                    if (
+                                        pile_text != ""
+                                        and pile_text.lower() != "nan"
+                                    ):
                                 
                                         pile_list = [
                                 
@@ -2674,10 +2718,35 @@ elif mode == "修正當前進度表":
                                         completed_piles.extend(
                                             pile_list
                                         )
+
+                                all_piles = set(
+                                    range(
+                                        1,
+                                        st.session_state.repair_total_piles + 1
+                                    )
+                                )
+                                
+                                remaining_piles = sorted(
+                                    list(
+                                        all_piles
+                                        -
+                                        set(completed_piles)
+                                    )
+                                )
+                                remaining_piles = [
+                                    p
+                                    for p in remaining_piles
+                                    if p not in st.session_state.excluded_piles
+                                ]
                                 
                                 st.write("已完成樁體")
-                                
                                 st.write(completed_piles)
+                                
+                                st.write("剩餘未施工樁體")
+                                st.write(remaining_piles)
+                                
+                                st.write("續排開始日期")
+                                st.write(start_date)
         
                 except Exception as e:
         
