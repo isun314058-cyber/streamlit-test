@@ -384,7 +384,7 @@ def validate_pile_input(edit_df, total_piles):
         # 空白允許
         if pile_text == "":
 
-            result_df.at[idx, "施工數量"] = 0
+            result_df.at[idx, "施工數量"] = "0"
 
             continue
 
@@ -439,7 +439,7 @@ def validate_pile_input(edit_df, total_piles):
 
             continue
 
-        result_df.at[idx, "施工數量"] = len(pile_list)
+        result_df.at[idx, "施工數量"] = str(len(pile_list))
 
         for p in pile_list:
 
@@ -523,6 +523,7 @@ def validate_pile_input(edit_df, total_piles):
     # 最後統一轉字串
     result_df["施工數量"] = (
         result_df["施工數量"]
+        .fillna("")
         .astype(str)
     )
 
