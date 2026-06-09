@@ -873,42 +873,6 @@ def create_schedule(
                     if len(available_neighbors) == 0:
 
                         isolated_count += 1
-
-                # ==================================================
-                # 二層模擬
-                # ==================================================
-                
-                secondary_future = 0
-
-                if len(future_remaining_list) > 0:
-                
-                    sample_future = random.sample(
-                        future_remaining_list,
-                        min(2, len(future_remaining_list))
-                    )
-                
-                    for fp in sample_future:
-                
-                        second_blocked = set()
-                
-                        second_blocked.add(fp)
-                
-                        second_blocked.update(
-                            neighbor_map[fp]
-                        )
-                
-                        second_remaining = [
-                
-                            x for x in future_remaining_list
-                
-                            if x not in second_blocked
-                        ]
-                
-                        secondary_future += len(second_remaining)
-                
-                        if secondary_future > 300:
-                            break
-
                 # =========================================
                 # AI 評分
                 # =========================================
@@ -918,9 +882,6 @@ def create_schedule(
                 fill_ratio = len(temp_today) / daily_count
                 
                 score += fill_ratio * 350
-                
-                # 二層模擬加分
-                score += secondary_future * 1.2
                 
                 # ==================================================
                 # 1. 未來可施工量（最重要）
@@ -1515,7 +1476,7 @@ if mode == "新建預定進度表":
                         best_total_score = -999999
                         
                         # AI 多次模擬
-                        for sim in range(15):
+                        for sim in range(5):
                         
                             schedule = create_schedule(
                             
