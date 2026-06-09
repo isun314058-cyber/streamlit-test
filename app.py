@@ -1582,8 +1582,13 @@ if mode == "新建預定進度表":
                         # 只計算一次鄰樁
                         # ============================
                         
+                        median_radius = np.median(
+                            [r for _, _, r in piles]
+                        )
+                        
                         neighbor_map = build_neighbor_map(
-                            piles
+                            piles,
+                            row_tolerance=int(median_radius * 3)
                         )
             
                         best_schedule = None
@@ -1593,11 +1598,8 @@ if mode == "新建預定進度表":
                         backup_schedule = None
                         
                         # AI 多次模擬
-                        for sim in range(15):
-
-                            if backup_schedule is None:
-                                backup_schedule = schedule
-                            
+                        for sim in range(30):
+                                                       
                             schedule = create_schedule(
                             
                                 pile_positions=piles,
@@ -1614,6 +1616,8 @@ if mode == "新建預定進度表":
                             
                                 neighbor_map=neighbor_map
                             )
+                            if backup_schedule is None:
+                                backup_schedule = schedule
 
                             last_day_count = len(
                                 schedule[-1]["施工樁號"]
