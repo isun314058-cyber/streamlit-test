@@ -367,11 +367,14 @@ def validate_pile_input(edit_df, total_piles):
 
     result_df = edit_df.copy()
 
+    # 最後統一轉文字
     result_df["施工數量"] = (
         result_df["施工數量"]
-        .astype("object")
+        .astype(str)
     )
-
+    
+    return result_df, error_messages
+    
     all_piles = []
 
     pile_day_map = {}
