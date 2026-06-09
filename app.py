@@ -774,13 +774,12 @@ def create_schedule(
     # 初始化
     # =====================================================
 
-    remaining = list(range(1, total_piles + 1))
-
-    # 起始樁優先
-    if start_no in remaining:
-
-        remaining.remove(start_no)
-        remaining.insert(0, start_no)
+    remaining = list(
+        range(
+            1,
+            total_piles + 1
+        )
+    )
 
     blocked_until = {}
 
