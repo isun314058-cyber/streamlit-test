@@ -12,6 +12,7 @@ import math
 import random
 import io
 import cv2
+import easyocr
 from streamlit_image_coordinates import streamlit_image_coordinates
 
 # =====================================================
@@ -93,57 +94,21 @@ st.title("🏗️ AI 排樁施工系統")
 # =====================================================
 
 mode = st.radio(
+
     "請選擇功能模式",
+
     [
-        "新建預定進度表",
-        "修正當前進度表"
+
+        "🆕 新建預定進度表",
+
+        "🛠️ 修正當前進度表"
+
     ],
-    horizontal=True,
-    key="mode_selector"
+
+    horizontal=True
+
 )
-if "last_mode" not in st.session_state:
-    st.session_state.last_mode = mode
 
-if st.session_state.last_mode != mode:
-
-    keys_to_reset = [
-    
-        "points",
-        "last_clicked",
-    
-        "repair_points",
-        "repair_piles",
-        "excluded_piles",
-        "repair_last_clicked",
-        "exclude_last_click",
-    
-        "repair_canvas_key",
-        "repair_current_file",
-    
-        "schedule_df",
-        "repair_schedule_df",
-    
-        "result_image",
-        "original_image",
-    
-        "pile_positions"
-    ]
-
-    for k in keys_to_reset:
-
-        if k in st.session_state:
-
-            if isinstance(st.session_state[k], list):
-                st.session_state[k] = []
-            else:
-                st.session_state[k] = None
-
-    st.session_state.processed = False
-
-    st.session_state.last_mode = mode
-
-    st.rerun()
-        
 st.markdown("---")
 
 # =====================================================
@@ -170,10 +135,10 @@ for key, value in DEFAULT_STATES.items():
 # =====================================================
 
 POINT_COLORS = [
-    ("第一點", "red"),
-    ("第二點", "blue"),
-    ("第三點", "orange"),
-    ("第四點", "lime")
+    ("左上", "red"),
+    ("左下", "blue"),
+    ("右上", "orange"),
+    ("右下", "lime")
 ]
 
 COLOR_TEXT = {
@@ -311,10 +276,154 @@ def detect_piles(pil_image, roi=None):
 
     return positions
     
+# =====================================================
+# OCR 自動辨識原圖樁號
+# =====================================================
+
+@st.cache_resource
+def load_ocr():
+
+    return easyocr.Reader(
+        ['en'],
+        gpu=False,
+        download_enabled=True
+    )
+
+reader = load_ocr()
+
 @st.cache_data(
     show_spinner=False,
     hash_funcs={Image.Image: id}
 )
+def detect_pile_numbers(image, piles):
+
+    img = np.array(image)
+
+    img_h, img_w = img.shape[:2]
+
+    mapping = {}
+
+    for idx, (x, y, r) in enumerate(piles):
+
+        x1 = max(0, x - int(r * 3))
+        x2 = min(img_w, x + int(r * 3))
+        
+        y1 = max(0, y - int(r * 4))
+        y2 = max(0, y - int(r * 0.5))
+        
+        crop = img[y1:y2, x1:x2]
+
+        import os
+        
+        os.makedirs("debug", exist_ok=True)
+        
+        if idx < 20:
+            cv2.imwrite(
+                f"debug/{idx+1}.png",
+                cv2.cvtColor(crop, cv2.COLOR_RGB2BGR)
+            )
+
+        if crop.size == 0:
+            mapping[idx + 1] = ""
+            continue
+
+        gray_crop = cv2.cvtColor(
+            crop,
+            cv2.COLOR_RGB2GRAY
+        )
+        
+        gray_crop = cv2.resize(
+            gray_crop,
+            None,
+            fx=4,
+            fy=4,
+            interpolation=cv2.INTER_CUBIC
+        )
+        
+        gray_crop = cv2.equalizeHist(
+            gray_crop
+        )
+        
+        # 新增這段
+        gray_crop = cv2.GaussianBlur(
+            gray_crop,
+            (3,3),
+            0
+        )
+
+        results = reader.readtext(
+            gray_crop,
+            detail=0,
+            paragraph=False,
+            allowlist='0123456789'
+        )
+        
+        detected_no = ""
+        
+        for text in results:
+
+            text = str(text).strip()
+        
+            text = ''.join(
+                filter(str.isdigit, text)
+            )
+        
+            if not text:
+                continue
+        
+            value = int(text)
+        
+            if 1 <= value <= 300:
+            
+                detected_no = value
+                break
+
+        mapping[idx + 1] = detected_no
+
+    return mapping
+
+@st.cache_data(show_spinner=False)
+def detect_pile_day(image, piles):
+
+    img = np.array(image)
+
+    mapping = {}
+
+    for idx,(x,y,r) in enumerate(piles):
+
+        x1 = max(0, x-int(r*2))
+        x2 = x+int(r*2)
+
+        y1 = y+int(r*0.3)
+        y2 = y+int(r*2.5)
+
+        crop = img[y1:y2,x1:x2]
+
+        if crop.size == 0:
+            mapping[idx+1] = ""
+            continue
+
+        result = reader.readtext(
+            crop,
+            detail=0,
+            paragraph=False,
+            allowlist="D0123456789"
+        )
+
+        day_text = ""
+
+        for txt in result:
+
+            txt = str(txt).upper().replace(" ","")
+
+            if txt.startswith("D"):
+
+                day_text = txt
+                break
+
+        mapping[idx+1] = day_text
+
+    return mapping
 
 # =====================================================
 # 智慧避鄰排程
@@ -334,296 +443,33 @@ def calculate_distance(p1, p2):
 
 def build_neighbor_map(
     pile_positions,
-    row_tolerance=40
+    safe_distance=120
 ):
 
     neighbor_map = {}
 
-    # =========================
-    # 依Y座標分列
-    # =========================
+    for i, p1 in enumerate(pile_positions):
 
-    pile_data = []
+        pile_no = i + 1
 
-    for idx, (x, y, r) in enumerate(pile_positions):
+        neighbor_map[pile_no] = []
 
-        pile_data.append({
-            "pile": idx + 1,
-            "x": x,
-            "y": y
-        })
+        for j, p2 in enumerate(pile_positions):
 
-    rows = []
+            other_no = j + 1
 
-    sorted_piles = sorted(
-        pile_data,
-        key=lambda p: p["y"]
-    )
+            if pile_no == other_no:
+                continue
 
-    for pile in sorted_piles:
+            dist = calculate_distance(p1, p2)
 
-        found = False
+            if dist < safe_distance:
 
-        for row in rows:
-
-            if abs(
-                pile["y"] - row[0]["y"]
-            ) < row_tolerance:
-
-                row.append(pile)
-
-                found = True
-
-                break
-
-        if not found:
-
-            rows.append([pile])
-
-    # =========================
-    # 每列由左到右排序
-    # =========================
-
-    for row in rows:
-
-        row.sort(
-            key=lambda p: p["x"]
-        )
-
-    # =========================
-    # 建立上下左右鄰樁
-    # =========================
-
-    for row_idx, row in enumerate(rows):
-
-        for col_idx, pile in enumerate(row):
-
-            pile_no = pile["pile"]
-
-            neighbor_map[pile_no] = []
-
-            # 左
-
-            if col_idx > 0:
-
-                neighbor_map[pile_no].append(
-                    row[col_idx - 1]["pile"]
-                )
-
-            # 右
-
-            if col_idx < len(row) - 1:
-
-                neighbor_map[pile_no].append(
-                    row[col_idx + 1]["pile"]
-                )
-
-            # 上
-
-            if row_idx > 0:
-
-                upper_row = rows[row_idx - 1]
-
-                nearest_upper = min(
-                    upper_row,
-                    key=lambda p:
-                    abs(
-                        p["x"] - pile["x"]
-                    )
-                )
-
-                neighbor_map[pile_no].append(
-                    nearest_upper["pile"]
-                )
-
-            # 下
-
-            if row_idx < len(rows) - 1:
-
-                lower_row = rows[row_idx + 1]
-
-                nearest_lower = min(
-                    lower_row,
-                    key=lambda p:
-                    abs(
-                        p["x"] - pile["x"]
-                    )
-                )
-
-                neighbor_map[pile_no].append(
-                    nearest_lower["pile"]
-                )
+                neighbor_map[pile_no].append(other_no)
 
     return neighbor_map
 
 
-def validate_pile_input(edit_df, total_piles):
-
-    import re
-
-    result_df = edit_df.copy()
-    
-    all_piles = []
-
-    pile_day_map = {}
-
-    error_messages = []
-
-    for idx, row in result_df.iterrows():
-
-        pile_text = str(
-            row["施工樁號"]
-        ).strip()
-
-        pile_text = pile_text.replace("，", ",")
-
-        # 空白允許
-        if pile_text == "":
-
-            result_df.at[idx, "施工數量"] = "0"
-
-            continue
-
-        # 格式檢查
-        if not re.fullmatch(
-            r"\d+(\s*,\s*\d+)*",
-            pile_text
-        ):
-
-            result_df.at[idx, "施工數量"] = "輸入錯誤"
-
-            error_messages.append(
-                f"{row['施工日']} 輸入格式錯誤"
-            )
-
-            continue
-
-        pile_list = [
-            int(x.strip())
-            for x in pile_text.split(",")
-        ]
-
-        # 同一天重複
-        if len(pile_list) != len(set(pile_list)):
-
-            result_df.at[idx, "施工數量"] = "重複樁號"
-
-            error_messages.append(
-                f"{row['施工日']} 同一天有重複樁號"
-            )
-
-            continue
-
-        # 範圍檢查
-        out_range = False
-
-        for p in pile_list:
-
-            if p < 1 or p > total_piles:
-
-                result_df.at[idx, "施工數量"] = "樁號超出範圍"
-
-                error_messages.append(
-                    f"{row['施工日']} 樁號 {p} 超出範圍"
-                )
-
-                out_range = True
-
-                break
-
-        if out_range:
-
-            continue
-
-        result_df.at[idx, "施工數量"] = str(len(pile_list))
-
-        for p in pile_list:
-
-            if p not in pile_day_map:
-
-                pile_day_map[p] = []
-
-            pile_day_map[p].append(
-                row["施工日"]
-            )
-
-        all_piles.extend(pile_list)
-
-    # =================================
-    # 跨天重複檢查
-    # =================================
-
-    duplicated_piles = {
-
-        pile
-
-        for pile, days
-
-        in pile_day_map.items()
-
-        if len(days) > 1
-    }
-
-    duplicate_detail = {}
-    
-    for pile, days in pile_day_map.items():
-    
-        if len(days) > 1:
-    
-            duplicate_detail[pile] = days
-
-    if duplicated_piles:
-        reported = set()
-        
-        for idx,row in result_df.iterrows():
-        
-            pile_text = str(
-                row["施工樁號"]
-            ).strip()
-        
-            if pile_text == "":
-                continue
-        
-            try:
-        
-                pile_list = [
-                    int(x.strip())
-                    for x in pile_text.split(",")
-                ]
-        
-            except:
-                continue
-        
-            dup_list = [
-        
-                p
-        
-                for p in pile_list
-        
-                if p in duplicated_piles
-        
-            ]
-        
-            for dup_pile in dup_list:
-            
-                if dup_pile in reported:
-                    continue
-            
-                reported.add(dup_pile)
-            
-                error_messages.append(
-                    f"樁號 {dup_pile} 重複，出現在："
-                    f"{','.join(duplicate_detail[dup_pile])}"
-                )
-            
-    # 最後統一轉字串
-    result_df["施工數量"] = (
-        result_df["施工數量"]
-        .fillna("")
-        .astype(str)
-    )
-
-    return result_df, error_messages
 # =====================================================
 # AI 智慧避鄰排程
 # =====================================================
@@ -641,11 +487,6 @@ def create_schedule(
 
     neighbor_map=None
 ):
-
-    # 避免 NameError
-    future_count = 0
-    future_days = 1
-    future_avg = 0
 
     import random
     import pandas as pd
@@ -705,7 +546,8 @@ def create_schedule(
         except Exception:
     
             neighbor_map = build_neighbor_map(
-                pile_positions
+                pile_positions,
+                safe_distance=base_distance * 1.1
             )
     
         if neighbor_map is None:
@@ -736,16 +578,7 @@ def create_schedule(
     
                                 neighbor_map[p1].add(p2)
     
-            for pile in neighbor_map:
-            
-                neighbor_map[pile] = sorted(
-                    neighbor_map[pile],
-                    key=lambda n:
-                    calculate_distance(
-                        pile_positions[pile-1],
-                        pile_positions[n-1]
-                    )
-                )[:8]
+            MAX_NEIGHBORS = 8
     
             for p in neighbor_map:
     
@@ -759,6 +592,9 @@ def create_schedule(
                         pile_positions[n - 1]
                     )
                 )
+    
+                neighbor_map[p] = neighbors[:MAX_NEIGHBORS]
+
     # =====================================================
     # 顏色
     # =====================================================
@@ -779,12 +615,13 @@ def create_schedule(
     # 初始化
     # =====================================================
 
-    remaining = list(
-        range(
-            1,
-            total_piles + 1
-        )
-    )
+    remaining = list(range(1, total_piles + 1))
+
+    # 起始樁優先
+    if start_no in remaining:
+
+        remaining.remove(start_no)
+        remaining.insert(0, start_no)
 
     blocked_until = {}
 
@@ -816,7 +653,8 @@ def create_schedule(
                     day + cooldown_days
                 )
 
-                for neighbor in neighbor_map.get(start_no, []):
+                for neighbor in neighbor_map[start_no]:
+
                     blocked_until[neighbor] = (
                         day + cooldown_days
                     )
@@ -855,20 +693,22 @@ def create_schedule(
             # =====================================
             # AI排序
             # =====================================
-            #random.shuffle(candidate_piles)
+            random.shuffle(candidate_piles)
             sorted_remaining = sorted(
+        
                 candidate_piles,
-                key=lambda p: len(
-                    neighbor_map.get(p, [])
+        
+                key=lambda p: (
+        
+                    len(neighbor_map[p]),
+        
+                    -abs(p - start_no)
+        
                 ),
+        
                 reverse=True
+        
             )
-            
-            TOP_K = 15
-            
-            sorted_remaining = sorted_remaining[:TOP_K]
-            
-            random.shuffle(sorted_remaining)
         
             best_score = -999999
         
@@ -896,11 +736,11 @@ def create_schedule(
 
                     if (
 
-                        pile in neighbor_map.get(existing, [])
+                        pile in neighbor_map[existing]
 
                         or
 
-                        existing in neighbor_map.get(pile, [])
+                        existing in neighbor_map[pile]
 
                     ):
 
@@ -911,55 +751,168 @@ def create_schedule(
                     continue
 
                 # =========================================
+                # 模擬加入後
+                # =========================================
+
+                temp_today = today_piles + [pile]
+
+                future_blocked = set()
+
+                for p in temp_today:
+
+                    future_blocked.add(p)
+
+                    future_blocked.update(
+                        neighbor_map[p]
+                    )
+
+                future_remaining_list = [
+                
+                    p for p in remaining
+                
+                    if (
+                
+                        p not in future_blocked
+                
+                        and not (
+                
+                            p in blocked_until
+                            and day <= blocked_until[p]
+                
+                        )
+                
+                    )
+                
+                ]
+
+                # =========================================
+                # 孤立檢查
+                # =========================================
+
+                isolated_count = 0
+
+                for p in future_remaining_list:
+
+                    available_neighbors = [
+
+                        n for n in neighbor_map[p]
+
+                        if n in future_remaining_list
+
+                    ]
+
+                    if len(available_neighbors) == 0:
+
+                        isolated_count += 1
+
+                # ==================================================
+                # 二層模擬
+                # ==================================================
+                
+                secondary_future = 0
+
+                if len(future_remaining_list) > 0:
+                
+                    sample_future = random.sample(
+                        future_remaining_list,
+                        min(2, len(future_remaining_list))
+                    )
+                
+                    for fp in sample_future:
+                
+                        second_blocked = set()
+                
+                        second_blocked.add(fp)
+                
+                        second_blocked.update(
+                            neighbor_map[fp]
+                        )
+                
+                        second_remaining = [
+                
+                            x for x in future_remaining_list
+                
+                            if x not in second_blocked
+                        ]
+                
+                        secondary_future += len(second_remaining)
+                
+                        if secondary_future > 300:
+                            break
+
+                # =========================================
                 # AI 評分
                 # =========================================
                 
                 score = 0
+
+                fill_ratio = len(temp_today) / daily_count
                 
-                # 鄰居越多越優先
+                score += fill_ratio * 350
                 
-                score += len(
-                    neighbor_map.get(pile, [])
-                ) * 50
+                # 二層模擬加分
+                score += secondary_future * 1.2
                 
-                # 避免集中同區域
+                # ==================================================
+                # 1. 未來可施工量（最重要）
+                # ==================================================
                 
-                if len(today_piles) > 0:
+                future_count = len(future_remaining_list)
                 
-                    min_dist = min(
+                future_days_left = math.ceil(
+                    future_count / daily_count
+                )
                 
-                        calculate_distance(
-                            pile_positions[pile-1],
-                            pile_positions[p2-1]
-                        )
+                # ==================================================
+                # 尾盤預測（新增）
+                # ==================================================
                 
-                        for p2 in today_piles
+                if future_days_left > 0:
+                
+                    estimated_tail_avg = (
+                        future_count / future_days_left
                     )
                 
-                    score += min_dist * 0.2
+                    # 尾盤太少
+                    if estimated_tail_avg < daily_count * 0.75:
                 
-                # 靠近起始樁
+                        score -= 500
                 
-                score -= abs(pile - start_no) * 0.03
+                    # 尾盤穩定
+                    else:
                 
-                # =========================================
-                # 未來剩餘數量
-                # =========================================
+                        score += 120
                 
-                future_count = max(
-                    0,
-                    len(remaining)
-                )
+                # ==================================================
+                # 未來平均量
+                # ==================================================
                 
-                safe_daily_count = max(
-                    1,
-                    int(daily_count)
-                )
+                if future_days_left >= 1:
+                
+                    expected_avg = (
+                        future_count / future_days_left
+                    )
+                
+                    score += expected_avg * 35
+                
+                # 未來可施工數量
+                score += future_count * 12
+
+                
+                # ==================================================
+                # 2. 孤立樁重罰
+                # ==================================================
+                
+                score -= isolated_count * 50
+                
+                # ==================================================
+                # 3. 未來平均施工量
+                # ==================================================
                 
                 future_days = max(
                     1,
                     math.ceil(
-                        future_count / safe_daily_count
+                        future_count / daily_count
                     )
                 )
                 
@@ -969,17 +922,32 @@ def create_schedule(
                 
                 score += future_avg * 25
                 
-                if future_avg < safe_daily_count * 0.8:
+                # ==================================================
+                # 4. 如果未來平均太低
+                # 代表後面會崩盤
+                # ==================================================
+                
+                if future_avg < daily_count * 0.8:
                 
                     score -= 400
+                
+                # ==================================================
+                # 5. 最後幾天避免只剩單支
+                # ==================================================
                 
                 if (
                     future_count > 0
                     and
-                    future_count < safe_daily_count * 0.5
+                    future_count < daily_count * 0.5
                 ):
                 
                     score -= 150
+                
+                # ==================================================
+                # 6. 鄰居多優先
+                # ==================================================
+                
+                score += len(neighbor_map[pile]) * 8
                 
                 # ==================================================
                 # 7. 靠近目前群組
@@ -1033,7 +1001,7 @@ def create_schedule(
             # 立即更新封鎖
             blocked_until[best_pile] = day + cooldown_days
             
-            for neighbor in neighbor_map.get(best_pile, []):
+            for neighbor in neighbor_map[best_pile]:
             
                 blocked_until[neighbor] = day + cooldown_days
 
@@ -1042,16 +1010,10 @@ def create_schedule(
         # =================================================
 
         if len(today_piles) == 0:
-        
-            if len(remaining) == 0:
-        
-                break
-        
-            first_pile = remaining[0]
-        
-            today_piles.append(first_pile)
-        
-            remaining.remove(first_pile)
+
+            today_piles.append(remaining[0])
+
+            remaining.remove(remaining[0])
 
         # =================================================
         # 更新封鎖
@@ -1065,7 +1027,7 @@ def create_schedule(
 
             )
 
-            for neighbor in neighbor_map.get(pile, []):
+            for neighbor in neighbor_map[pile]:
 
                 blocked_until[neighbor] = (
 
@@ -1130,7 +1092,7 @@ def create_schedule(
 # 模式：新建預定進度表
 # =====================================================
 
-if mode == "新建預定進度表":
+if mode == "🆕 新建預定進度表":
 
     uploaded_file = st.file_uploader(
 
@@ -1167,7 +1129,7 @@ else:
 # =====================================================
 # 主流程
 # =====================================================
-if mode == "新建預定進度表":
+if mode == "🆕 新建預定進度表":
         if uploaded_file:
         
             if uploaded_file.type == "application/pdf":
@@ -1475,7 +1437,8 @@ if mode == "新建預定進度表":
                         # ============================
                         
                         neighbor_map = build_neighbor_map(
-                            piles
+                            piles,
+                            safe_distance=100
                         )
             
                         best_schedule = None
@@ -1483,7 +1446,7 @@ if mode == "新建預定進度表":
                         best_total_score = -999999
                         
                         # AI 多次模擬
-                        for sim in range(20):
+                        for sim in range(50):
                         
                             schedule = create_schedule(
                             
@@ -1611,50 +1574,6 @@ if mode == "新建預定進度表":
                             # =====================================
                             # 更新最佳結果
                             # =====================================
-
-                            daily_counts = [
-                            
-                                len(x["施工樁號"])
-                            
-                                for x in schedule
-                            
-                            ]
-
-                            # ======================
-                            # 尾盤品質
-                            # ======================
-                            
-                            tail_counts = daily_counts[-5:]
-                            
-                            # 最後一天
-                            
-                            last_day = tail_counts[-1]
-                            
-                            if last_day <= 2:
-                            
-                                schedule_score -= 5000
-                            
-                            elif last_day <= 5:
-                            
-                                schedule_score -= 2500
-                            
-                            elif last_day <= 8:
-                            
-                                schedule_score -= 1000
-
-                            # ======================
-                            # 遞減檢查
-                            # ======================
-                            
-                            for i in range(len(tail_counts)-1):
-                            
-                                if tail_counts[i] < tail_counts[i+1]:
-                            
-                                    schedule_score -= 2000
-
-                            tail_avg = np.mean(tail_counts)
-                            
-                            schedule_score += tail_avg * 200
                             
                             if schedule_score > best_total_score:
                             
@@ -1891,78 +1810,9 @@ if mode == "新建預定進度表":
             if st.session_state.processed:
             
                 st.markdown("---")
-                
-                title_col, excel_col = st.columns([8,2])
-                
-                with title_col:
-                
-                    st.subheader("📋 施工排程結果")
-                
-                with excel_col:
-                
-                    if st.session_state.schedule_df is not None:
-                
-                        excel_df = st.session_state.schedule_df.copy()
-                
-                        excel_df["施工數量"] = excel_df["施工樁號"].apply(len)
-                
-                        excel_df["施工樁號"] = excel_df["施工樁號"].apply(
-                            lambda x: ",".join(map(str, x))
-                        )
-                
-                        excel_df = excel_df[
-                            [
-                                "施工日",
-                                "日期",
-                                "日期顏色",
-                                "施工數量",
-                                "施工樁號"
-                            ]
-                        ]
-                
-                        excel_buffer = io.BytesIO()
-                
-                        from openpyxl.styles import PatternFill
-                            
-                        with pd.ExcelWriter(
-                            excel_buffer,
-                            engine="openpyxl"
-                        ) as writer:
-                        
-                            excel_df.to_excel(
-                                writer,
-                                sheet_name="施工排程",
-                                index=False
-                            )
-                        
-                            ws = writer.book["施工排程"]
-                        
-                            # 日期顏色欄位(C欄)
-                            for row in range(2, ws.max_row + 1):
-                        
-                                hex_color = ws[f"C{row}"].value
-                        
-                                if hex_color:
-                        
-                                    fill = PatternFill(
-                                        fill_type="solid",
-                                        start_color=hex_color.replace("#",""),
-                                        end_color=hex_color.replace("#","")
-                                    )
-                        
-                                    ws[f"C{row}"].fill = fill
-                        
-                                    # 不顯示色碼
-                                    ws[f"C{row}"].value = ""
-                        today_str = pd.Timestamp.today().strftime("%Y%m%d")
-                        st.download_button(
-                            "📊下載Excel",
-                            excel_buffer.getvalue(),
-                            file_name=f"{today_str}_AI排樁施工計畫.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            use_container_width=True
-                        )
-                
+            
+                st.subheader("📋 施工排程結果")
+            
                 df = st.session_state.schedule_df
             
                 if df is not None:
@@ -2086,7 +1936,7 @@ if mode == "新建預定進度表":
                             mime="application/pdf",
                             use_container_width=True
                         )
-elif mode == "修正當前進度表":
+elif mode == "🛠️ 修正當前進度表":
     # ============================================
     # 初始化修正模式
     # ============================================
@@ -2255,10 +2105,10 @@ elif mode == "修正當前進度表":
             else:
         
                 point_names = [
-                    ("第一點", "紅色"),
-                    ("第二點", "藍色"),
-                    ("第三點", "橘色"),
-                    ("第四點", "綠色")
+                    ("左上", "紅色"),
+                    ("左下", "藍色"),
+                    ("右上", "橘色"),
+                    ("右下", "綠色")
                 ]
         
                 for idx, point in enumerate(
@@ -2402,11 +2252,9 @@ elif mode == "修正當前進度表":
 
             try:
 
-                FONT_NAME = "DejaVuSans.ttf"
-                
                 font = ImageFont.truetype(
-                    FONT_NAME,
-                    12
+                    "arial.ttf",
+                    20
                 )
 
             except:
@@ -2421,7 +2269,7 @@ elif mode == "修正當前進度表":
             
                 pile_no = idx + 1
             
-                # 已排除樁
+                # 已排除的樁
                 if pile_no in st.session_state.excluded_piles:
             
                     draw_result.line(
@@ -2438,7 +2286,6 @@ elif mode == "修正當前進度表":
             
                     continue
             
-                # 畫圓
                 draw_result.ellipse(
                     (
                         x-r,
@@ -2448,31 +2295,6 @@ elif mode == "修正當前進度表":
                     ),
                     outline="red",
                     width=2
-                )
-            
-                # ===================
-                # 新增樁號
-                # ===================
-            
-                pile_text = str(pile_no)
-                
-                pile_bbox = draw_result.textbbox(
-                    (0,0),
-                    pile_text,
-                    font=font
-                )
-                
-                pile_width = pile_bbox[2] - pile_bbox[0]
-                pile_height = pile_bbox[3] - pile_bbox[1]
-                
-                draw_result.text(
-                    (
-                        x - pile_width // 2,
-                        y - 22
-                    ),
-                    pile_text,
-                    fill="red",
-                    font=font
                 )
                 
             left_result, right_result = st.columns([2.2, 1])
@@ -2546,326 +2368,315 @@ elif mode == "修正當前進度表":
             
             with right_result:
             
-                st.subheader("📊 AI辨識結果")
+                st.subheader("🤖 AI自動辨識原圖樁號")
 
         # ============================================
         # 有辨識到樁體才往下
         # ============================================
 
         if len(st.session_state.repair_piles) > 0:
-        
+
+            # ========================================
+            # OCR 自動辨識原圖樁號
+            # ========================================
+         
+            with st.spinner("AI正在辨識原圖樁號..."):
+            
+                filtered_piles = []
+                
+                filtered_index_map = {}
+                
+                new_idx = 1
+                
+                for idx, pile in enumerate(st.session_state.repair_piles):
+                
+                    pile_no = idx + 1
+                
+                    if pile_no in st.session_state.excluded_piles:
+                        continue
+                
+                    filtered_piles.append(pile)
+                
+                    filtered_index_map[new_idx] = pile_no
+                
+                    new_idx += 1
+                
+                temp_mapping = detect_pile_numbers(
+                    image,
+                    filtered_piles
+                )
+
+                temp_day_mapping = detect_pile_day(
+                    image,
+                    filtered_piles
+                )
+                
+                pile_mapping = {}
+
+                pile_day_mapping = {}
+                
+                for temp_ai_no, original_no in temp_mapping.items():
+                
+                    real_ai_no = filtered_index_map[temp_ai_no]
+                
+                    pile_mapping[real_ai_no] = original_no
+                
+                    pile_day_mapping[real_ai_no] = temp_day_mapping.get(
+                        temp_ai_no,
+                        ""
+                    )
+            
+            mapping_rows = []
+            
+            for ai_no, original_no in pile_mapping.items():
+            
+                # =========================
+                # 預設正常
+                # =========================
+            
+                status = "✅ 正常"
+            
+                # =========================
+                # 空白
+                # =========================
+            
+                if (
+                    original_no == ""
+                    or
+                    original_no is None
+                ):
+            
+                    status = "❌ OCR失敗"
+            
+                # =========================
+                # 非數字
+                # =========================
+            
+                elif not str(original_no).isdigit():
+            
+                    status = "⚠️ 非數字"
+            
+                else:
+            
+                    value = int(original_no)
+            
+                    # =========================
+                    # 超出合理範圍
+                    # =========================
+            
+                    if (
+                        value < 1
+                        or
+                        value > total_piles
+                    ):
+            
+                        status = "⚠️ 超出範圍"
+            
+                    # =========================
+                    # 與AI排序差距過大
+                    # =========================
+            
+                    elif abs(ai_no - value) > 10:
+            
+                        status = "⚠️ 疑似錯誤"
+            
+                mapping_rows.append({
+                
+                    "AI辨識樁號": ai_no,
+                
+                    "原圖樁號": original_no,
+                
+                    "施工日": pile_day_mapping.get(ai_no,""),
+                
+                    "錯誤標記": status
+                
+                })
+            
+            mapping_df = pd.DataFrame(mapping_rows)
+
+            failed_ocr = mapping_df[
+                mapping_df["原圖樁號"].isna()
+                |
+                (mapping_df["原圖樁號"] == "")
+            ]
+            
+            if len(failed_ocr) > 0:
+            
+                st.warning(
+                    f"⚠️ 有 {len(failed_ocr)} 支樁 OCR辨識失敗，請確認圖面清晰度"
+                )
+            
+            with right_result:
+            
+                st.dataframe(
+                    mapping_df,
+                    use_container_width=True,
+                    height=420
+                )
+            
+                st.success("✅ AI已完成原圖樁號對應")
+
+            # ========================================
+            # 已完成施工輸入
+            # ========================================
+
             st.markdown("---")
-            st.subheader("📊 上傳原施工排程 Excel")
-        
-            excel_file = st.file_uploader(
-                "上傳施工排程Excel",
-                type=["xlsx"],
-                key="repair_excel"
+
+            st.subheader("✅ 已完成施工")
+
+            completed_text = st.text_area(
+
+                "輸入已完成樁號（原圖樁號）",
+
+                placeholder="例如：35,36,40"
+
             )
-        
-            if excel_file:
-        
-                try:
-        
-                    original_df = pd.read_excel(excel_file)
-        
-                    required_cols = [
-                        "施工日",
-                        "日期",
-                        "日期顏色",
-                        "施工數量",
-                        "施工樁號"
+
+            # ========================================
+            # 修正施工條件
+            # ========================================
+
+            st.markdown("---")
+
+            st.subheader("📅 修正施工條件")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+
+                start_date = st.date_input(
+                    "後續施工開始日期"
+                )
+
+            with col2:
+
+                daily_count = st.number_input(
+                    "修正後每日施工支數",
+                    min_value=1,
+                    value=10
+                )
+
+            # ========================================
+            # AI重新分析
+            # ========================================
+
+            if st.button(
+                "🧠 AI重新分析後續排程",
+                use_container_width=True
+            ):
+
+                reverse_mapping = {}
+
+                for ai_no, original_no in pile_mapping.items():
+                
+                    if str(original_no).isdigit():
+                
+                        reverse_mapping[int(original_no)] = ai_no
+
+                completed_piles = []
+
+                if completed_text.strip():
+
+                    for x in completed_text.split(","):
+
+                        x = x.strip()
+
+                        if x.isdigit():
+
+                            original_no = int(x)
+
+                            if original_no in reverse_mapping:
+
+                                completed_piles.append(
+                                    reverse_mapping[original_no]
+                                )
+
+                valid_piles = []
+                
+                for i in range(
+                    1,
+                    st.session_state.repair_total_piles + 1
+                ):
+                
+                    if i not in st.session_state.excluded_piles:
+                
+                        valid_piles.append(i)
+                        
+                remaining_piles = []
+                
+                for i in valid_piles:
+                
+                    if i not in completed_piles:
+                
+                        remaining_piles.append(i)
+                
+                remaining_data = []
+                
+                for pile_no in remaining_piles:
+                
+                    remaining_data.append({
+                    
+                        "original_no": int(
+                            pile_mapping[pile_no]
+                        ) if str(
+                            pile_mapping[pile_no]
+                        ).isdigit() else pile_no,
+                    
+                        "position": st.session_state.repair_piles[pile_no - 1]
+                    
+                    })
+                
+                remaining_positions = [
+                
+                    x["position"]
+                
+                    for x in remaining_data
+                ]
+
+                with st.spinner(
+                    "🤖 AI正在重新分析後續施工..."
+                ):
+
+                    new_schedule = create_schedule(
+
+                        pile_positions=remaining_positions,
+
+                        total_piles=len(
+                            remaining_positions
+                        ),
+
+                        daily_count=daily_count,
+
+                        start_date=start_date,
+
+                        start_no=1,
+
+                        cooldown_days=1
+
+                    )
+
+                st.success(
+                    "✅ AI已完成後續最佳化排程"
+                )
+
+                # ============================================
+                # AI樁號 轉回 原圖樁號
+                # ============================================
+                
+                new_no_mapping = {}
+                
+                for idx, data in enumerate(remaining_data):
+                
+                    new_no_mapping[idx + 1] = data["original_no"]
+                
+                for row in new_schedule:
+                
+                    row["施工樁號"] = [
+                
+                        new_no_mapping[p]
+                
+                        for p in row["施工樁號"]
                     ]
-        
-                    missing_cols = [
-                        c
-                        for c in required_cols
-                        if c not in original_df.columns
-                    ]
-        
-                    if missing_cols:
-        
-                        st.error(
-                            f"缺少欄位：{','.join(missing_cols)}"
-                        )
-        
-                    else:
-                                                     
-                        st.markdown("---")
-                        st.write("✏️ 請於下方修改施工樁號")
-                        
-                        editor_df = original_df.drop(
-                            columns=["日期顏色"]
-                        )
-
-                        editor_df["施工數量"] = (
-                            editor_df["施工數量"]
-                            .astype(str)
-                        )
-                        if "repair_edit_df" not in st.session_state:
-                        
-                            st.session_state.repair_edit_df = editor_df.copy()
-                        edited_df = st.data_editor(
-                        
-                            st.session_state.repair_edit_df,
-                        
-                            use_container_width=True,
-                        
-                            height=500,
-                        
-                            hide_index=True,
-                        
-                            disabled=[
-                                "施工日",
-                                "日期",
-                                "施工數量"
-                            ],
-                        
-                            key="repair_editor"
-                        )
-                        
-                        # 只有結果不同才更新
-                        validated_df, error_messages = validate_pile_input(
-                            edited_df,
-                            st.session_state.repair_total_piles
-                        )
-                        
-                        if not validated_df.equals(
-                            st.session_state.repair_edit_df
-                        ):
-                            st.session_state.repair_edit_df = validated_df.copy()
-                            st.rerun()
-                        
-                        st.markdown("### 🔍 驗證結果")
-                        
-                        if error_messages:
-                        
-                            st.error(
-                                "\n".join(error_messages)
-                            )
-                        
-                        else:
-                        
-                            if len(error_messages) == 0:
-                            
-                                st.success("✅ 更改完成")
-
-                        # ============================================
-                        # 重新排程
-                        # ============================================
-                        
-                        if "repair_edit_df" in st.session_state:
-                        
-                            st.markdown("---")
-                        
-                            st.subheader("🚀 重新排程")
-                        
-                            daily_count = st.number_input(
-                                "每日施工支數",
-                                min_value=1,
-                                value=14,
-                                key="repair_daily_count"
-                            )
-                        
-                            if st.button(
-                                "🚀重新產出排程",
-                                use_container_width=True
-                            ):
-                        
-                                edit_df = st.session_state.repair_edit_df
-                                
-                                completed_piles = []
-
-                                first_empty_index = None
-                                
-                                for idx,row in edit_df.iterrows():
-                                
-                                    pile_text = str(
-                                        row["施工樁號"]
-                                    ).strip()
-                                
-                                    if (
-                                        pile_text == ""
-                                        or pile_text.lower() == "nan"
-                                    ):
-                                
-                                        first_empty_index = idx
-                                
-                                        break
-
-                                # 找不到空白列
-
-                                if first_empty_index is None:
-                                
-                                    st.error("全部施工日都有樁號，沒有可續排的施工日")
-                                
-                                    st.stop()
-                                
-                                
-                                # 自動抓續排開始日期
-                                
-                                start_date = pd.to_datetime(
-                                
-                                    edit_df.iloc[first_empty_index]["日期"]
-                                
-                                )
-                                
-                                st.write("續排開始日期")
-                                
-                                st.write(start_date)
-                                
-                                for idx, row in edit_df.iterrows():
-                                    if idx >= first_empty_index:
-                                        break
-                                    pile_text = str(
-                                        row["施工樁號"]
-                                    ).strip()
-                                
-                                    if (
-                                        pile_text != ""
-                                        and pile_text.lower() != "nan"
-                                    ):
-                                
-                                        pile_list = [
-                                
-                                            int(x.strip())
-                                
-                                            for x in pile_text.split(",")
-                                
-                                            if x.strip().isdigit()
-                                
-                                        ]
-                                
-                                        completed_piles.extend(
-                                            pile_list
-                                        )
-
-                                all_piles = set(
-                                    range(
-                                        1,
-                                        st.session_state.repair_total_piles + 1
-                                    )
-                                )
-                                
-                                remaining_piles = sorted(
-                                    list(
-                                        all_piles
-                                        -
-                                        set(completed_piles)
-                                    )
-                                )
-                                remaining_piles = [
-                                    p
-                                    for p in remaining_piles
-                                    if p not in st.session_state.excluded_piles
-                                ]
-
-                                # ==================================
-                                # 建立剩餘樁體座標
-                                # ==================================
-                                
-                                remaining_positions = [
-                                    piles[p-1]
-                                    for p in remaining_piles
-                                ]
-                                
-                                st.write("已完成樁體")
-                                st.write(completed_piles)
-                                
-                                st.write("剩餘未施工樁體")
-                                st.write(remaining_piles)
-                                
-                                st.write("續排開始日期")
-                                st.write(start_date)
-
-                                # ==================================
-                                # 建立樁號對照表
-                                # ==================================
-                                
-                                pile_mapping = {}
-                                
-                                for new_no, old_no in enumerate(remaining_piles, start=1):
-                                
-                                    pile_mapping[new_no] = old_no
-                                
-                                st.write("樁號對照表")
-                                
-                                st.write(pile_mapping)
-
-                                # ==================================
-                                # 剩餘樁體鄰樁分析
-                                # ==================================
-                                
-                                neighbor_map = build_neighbor_map(
-                                    remaining_positions
-                                )
-
-                                # ==================================
-                                # AI續排
-                                # ==================================
-                                
-                                new_schedule = create_schedule(
-                                
-                                    pile_positions=remaining_positions,
-                                
-                                    total_piles=len(remaining_positions),
-                                
-                                    daily_count=daily_count,
-                                
-                                    start_date=start_date,
-                                
-                                    start_no=1,
-                                
-                                    cooldown_days=1,
-                                
-                                    neighbor_map=neighbor_map
-                                )
-
-                                for day in new_schedule:
-
-                                    day["施工樁號"] = [
-                                
-                                        pile_mapping[p]
-                                
-                                        for p in day["施工樁號"]
-                                
-                                    ]
-
-                                # ==================================
-                                # 回填到原排程
-                                # ==================================
-                                
-                                new_df = edit_df.copy()
-                                
-                                for i, day_data in enumerate(new_schedule):
-                                
-                                    target_row = first_empty_index + i
-                                
-                                    if target_row >= len(new_df):
-                                
-                                        break
-                                
-                                    pile_text = ",".join(
-                                        map(str, day_data["施工樁號"])
-                                    )
-                                
-                                    new_df.at[target_row, "施工樁號"] = pile_text
-                                
-                                    new_df.at[target_row, "施工數量"] = len(
-                                        day_data["施工樁號"]
-                                    )
-
-                                st.session_state.repair_schedule_df = new_df
-                                
-                                st.success("✅ AI續排完成")
-
-                                st.dataframe(
-                                    st.session_state.repair_schedule_df,
-                                    use_container_width=True
-                                )
-
-                                st.write(st.session_state.repair_schedule_df.head())
-        
-                except Exception as e:
-        
-                    st.error(f"Excel讀取失敗：{e}")
+                    
+                new_df = pd.DataFrame(new_schedule)
+                st.session_state.repair_schedule_df = new_df
