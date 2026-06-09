@@ -2738,6 +2738,15 @@ elif mode == "修正當前進度表":
                                     for p in remaining_piles
                                     if p not in st.session_state.excluded_piles
                                 ]
+
+                                # ==================================
+                                # 建立剩餘樁體座標
+                                # ==================================
+                                
+                                remaining_positions = [
+                                    piles[p-1]
+                                    for p in remaining_piles
+                                ]
                                 
                                 st.write("已完成樁體")
                                 st.write(completed_piles)
@@ -2747,6 +2756,95 @@ elif mode == "修正當前進度表":
                                 
                                 st.write("續排開始日期")
                                 st.write(start_date)
+
+                                # ==================================
+                                # 建立樁號對照表
+                                # ==================================
+                                
+                                pile_mapping = {}
+                                
+                                for new_no, old_no in enumerate(remaining_piles, start=1):
+                                
+                                    pile_mapping[new_no] = old_no
+                                
+                                st.write("樁號對照表")
+                                
+                                st.write(pile_mapping)
+
+                                # ==================================
+                                # 剩餘樁體鄰樁分析
+                                # ==================================
+                                
+                                neighbor_map = build_neighbor_map(
+                                    remaining_positions,
+                                    safe_distance=55
+                                )
+
+                                # ==================================
+                                # AI續排
+                                # ==================================
+                                
+                                new_schedule = create_schedule(
+                                
+                                    pile_positions=remaining_positions,
+                                
+                                    total_piles=len(remaining_positions),
+                                
+                                    daily_count=daily_count,
+                                
+                                    start_date=start_date,
+                                
+                                    start_no=1,
+                                
+                                    cooldown_days=1,
+                                
+                                    neighbor_map=neighbor_map
+                                )
+
+                                for day in new_schedule:
+
+                                    day["施工樁號"] = [
+                                
+                                        pile_mapping[p]
+                                
+                                        for p in day["施工樁號"]
+                                
+                                    ]
+
+                                # ==================================
+                                # 回填到原排程
+                                # ==================================
+                                
+                                new_df = edit_df.copy()
+                                
+                                for i, day_data in enumerate(new_schedule):
+                                
+                                    target_row = first_empty_index + i
+                                
+                                    if target_row >= len(new_df):
+                                
+                                        break
+                                
+                                    pile_text = ",".join(
+                                        map(str, day_data["施工樁號"])
+                                    )
+                                
+                                    new_df.at[target_row, "施工樁號"] = pile_text
+                                
+                                    new_df.at[target_row, "施工數量"] = len(
+                                        day_data["施工樁號"]
+                                    )
+
+                                st.session_state.repair_schedule_df = new_df
+                                
+                                st.success("✅ AI續排完成")
+
+                                st.dataframe(
+                                    st.session_state.repair_schedule_df,
+                                    use_container_width=True
+                                )
+
+                                st.write(st.session_state.repair_schedule_df.head())
         
                 except Exception as e:
         
