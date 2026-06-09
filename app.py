@@ -364,6 +364,8 @@ def build_neighbor_map(
 def validate_pile_input(edit_df, total_piles):
 
     import re
+
+    result_df = edit_df.copy()
     
     all_piles = []
 
@@ -518,11 +520,11 @@ def validate_pile_input(edit_df, total_piles):
                     f"{','.join(duplicate_detail[dup_pile])}"
                 )
             
-            # 最後統一轉字串
-            result_df["施工數量"] = (
-                result_df["施工數量"]
-                .astype(str)
-            )
+    # 最後統一轉字串
+    result_df["施工數量"] = (
+        result_df["施工數量"]
+        .astype(str)
+    )
 
     return result_df, error_messages
 # =====================================================
@@ -2598,11 +2600,6 @@ elif mode == "修正當前進度表":
                             ],
                         
                             key="repair_editor"
-                        )
-                        
-                        validated_df, error_messages = validate_pile_input(
-                            edited_df,
-                            st.session_state.repair_total_piles
                         )
                         
                         # 只有結果不同才更新
