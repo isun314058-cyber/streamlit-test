@@ -2693,7 +2693,7 @@ elif mode == "修正當前進度表":
                                 
                                 st.write(start_date)
                                 
-                                for _, row in edit_df.iterrows():
+                                for idx, row in edit_df.iterrows():
                                     if idx >= first_empty_index:
                                         break
                                     pile_text = str(
