@@ -938,15 +938,23 @@ def create_schedule(
                 # 未來剩餘數量
                 # =========================================
                 
-                future_count = len(remaining)-1
+                future_count = max(
+                    0,
+                    len(remaining) - 1
+                )
                 
                 st.write("future_count =", future_count)
                 st.write("daily_count =", daily_count)
                 
+                safe_daily_count = max(
+                    1,
+                    daily_count
+                )
+                
                 future_days = max(
                     1,
                     math.ceil(
-                        future_count / daily_count
+                        future_count / safe_daily_count
                     )
                 )
                 
@@ -1038,10 +1046,16 @@ def create_schedule(
         # =================================================
 
         if len(today_piles) == 0:
-
-            today_piles.append(remaining[0])
-
-            remaining.remove(remaining[0])
+        
+            if len(remaining) == 0:
+        
+                break
+        
+            first_pile = remaining[0]
+        
+            today_piles.append(first_pile)
+        
+            remaining.remove(first_pile)
 
         # =================================================
         # 更新封鎖
