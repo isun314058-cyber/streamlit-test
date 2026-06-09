@@ -653,25 +653,48 @@ def create_schedule(
     # =====================================================
     # AI 自動學習最近鄰距離
     # =====================================================
+
+    # ====================================
+    # 距離快取
+    # ====================================
+    
+    distance_cache = {}
+    
+    for i in range(total_piles):
+    
+        for j in range(i + 1, total_piles):
+    
+            dist = calculate_distance(
+                pile_positions[i],
+                pile_positions[j]
+            )
+    
+            distance_cache[(i+1, j+1)] = dist
+            distance_cache[(j+1, i+1)] = dist
     
     nearest_distances = []
     
-    for i, p1 in enumerate(pile_positions):
+    for i in range(total_piles):
     
         min_dist = 999999
     
-        for j, p2 in enumerate(pile_positions):
+        for j in range(total_piles):
     
             if i == j:
                 continue
     
-            dist = calculate_distance(p1, p2)
+            dist = distance_cache.get(
+                (i + 1, j + 1),
+                999999
+            )
     
             if dist < min_dist:
     
                 min_dist = dist
     
-        nearest_distances.append(min_dist)
+        nearest_distances.append(
+            min_dist
+        )
     
     # AI 學習真正樁距
     base_distance = np.median(nearest_distances)
@@ -785,11 +808,23 @@ def create_schedule(
             total_piles + 1
         )
     )
-
+    
+    # 預先計算鄰樁數量
+    neighbor_score = {}
+    
+    for p in range(
+        1,
+        total_piles + 1
+    ):
+    
+        neighbor_score[p] = len(
+            neighbor_map.get(p, [])
+        )
+    
     blocked_until = {}
-
+    
     result = []
-
+    
     day = 1
 
     # =====================================================
@@ -826,7 +861,26 @@ def create_schedule(
         # =================================================
 
         while len(today_piles) < daily_count:
-        
+            future_count = max(
+                0,
+                len(remaining)
+            )
+            
+            safe_daily_count = max(
+                1,
+                int(daily_count)
+            )
+            
+            future_days = max(
+                1,
+                math.ceil(
+                    future_count / safe_daily_count
+                )
+            )
+            
+            future_avg = (
+                future_count / future_days
+            )
             # =====================================
             # 先過濾還能施工的樁
             # =====================================
@@ -855,16 +909,17 @@ def create_schedule(
             # =====================================
             # AI排序
             # =====================================
-            #random.shuffle(candidate_piles)
+            #random.shuffle(candidate_piles)          
             sorted_remaining = sorted(
                 candidate_piles,
-                key=lambda p: len(
-                    neighbor_map.get(p, [])
-                ),
+                key=lambda p: neighbor_score[p],
                 reverse=True
             )
             
-            TOP_K = 15
+            TOP_K = min(
+                12,
+                len(sorted_remaining)
+            )
             
             sorted_remaining = sorted_remaining[:TOP_K]
             
@@ -927,12 +982,12 @@ def create_schedule(
                 if len(today_piles) > 0:
                 
                     min_dist = min(
-                
-                        calculate_distance(
-                            pile_positions[pile-1],
-                            pile_positions[p2-1]
+                    
+                        distance_cache.get(
+                            (pile,p2),
+                            999999
                         )
-                
+                    
                         for p2 in today_piles
                     )
                 
@@ -945,28 +1000,7 @@ def create_schedule(
                 # =========================================
                 # 未來剩餘數量
                 # =========================================
-                
-                future_count = max(
-                    0,
-                    len(remaining)
-                )
-                
-                safe_daily_count = max(
-                    1,
-                    int(daily_count)
-                )
-                
-                future_days = max(
-                    1,
-                    math.ceil(
-                        future_count / safe_daily_count
-                    )
-                )
-                
-                future_avg = (
-                    future_count / future_days
-                )
-                
+            
                 score += future_avg * 25
                 
                 if future_avg < safe_daily_count * 0.8:
@@ -996,12 +1030,6 @@ def create_schedule(
                         )
                 
                     score -= cluster_score * 0.08
-                
-                # ==================================================
-                # 8. 靠近起始樁
-                # ==================================================
-                
-                score -= abs(pile - start_no) * 0.01
                 # =========================================
                 # 更新最佳選擇
                 # =========================================
@@ -1483,7 +1511,7 @@ if mode == "新建預定進度表":
                         best_total_score = -999999
                         
                         # AI 多次模擬
-                        for sim in range(20):
+                        for sim in range(5):
                         
                             schedule = create_schedule(
                             
