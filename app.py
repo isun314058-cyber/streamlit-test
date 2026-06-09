@@ -910,7 +910,6 @@ def create_schedule(
                 # =========================================
                 
                 score = 0
-                future_count = len(remaining) - 1
                 
                 # 鄰居越多越優先
                 
