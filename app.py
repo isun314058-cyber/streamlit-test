@@ -2607,10 +2607,16 @@ elif mode == "修正當前進度表":
                         )
                         
                         # 只有結果不同才更新
+                        validated_df, error_messages = validate_pile_input(
+                            edited_df,
+                            st.session_state.repair_total_piles
+                        )
+                        
                         if not validated_df.equals(
                             st.session_state.repair_edit_df
                         ):
                             st.session_state.repair_edit_df = validated_df.copy()
+                            st.rerun()
                         
                         st.markdown("### 🔍 驗證結果")
                         
