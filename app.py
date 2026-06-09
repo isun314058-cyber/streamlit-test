@@ -334,29 +334,125 @@ def calculate_distance(p1, p2):
 
 def build_neighbor_map(
     pile_positions,
-    safe_distance=120
+    row_tolerance=40
 ):
 
     neighbor_map = {}
 
-    for i, p1 in enumerate(pile_positions):
+    # =========================
+    # 依Y座標分列
+    # =========================
 
-        pile_no = i + 1
+    pile_data = []
 
-        neighbor_map[pile_no] = []
+    for idx, (x, y, r) in enumerate(pile_positions):
 
-        for j, p2 in enumerate(pile_positions):
+        pile_data.append({
+            "pile": idx + 1,
+            "x": x,
+            "y": y
+        })
 
-            other_no = j + 1
+    rows = []
 
-            if pile_no == other_no:
-                continue
+    sorted_piles = sorted(
+        pile_data,
+        key=lambda p: p["y"]
+    )
 
-            dist = calculate_distance(p1, p2)
+    for pile in sorted_piles:
 
-            if dist < safe_distance:
+        found = False
 
-                neighbor_map[pile_no].append(other_no)
+        for row in rows:
+
+            if abs(
+                pile["y"] - row[0]["y"]
+            ) < row_tolerance:
+
+                row.append(pile)
+
+                found = True
+
+                break
+
+        if not found:
+
+            rows.append([pile])
+
+    # =========================
+    # 每列由左到右排序
+    # =========================
+
+    for row in rows:
+
+        row.sort(
+            key=lambda p: p["x"]
+        )
+
+    # =========================
+    # 建立上下左右鄰樁
+    # =========================
+
+    for row_idx, row in enumerate(rows):
+
+        for col_idx, pile in enumerate(row):
+
+            pile_no = pile["pile"]
+
+            neighbor_map[pile_no] = []
+
+            # 左
+
+            if col_idx > 0:
+
+                neighbor_map[pile_no].append(
+                    row[col_idx - 1]["pile"]
+                )
+
+            # 右
+
+            if col_idx < len(row) - 1:
+
+                neighbor_map[pile_no].append(
+                    row[col_idx + 1]["pile"]
+                )
+
+            # 上
+
+            if row_idx > 0:
+
+                upper_row = rows[row_idx - 1]
+
+                nearest_upper = min(
+                    upper_row,
+                    key=lambda p:
+                    abs(
+                        p["x"] - pile["x"]
+                    )
+                )
+
+                neighbor_map[pile_no].append(
+                    nearest_upper["pile"]
+                )
+
+            # 下
+
+            if row_idx < len(rows) - 1:
+
+                lower_row = rows[row_idx + 1]
+
+                nearest_lower = min(
+                    lower_row,
+                    key=lambda p:
+                    abs(
+                        p["x"] - pile["x"]
+                    )
+                )
+
+                neighbor_map[pile_no].append(
+                    nearest_lower["pile"]
+                )
 
     return neighbor_map
 
@@ -659,9 +755,6 @@ def create_schedule(
                         pile_positions[n - 1]
                     )
                 )
-    
-                neighbor_map[p] = neighbors[:MAX_NEIGHBORS]
-
     # =====================================================
     # 顏色
     # =====================================================
@@ -760,22 +853,18 @@ def create_schedule(
             # =====================================
             # AI排序
             # =====================================
-            random.shuffle(candidate_piles)
+            #random.shuffle(candidate_piles)
             sorted_remaining = sorted(
-        
                 candidate_piles,
-        
-                key=lambda p: (
-        
-                    len(neighbor_map[p]),
-        
-                    -abs(p - start_no)
-        
-                ),
-        
+                key=lambda p: len(neighbor_map[p]),
                 reverse=True
-        
             )
+            
+            TOP_K = 15
+            
+            sorted_remaining = sorted_remaining[:TOP_K]
+            
+            random.shuffle(sorted_remaining)
         
             best_score = -999999
         
@@ -818,122 +907,34 @@ def create_schedule(
                     continue
 
                 # =========================================
-                # 模擬加入後
-                # =========================================
-
-                temp_today = today_piles + [pile]
-
-                future_blocked = set()
-
-                for p in temp_today:
-
-                    future_blocked.add(p)
-
-                    future_blocked.update(
-                        neighbor_map[p]
-                    )
-
-                future_remaining_list = [
-                
-                    p for p in remaining
-                
-                    if (
-                
-                        p not in future_blocked
-                
-                        and not (
-                
-                            p in blocked_until
-                            and day <= blocked_until[p]
-                
-                        )
-                
-                    )
-                
-                ]
-
-                # =========================================
-                # 孤立檢查
-                # =========================================
-
-                isolated_count = 0
-
-                future_set = set(future_remaining_list)
-                
-                for p in future_remaining_list:
-                
-                    available_neighbors = [
-                
-                        n for n in neighbor_map[p]
-                
-                        if n in future_set
-                
-                    ]
-
-                    if len(available_neighbors) == 0:
-
-                        isolated_count += 1
-                # =========================================
                 # AI 評分
                 # =========================================
                 
                 score = 0
-
-                fill_ratio = len(temp_today) / daily_count
                 
-                score += fill_ratio * 350
+                # 鄰居越多越優先
                 
-                # ==================================================
-                # 1. 未來可施工量（最重要）
-                # ==================================================
+                score += len(neighbor_map[pile]) * 50
                 
-                future_count = len(future_remaining_list)
+                # 避免集中同區域
                 
-                future_days_left = math.ceil(
-                    future_count / daily_count
-                )
+                if len(today_piles) > 0:
                 
-                # ==================================================
-                # 尾盤預測（新增）
-                # ==================================================
+                    min_dist = min(
                 
-                if future_days_left > 0:
+                        calculate_distance(
+                            pile_positions[pile-1],
+                            pile_positions[p2-1]
+                        )
                 
-                    estimated_tail_avg = (
-                        future_count / future_days_left
+                        for p2 in today_piles
                     )
                 
-                    # 尾盤太少
-                    if estimated_tail_avg < daily_count * 0.75:
+                    score += min_dist * 0.2
                 
-                        score -= 500
+                # 靠近起始樁
                 
-                    # 尾盤穩定
-                    else:
-                
-                        score += 120
-                
-                # ==================================================
-                # 未來平均量
-                # ==================================================
-                
-                if future_days_left >= 1:
-                
-                    expected_avg = (
-                        future_count / future_days_left
-                    )
-                
-                    score += expected_avg * 35
-                
-                # 未來可施工數量
-                score += future_count * 12
-
-                
-                # ==================================================
-                # 2. 孤立樁重罰
-                # ==================================================
-                
-                score -= isolated_count * 50
+                score -= abs(pile - start_no) * 0.03
                 
                 # ==================================================
                 # 3. 未來平均施工量
@@ -972,12 +973,6 @@ def create_schedule(
                 ):
                 
                     score -= 150
-                
-                # ==================================================
-                # 6. 鄰居多優先
-                # ==================================================
-                
-                score += len(neighbor_map[pile]) * 8
                 
                 # ==================================================
                 # 7. 靠近目前群組
@@ -1467,8 +1462,7 @@ if mode == "新建預定進度表":
                         # ============================
                         
                         neighbor_map = build_neighbor_map(
-                            piles,
-                            safe_distance=110
+                            piles
                         )
             
                         best_schedule = None
@@ -1476,7 +1470,7 @@ if mode == "新建預定進度表":
                         best_total_score = -999999
                         
                         # AI 多次模擬
-                        for sim in range(5):
+                        for sim in range(20):
                         
                             schedule = create_schedule(
                             
@@ -1604,6 +1598,50 @@ if mode == "新建預定進度表":
                             # =====================================
                             # 更新最佳結果
                             # =====================================
+
+                            daily_counts = [
+                            
+                                len(x["施工樁號"])
+                            
+                                for x in schedule
+                            
+                            ]
+
+                            # ======================
+                            # 尾盤品質
+                            # ======================
+                            
+                            tail_counts = daily_counts[-5:]
+                            
+                            # 最後一天
+                            
+                            last_day = tail_counts[-1]
+                            
+                            if last_day <= 2:
+                            
+                                schedule_score -= 5000
+                            
+                            elif last_day <= 5:
+                            
+                                schedule_score -= 2500
+                            
+                            elif last_day <= 8:
+                            
+                                schedule_score -= 1000
+
+                            # ======================
+                            # 遞減檢查
+                            # ======================
+                            
+                            for i in range(len(tail_counts)-1):
+                            
+                                if tail_counts[i] < tail_counts[i+1]:
+                            
+                                    schedule_score -= 2000
+
+                            tail_avg = np.mean(tail_counts)
+                            
+                            schedule_score += tail_avg * 200
                             
                             if schedule_score > best_total_score:
                             
@@ -2746,8 +2784,7 @@ elif mode == "修正當前進度表":
                                 # ==================================
                                 
                                 neighbor_map = build_neighbor_map(
-                                    remaining_positions,
-                                    safe_distance=55
+                                    remaining_positions
                                 )
 
                                 # ==================================
