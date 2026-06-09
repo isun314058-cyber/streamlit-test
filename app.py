@@ -482,7 +482,7 @@ def validate_pile_input(edit_df, total_piles):
             duplicate_detail[pile] = days
 
     if duplicated_piles:
-
+        reported = set()
         for idx, row in result_df.iterrows():
 
             pile_text = str(
@@ -518,12 +518,18 @@ def validate_pile_input(edit_df, total_piles):
 
                 result_df.at[idx, "施工數量"] = "重複樁號"
 
+                reported = set()
+                
                 for dup_pile in dup_list:
                 
-                    error_messages.append(
-                        f"{row['施工日']} 樁號 {dup_pile} 重複，出現在："
-                        f"{','.join(duplicate_detail[int(dup_pile)])}"
-                    )
+                    if dup_pile not in reported:
+                
+                        reported.add(dup_pile)
+                
+                        error_messages.append(
+                            f"樁號 {dup_pile} 重複，出現在："
+                            f"{','.join(duplicate_detail[int(dup_pile)])}"
+                        )
 
     return result_df, error_messages
 # =====================================================
@@ -2579,10 +2585,12 @@ elif mode == "修正當前進度表":
                             editor_df["施工數量"]
                             .astype(str)
                         )
-
+                        if "repair_edit_df" not in st.session_state:
+                        
+                            st.session_state.repair_edit_df = editor_df.copy()
                         edited_df = st.data_editor(
                         
-                            editor_df,
+                            st.session_state.repair_edit_df,
                         
                             use_container_width=True,
                         
@@ -2596,11 +2604,9 @@ elif mode == "修正當前進度表":
                             ],
                         
                             column_config={
-                        
                                 "施工數量": st.column_config.TextColumn(
                                     "施工數量"
                                 )
-                        
                             },
                         
                             key="repair_editor"
@@ -2610,20 +2616,16 @@ elif mode == "修正當前進度表":
                             edited_df,
                             st.session_state.repair_total_piles
                         )
-                        
-                        st.session_state.repair_edit_df = validated_df
+
+                        st.session_state.repair_edit_df = validated_df.copy()
                         
                         st.markdown("### 🔍 驗證結果")
                         
                         if error_messages:
                         
-                            for msg in error_messages:
-                        
-                                if error_messages:
-                                
-                                    st.error(
-                                        "\n".join(error_messages)
-                                    )
+                            st.error(
+                                "\n".join(error_messages)
+                            )
                         
                         else:
                         
