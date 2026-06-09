@@ -629,7 +629,7 @@ def validate_pile_input(edit_df, total_piles):
 # =====================================================
 
 def create_schedule(
-
+    st.error("V10 已載入")
     pile_positions,
     total_piles,
     daily_count,
