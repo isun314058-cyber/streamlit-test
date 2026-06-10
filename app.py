@@ -1688,6 +1688,10 @@ if mode == "新建預定進度表":
                     )
         
                 if execute:
+                    progress_bar = st.progress(0)
+                    
+                    progress_text = st.empty()
+                    
                     with st.spinner("🤖 AI 正在分析最佳施工排程中，請稍候..."):
                         # ============================
                         # 只計算一次鄰樁
@@ -1709,7 +1713,19 @@ if mode == "新建預定進度表":
                         backup_schedule = None
                         
                         # AI 多次模擬
-                        for sim in range(10):
+                        total_sim = 10
+                        
+                        for sim in range(total_sim):
+                        
+                            percent = int(
+                                ((sim + 1) / total_sim) * 100
+                            )
+                        
+                            progress_bar.progress(percent)
+                        
+                            progress_text.info(
+                                f"AI分析進度：{percent}% ({sim+1}/{total_sim})"
+                            )
                                                        
                             schedule = create_schedule(
                             
