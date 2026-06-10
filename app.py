@@ -1054,7 +1054,7 @@ def create_schedule(
                 
                 score += len(
                     neighbor_map.get(pile, [])
-                ) * 50
+                ) * 30
                 
                 # 避免集中同區域
                 
@@ -1080,7 +1080,7 @@ def create_schedule(
                 # 未來剩餘數量
                 # =========================================
             
-                score += future_avg * 25
+                score += future_avg * 80
                 
                 if future_avg < safe_daily_count * 0.8:
                 
@@ -1125,8 +1125,21 @@ def create_schedule(
             # =============================================
 
             if best_pile is None:
-
-                break
+            
+                relaxed_candidates = [
+                    p for p in remaining
+                    if p not in today_piles
+                ]
+            
+                if relaxed_candidates:
+            
+                    best_pile = max(
+                        relaxed_candidates,
+                        key=lambda p: neighbor_score[p]
+                    )
+            
+                else:
+                    break
 
             # =============================================
             # 加入今日施工
@@ -1633,11 +1646,27 @@ if mode == "新建預定進度表":
                             # 滿載獎勵
                             # =====================================
                             
+                            daily_counts = [
+                                len(x["施工樁號"])
+                                for x in schedule
+                            ]
+                            
                             full_days = sum(
                                 1
                                 for day in schedule[:-3]
                                 if len(day["施工樁號"]) >= daily_count
                             )
+                            
+                            first_days_score = 0
+                            
+                            for c in daily_counts[:5]:
+                            
+                                first_days_score -= abs(
+                                    daily_count - c
+                                ) * 3000
+                            
+                            schedule_score += first_days_score
+                            schedule_score += full_days * 5000
                             
                             schedule_score += full_days * 5000
                         
@@ -1707,12 +1736,6 @@ if mode == "新建預定進度表":
                                 for x in schedule[-5:]
                             
                             ]
-                            
-                            for i in range(len(tail_counts)-1):
-                            
-                                if tail_counts[i] < tail_counts[i+1]:
-                            
-                                    schedule_score -= 300
 
                             # 最後一天不要太少
                             
