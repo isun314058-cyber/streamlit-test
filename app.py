@@ -1688,299 +1688,326 @@ if mode == "新建預定進度表":
                     )
         
                 if execute:
-                    with st.spinner("🤖 AI 正在分析最佳施工排程中，請稍候..."):
-                        # ============================
-                        # 只計算一次鄰樁
-                        # ============================
-                        
-                        median_radius = np.median(
-                            [r for _, _, r in piles]
-                        )
-                        
-                        neighbor_map = build_neighbor_map(
-                            piles,
-                            row_tolerance=int(median_radius * 3)
-                        )
-            
-                        best_schedule = None
-                        
-                        best_total_score = -999999
-                        
-                        backup_schedule = None
-                        
-                        # AI 多次模擬
-                        for sim in range(10):
-                                                       
-                            schedule = create_schedule(
-                            
-                                pile_positions=piles,
-                            
-                                total_piles=total_piles,
-                            
-                                daily_count=daily_count,
-                            
-                                start_date=start_date,
-                            
-                                start_no=start_no,
-                            
-                                cooldown_days=2,
-                            
-                                neighbor_map=neighbor_map
-                            )
-                            if backup_schedule is None:
-                                backup_schedule = schedule
-
-                            last_day_count = len(
-                                schedule[-1]["施工樁號"]
-                            )
-                            
-                            # =====================================
-                            # AI 總體評分
-                            # =====================================
-                        
-                            schedule_score = 0
-
-                            # =====================================
-                            # 滿載獎勵
-                            # =====================================
-                            
-                            daily_counts = [
-                                len(x["施工樁號"])
-                                for x in schedule
-                            ]
-                            
-                            full_days = sum(
-                                1
-                                for day in schedule[:-3]
-                                if len(day["施工樁號"]) >= daily_count
-                            )
-                            
-                            first_days_score = 0
-                            
-                            for c in daily_counts[:5]:
-                            
-                                first_days_score -= abs(
-                                    daily_count - c
-                                ) * 3000
-                            
-                            schedule_score += first_days_score
-                            schedule_score += full_days * 5000
-                            
-                            # 天數越少越好
-                            schedule_score -= len(schedule) * 5000
-                        
-                            # 最後三天不要太少
-                            last_days = schedule[-3:]
-                        
-                            last_count = sum(
-                        
-                                len(x["施工樁號"])
-                        
-                                for x in last_days
-                            )
-                        
-                            schedule_score += last_count * 40
-                        
-                            # 平均施工量穩定
-                            daily_counts = [
-                        
-                                len(x["施工樁號"])
-                        
-                                for x in schedule
+                    progress_text = st.empty()
+                
+                    progress_bar = st.progress(0)
+                
+                    progress_text.markdown(
+                        "🤖 AI 正在分析最佳施工排程中，請稍候... 0%"
+                    )
+                    # ============================
+                    # 只計算一次鄰樁
+                    # ============================
+                    
+                    median_radius = np.median(
+                        [r for _, _, r in piles]
+                    )
+                    
+                    neighbor_map = build_neighbor_map(
+                        piles,
+                        row_tolerance=int(median_radius * 3)
+                    )
         
-                            ]
-                            avg_daily = np.mean(daily_counts)
-                                
-                            schedule_score += avg_daily * 50
+                    best_schedule = None
+                    
+                    best_total_score = -999999
+                    
+                    backup_schedule = None
+                    
+                    # AI 多次模擬
+                    for sim in range(10):
+                        percent = int(((sim + 1) / 10) * 100)
+                
+                        progress_bar.progress(percent)
+                
+                        progress_text.markdown(
+                            f"🤖 AI 正在分析最佳施工排程中，請稍候... {percent}%"
+                        )
+                                                   
+                        schedule = create_schedule(
                         
-                            variance = np.var(daily_counts)
+                            pile_positions=piles,
                         
-                            # 波動越小越好
-                            schedule_score -= variance * 30
+                            total_piles=total_piles,
                         
-                            # =====================================
-                            # 尾盤修復
-                            # =====================================
+                            daily_count=daily_count,
+                        
+                            start_date=start_date,
+                        
+                            start_no=start_no,
+                        
+                            cooldown_days=2,
+                        
+                            neighbor_map=neighbor_map
+                        )
+                        if backup_schedule is None:
+                            backup_schedule = schedule
+
+                        last_day_count = len(
+                            schedule[-1]["施工樁號"]
+                        )
+                        
+                        # =====================================
+                        # AI 總體評分
+                        # =====================================
+                    
+                        schedule_score = 0
+
+                        # =====================================
+                        # 滿載獎勵
+                        # =====================================
+                        
+                        daily_counts = [
+                            len(x["施工樁號"])
+                            for x in schedule
+                        ]
+                        
+                        full_days = sum(
+                            1
+                            for day in schedule[:-3]
+                            if len(day["施工樁號"]) >= daily_count
+                        )
+                        
+                        first_days_score = 0
+                        
+                        for c in daily_counts[:5]:
+                        
+                            first_days_score -= abs(
+                                daily_count - c
+                            ) * 3000
+                        
+                        schedule_score += first_days_score
+                        schedule_score += full_days * 5000
+                        
+                        # 天數越少越好
+                        schedule_score -= len(schedule) * 5000
+                    
+                        # 最後三天不要太少
+                        last_days = schedule[-3:]
+                    
+                        last_count = sum(
+                    
+                            len(x["施工樁號"])
+                    
+                            for x in last_days
+                        )
+                    
+                        schedule_score += last_count * 40
+                    
+                        # 平均施工量穩定
+                        daily_counts = [
+                    
+                            len(x["施工樁號"])
+                    
+                            for x in schedule
+    
+                        ]
+                        avg_daily = np.mean(daily_counts)
                             
-                            tail_days = schedule[-5:]
-                            
-                            tail_total = sum(
-                                len(x["施工樁號"])
-                                for x in tail_days
-                            )
-                            
-                            # 如果最後三天太少
-                            if tail_total < daily_count * 4:
-                            
+                        schedule_score += avg_daily * 50
+                    
+                        variance = np.var(daily_counts)
+                    
+                        # 波動越小越好
+                        schedule_score -= variance * 30
+                    
+                        # =====================================
+                        # 尾盤修復
+                        # =====================================
+                        
+                        tail_days = schedule[-5:]
+                        
+                        tail_total = sum(
+                            len(x["施工樁號"])
+                            for x in tail_days
+                        )
+                        
+                        # 如果最後三天太少
+                        if tail_total < daily_count * 4:
+                        
+                            schedule_score -= 200
+                        
+                        # 最後一天不能太少
+                        last_day_count = len(schedule[-1]["施工樁號"])
+                        
+                        if last_day_count <= 2:
+                        
+                            schedule_score -= 300
+
+                        # =====================================
+                        # 尾盤遞減檢查（加強版）
+                        # =====================================
+                        
+                        tail_counts = [
+                        
+                            len(x["施工樁號"])
+                        
+                            for x in schedule[-5:]
+                        
+                        ]
+
+                        # 最後一天不要太少
+                        
+                        if tail_counts[-1] <= 2:
+                        
+                            schedule_score -= 500
+                        
+                        # 倒數第二天不要比最後一天多太多
+                        
+                        if len(tail_counts) >= 2:
+                        
+                            if tail_counts[-2] - tail_counts[-1] > 5:
+                        
                                 schedule_score -= 200
-                            
-                            # 最後一天不能太少
-                            last_day_count = len(schedule[-1]["施工樁號"])
-                            
-                            if last_day_count <= 2:
-                            
-                                schedule_score -= 300
-
-                            # =====================================
-                            # 尾盤遞減檢查（加強版）
-                            # =====================================
-                            
-                            tail_counts = [
-                            
-                                len(x["施工樁號"])
-                            
-                                for x in schedule[-5:]
-                            
-                            ]
-
-                            # 最後一天不要太少
-                            
-                            if tail_counts[-1] <= 2:
-                            
-                                schedule_score -= 500
-                            
-                            # 倒數第二天不要比最後一天多太多
-                            
-                            if len(tail_counts) >= 2:
-                            
-                                if tail_counts[-2] - tail_counts[-1] > 5:
-                            
-                                    schedule_score -= 200
-                            
-                            
-                            # =====================================
-                            # 更新最佳結果
-                            # =====================================
-
-                            daily_counts = [
-                            
-                                len(x["施工樁號"])
-                            
-                                for x in schedule
-                            
-                            ]
-
-                            # =========================
-                            # 前面天數不得提前掉量
-                            # =========================
-                            
-                            for count in daily_counts[:-3]:
-                            
-                                diff = daily_count - count
-                            
-                                if diff > 0:
-                            
-                                    schedule_score -= diff * 30000
-
-                            # ======================
-                            # 尾盤品質
-                            # ======================
-                            
-                            tail_counts = daily_counts[-5:]
-                         
-                            # =========================
-                            # 禁止尾盤反彈
-                            # =========================
-                            
-                            for i in range(len(tail_counts)-1):
-                            
-                                if tail_counts[i+1] > tail_counts[i]:
-                            
-                                    schedule_score -= 20000
-
-                            # =========================
-                            # 尾盤不可暴跌
-                            # =========================
-                            
-                            for i in range(len(tail_counts)-1):
-                            
-                                diff = tail_counts[i] - tail_counts[i+1]
-                            
-                                if diff > 6:
-                                
-                                    schedule_score -= 8000
-                            
-                            # 最後一天
-                            
-                            last_day = tail_counts[-1]
-                            
-                            if last_day <= 2:
-                            
-                                schedule_score -= 5000
-                            
-                            elif last_day <= 5:
-                            
-                                schedule_score -= 2500
-                            
-                            elif last_day <= 8:
-                            
-                                schedule_score -= 1000
-
-                            # ======================
-                            # 遞減檢查
-                            # ======================
-                            
-                            for i in range(len(tail_counts)-1):
-                            
-                                if tail_counts[i] < tail_counts[i+1]:
-                            
-                                    schedule_score -= 2000
-
-                            tail_avg = np.mean(tail_counts)
-                            
-                            schedule_score += tail_avg * 200
-
-                            # ======================
-                            # 尾盤平衡度
-                            # ======================
-                            
-                            tail_balance_score = 0
-                            
-                            for count in tail_counts:
-                            
-                                tail_balance_score -= abs(
-                                    count - tail_avg
-                                ) * 300
-                            
-                            schedule_score += tail_balance_score
-
-                            # =========================
-                            # 強制尾盤遞減
-                            # =========================
-                            
-                            tail_ok = True
-                            
-                            tail_counts = [
-                                len(x["施工樁號"])
-                                for x in schedule[-5:]
-                            ]
-                            
-                            for i in range(
-                                len(tail_counts)-1
-                            ):
-                            
-                                if tail_counts[i+1] > tail_counts[i]:
-                            
-                                    tail_ok = False
-                                    break
-                            
-                            if not tail_ok:
-                            
-                                continue
-                            
-                            if schedule_score > best_total_score:
-                            
-                                best_total_score = schedule_score
-                            
-                                best_schedule = schedule
                         
-                        # 最終最佳排程                        
-                        if best_schedule is None:
                         
-                            best_schedule = backup_schedule
+                        # =====================================
+                        # 更新最佳結果
+                        # =====================================
+
+                        daily_counts = [
                         
-                        schedule = best_schedule
-        
+                            len(x["施工樁號"])
+                        
+                            for x in schedule
+                        
+                        ]
+
+                        # =========================
+                        # 前面天數不得提前掉量
+                        # =========================
+                        
+                        for count in daily_counts[:-3]:
+                        
+                            diff = daily_count - count
+                        
+                            if diff > 0:
+                        
+                                schedule_score -= diff * 30000
+
+                        # ======================
+                        # 尾盤品質
+                        # ======================
+                        
+                        tail_counts = daily_counts[-5:]
+                     
+                        # =========================
+                        # 禁止尾盤反彈
+                        # =========================
+                        
+                        for i in range(len(tail_counts)-1):
+                        
+                            if tail_counts[i+1] > tail_counts[i]:
+                        
+                                schedule_score -= 20000
+
+                        # =========================
+                        # 尾盤不可暴跌
+                        # =========================
+                        
+                        for i in range(len(tail_counts)-1):
+                        
+                            diff = tail_counts[i] - tail_counts[i+1]
+                        
+                            if diff > 6:
+                            
+                                schedule_score -= 8000
+                        
+                        # 最後一天
+                        
+                        last_day = tail_counts[-1]
+                        
+                        if last_day <= 2:
+                        
+                            schedule_score -= 5000
+                        
+                        elif last_day <= 5:
+                        
+                            schedule_score -= 2500
+                        
+                        elif last_day <= 8:
+                        
+                            schedule_score -= 1000
+
+                        # ======================
+                        # 遞減檢查
+                        # ======================
+                        
+                        for i in range(len(tail_counts)-1):
+                        
+                            if tail_counts[i] < tail_counts[i+1]:
+                        
+                                schedule_score -= 2000
+
+                        tail_avg = np.mean(tail_counts)
+                        
+                        schedule_score += tail_avg * 200
+
+                        # ======================
+                        # 尾盤平衡度
+                        # ======================
+                        
+                        tail_balance_score = 0
+                        
+                        for count in tail_counts:
+                        
+                            tail_balance_score -= abs(
+                                count - tail_avg
+                            ) * 300
+                        
+                        schedule_score += tail_balance_score
+
+                        # =========================
+                        # 強制尾盤遞減
+                        # =========================
+                        
+                        tail_ok = True
+                        
+                        tail_counts = [
+                            len(x["施工樁號"])
+                            for x in schedule[-5:]
+                        ]
+                        
+                        for i in range(
+                            len(tail_counts)-1
+                        ):
+                        
+                            if tail_counts[i+1] > tail_counts[i]:
+                        
+                                tail_ok = False
+                                break
+                        
+                        if not tail_ok:
+                        
+                            continue
+                        
+                        if schedule_score > best_total_score:
+                        
+                            best_total_score = schedule_score
+                        
+                            best_schedule = schedule
+                    
+                    # 最終最佳排程                        
+                    if best_schedule is None:
+                    
+                        best_schedule = backup_schedule
+
+                    progress_bar.progress(100)
+                    
+                    progress_text.markdown(
+                        "🤖 AI 正在分析最佳施工排程中，請稍候... 100%"
+                    )
+
+                    import time
+                    
+                    time.sleep(0.3)
+                    
+                    progress_bar.empty()
+                    
+                    progress_text.empty()
+                    
+                    schedule = best_schedule
+    
                     df = pd.DataFrame(schedule)
         
                     st.session_state.schedule_df = df
@@ -2003,7 +2030,7 @@ if mode == "新建預定進度表":
                     pile_positions = piles
         
                     try:
-
+    
                         FONT_NAME = "DejaVuSans.ttf"
                     
                         day_font = ImageFont.truetype(
