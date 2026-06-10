@@ -3074,10 +3074,6 @@ elif mode == "修正當前進度表":
                                 for new_no, old_no in enumerate(remaining_piles, start=1):
                                 
                                     pile_mapping[new_no] = old_no
-                                
-                                st.write("樁號對照表")
-                                
-                                st.write(pile_mapping)
 
                                 # ==================================
                                 # 剩餘樁體鄰樁分析
