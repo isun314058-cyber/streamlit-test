@@ -3646,4 +3646,8 @@ elif mode == "修正當前進度表":
                 
                 except Exception as e:
         
-                    st.error(f"Excel讀取失敗：{e}")
+                    st.error(str(e))
+                
+                    st.code(
+                        traceback.format_exc()
+                    )
