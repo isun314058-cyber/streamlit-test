@@ -74,6 +74,7 @@ h1,h2,h3,h4,h5,h6,p,span,label{
     padding:12px;
     border:1px solid #2d3b55;
     vertical-align:top;
+    text-align:center;
 }
 
 .schedule-table tr:nth-child(even){
