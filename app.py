@@ -2029,20 +2029,7 @@ if mode == "新建預定進度表":
         
                             x, y, r = pile_positions[idx]
         
-                            rr = int(r * 0.85)
-        
-                            draw.ellipse(
-                                (
-                                    x - rr,
-                                    y - rr,
-                                    x + rr,
-                                    y + rr
-                                ),
-                                fill=color,
-                                outline="black",
-                                width=1
-                            )
-        
+                                   
                             # =====================================
                             # 日期固定在圓下方
                             # =====================================
@@ -2993,6 +2980,8 @@ elif mode == "修正當前進度表":
                                 
                                 completed_piles = []
 
+                                completed_pile_colors = {}
+
                                 first_empty_index = None
                                 
                                 for idx,row in edit_df.iterrows():
@@ -3029,32 +3018,40 @@ elif mode == "修正當前進度表":
                                 
                                 )
                                 
-                                for idx, row in edit_df.iterrows():
+                                for idx,row in edit_df.iterrows():
+                                
                                     if idx >= first_empty_index:
                                         break
+                                
                                     pile_text = str(
                                         row["施工樁號"]
                                     ).strip()
                                 
                                     if (
-                                        pile_text != ""
-                                        and pile_text.lower() != "nan"
+                                        pile_text == ""
+                                        or pile_text.lower() == "nan"
                                     ):
+                                        continue
                                 
-                                        pile_list = [
+                                    pile_list = [
+                                        int(x.strip())
+                                        for x in pile_text.split(",")
+                                        if x.strip().isdigit()
+                                    ]
                                 
-                                            int(x.strip())
+                                    color_hex = row["日期顏色"]
                                 
-                                            for x in pile_text.split(",")
+                                    color_rgb = tuple(
+                                        int(color_hex[i:i+2],16)
+                                        for i in (1,3,5)
+                                    )
                                 
-                                            if x.strip().isdigit()
+                                    for pile_no in pile_list:
                                 
-                                        ]
+                                        completed_piles.append(pile_no)
                                 
-                                        completed_piles.extend(
-                                            pile_list
-                                        )
-
+                                        completed_pile_colors[pile_no] = color_rgb
+                                    
                                 all_piles = set(
                                     range(
                                         1,
@@ -3289,6 +3286,7 @@ elif mode == "修正當前進度表":
                                 except:
                                 
                                     pile_font = ImageFont.load_default()
+                                    day_font = ImageFont.load_default()
 
                                 LEGEND_WIDTH = 165
                                 
@@ -3309,23 +3307,96 @@ elif mode == "修正當前進度表":
                                     repair_result_img
                                 )
 
+                                # =====================================
+                                # 已完成樁先畫出來
+                                # =====================================
+                                
                                 for pile_no in completed_piles:
                                 
                                     idx = pile_no - 1
                                 
-                                    x,y,r = piles[idx]
+                                    if idx >= len(piles):
+                                        continue
                                 
-                                    draw.ellipse(
+                                    x, y, r = piles[idx]
+                                
+                                    day_no = None
+                                
+                                    for _, row in edit_df.iterrows():
+                                
+                                        pile_text = str(row["施工樁號"])
+                                
+                                        pile_list = [
+                                            int(x.strip())
+                                            for x in pile_text.split(",")
+                                            if x.strip().isdigit()
+                                        ]
+                                
+                                        if pile_no in pile_list:
+                                
+                                            day_no = row["施工日"].replace("Day ", "D")
+                                            break
+                                
+                                    if day_no:
+                                
+                                        day_bbox = draw.textbbox(
+                                            (0,0),
+                                            day_no,
+                                            font=day_font
+                                        )
+                                
+                                        day_width = day_bbox[2] - day_bbox[0]
+                                
+                                        draw.text(
+                                            (
+                                                x - day_width//2,
+                                                y + 14
+                                            ),
+                                            day_no,
+                                            fill="black",
+                                            font=day_font,
+                                            stroke_width=2,
+                                            stroke_fill="white"
+                                        )
+                                
+                                    color = completed_pile_colors.get(
+                                        pile_no,
+                                        (180,180,180)
+                                    )
+                                
+                                    rr = int(r * 0.85)
+                                
+                                    draw.text(
                                         (
-                                            x-r,
-                                            y-r,
-                                            x+r,
-                                            y+r
+                                            x - pile_width//2,
+                                            y - r - 25
                                         ),
-                                        fill=(180,180,180),
+                                        fill=color,
                                         outline="black",
                                         width=2
                                     )
+                                
+                                    pile_text = str(pile_no)
+                                
+                                    pile_bbox = draw.textbbox(
+                                        (0,0),
+                                        pile_text,
+                                        font=pile_font
+                                    )
+                                
+                                    pile_width = pile_bbox[2] - pile_bbox[0]
+                                
+                                    draw.text(
+                                        (
+                                            x - pile_width//2,
+                                            y - r - 25
+                                        ),
+                                        pile_text,
+                                        fill="black",
+                                        font=pile_font
+                                    )
+
+                                
 
                                 for day_idx,row in enumerate(new_schedule):
                                 
@@ -3381,7 +3452,7 @@ elif mode == "修正當前進度表":
                                         day_bbox = draw.textbbox(
                                             (0,0),
                                             day_text,
-                                            font=pile_font
+                                            font=day_font
                                         )
                                         
                                         day_width = day_bbox[2] - day_bbox[0]
@@ -3411,6 +3482,67 @@ elif mode == "修正當前進度表":
                                     fill="black",
                                     font=pile_font
                                 )
+
+                                                           
+                                pile_width = pile_bbox[2] - pile_bbox[0]
+                            
+                                draw.text(
+                                    (
+                                        x - pile_width//2,
+                                        y - rr - 25
+                                    ),
+                                    pile_text,
+                                    fill="black",
+                                    font=pile_font
+                                )
+
+                                day_no = None
+                            
+                                for idx2,row2 in edit_df.iterrows():
+                            
+                                    pile_text2 = str(
+                                        row2["施工樁號"]
+                                    ).strip()
+                            
+                                    if pile_text2 == "":
+                                        continue
+                            
+                                    pile_list2 = [
+                                        int(x.strip())
+                                        for x in pile_text2.split(",")
+                                        if x.strip().isdigit()
+                                    ]
+                            
+                                    if pile_no in pile_list2:
+                            
+                                        day_no = row2["施工日"].replace(
+                                            "Day ",
+                                            "D"
+                                        )
+                            
+                                        break
+                            
+                                if day_no:
+                            
+                                    day_bbox = draw.textbbox(
+                                        (0,0),
+                                        day_no,
+                                        font=day_font
+                                    )
+                            
+                                    day_width = day_bbox[2] - day_bbox[0]
+                            
+                                    draw.text(
+                                        (
+                                            x - day_width//2,
+                                            y + r + 8
+                                        ),
+                                        day_no,
+                                        fill="black",
+                                        font=day_font,
+                                        stroke_width=2,
+                                        stroke_fill="white"
+                                    )
 
                                 for day_idx,row in enumerate(new_schedule):
                                 
