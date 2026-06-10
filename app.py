@@ -2683,6 +2683,10 @@ elif mode == "修正當前進度表":
 
             total_piles = len(piles)
 
+            full_neighbor_map = build_neighbor_map(
+                piles
+            )
+
             st.session_state.repair_total_piles = total_piles
 
             st.success(
@@ -3094,13 +3098,28 @@ elif mode == "修正當前進度表":
                                 
                                     pile_mapping[new_no] = old_no
 
-                                # ==================================
-                                # 剩餘樁體鄰樁分析
-                                # ==================================
+                                neighbor_map = {}
                                 
-                                neighbor_map = build_neighbor_map(
-                                    remaining_positions
-                                )
+                                reverse_mapping = {}
+                                
+                                for new_no, old_no in pile_mapping.items():
+                                
+                                    reverse_mapping[old_no] = new_no
+                                
+                                
+                                for old_pile in remaining_piles:
+                                
+                                    new_pile = reverse_mapping[old_pile]
+                                
+                                    neighbor_map[new_pile] = []
+                                
+                                    for n in full_neighbor_map.get(old_pile, []):
+                                
+                                        if n in remaining_piles:
+                                
+                                            neighbor_map[new_pile].append(
+                                                reverse_mapping[n]
+                                            )
 
                                 # ==================================
                                 # AI續排
@@ -3108,27 +3127,36 @@ elif mode == "修正當前進度表":
                                 
                                 best_schedule = None
                                 
-                                best_score = -999999
+                                best_total_score = -999999
 
                                 backup_schedule = None
                                 
                                 for sim in range(10):
                                 
                                     temp_schedule = create_schedule(
-                                
+                                    
                                         pile_positions=remaining_positions,
-                                
+                                    
                                         total_piles=len(remaining_positions),
-                                
+                                    
                                         daily_count=daily_count,
-                                
+                                    
                                         start_date=start_date,
-                                
-                                        start_no=1,
-                                
+                                    
+                                        start_no=random.randint(
+                                            1,
+                                            len(remaining_positions)
+                                        ),
+                                    
                                         cooldown_days=2,
-                                
+                                    
                                         neighbor_map=neighbor_map
+                                    )
+
+                                    temp_schedule = optimize_tail_days(
+                                        temp_schedule,
+                                        neighbor_map,
+                                        daily_count
                                     )
 
                                     if backup_schedule is None:
@@ -3143,18 +3171,127 @@ elif mode == "修正當前進度表":
                                     
                                     ]
                                 
-                                    score = 0
-    
-                                    for c in daily_counts[:-3]:
+                                    schedule_score = 0
                                     
-                                        diff = daily_count - c
+                                    daily_counts = [
+                                        len(x["施工樁號"])
+                                        for x in temp_schedule
+                                    ]
+                                    
+                                    full_days = sum(
+                                        1
+                                        for day in temp_schedule[:-3]
+                                        if len(day["施工樁號"]) >= daily_count
+                                    )
+                                    
+                                    first_days_score = 0
+                                    
+                                    for c in daily_counts[:5]:
+                                    
+                                        first_days_score -= abs(
+                                            daily_count - c
+                                        ) * 3000
+                                    
+                                    schedule_score += first_days_score
+                                    schedule_score += full_days * 5000
+                                    
+                                    schedule_score -= len(temp_schedule) * 5000
+
+                                    last_days = temp_schedule[-3:]
+                                    
+                                    last_count = sum(
+                                        len(x["施工樁號"])
+                                        for x in last_days
+                                    )
+                                    
+                                    schedule_score += last_count * 40
+                                    
+                                    avg_daily = np.mean(daily_counts)
+                                    
+                                    schedule_score += avg_daily * 50
+                                    
+                                    variance = np.var(daily_counts)
+                                    
+                                    schedule_score -= variance * 30
+
+                                    tail_days = temp_schedule[-5:]
+                                    
+                                    tail_total = sum(
+                                        len(x["施工樁號"])
+                                        for x in tail_days
+                                    )
+                                    
+                                    if tail_total < daily_count * 4:
+                                        schedule_score -= 200
+                                    
+                                    last_day_count = len(
+                                        temp_schedule[-1]["施工樁號"]
+                                    )
+                                    
+                                    if last_day_count <= 2:
+                                        schedule_score -= 300
+
+                                    tail_counts = [
+                                        len(x["施工樁號"])
+                                        for x in temp_schedule[-5:]
+                                    ]
+
+                                    for count in daily_counts[:-3]:
+                                    
+                                        diff = daily_count - count
                                     
                                         if diff > 0:
                                     
-                                            score -= diff * 5000
-    
-                                    tail_counts = daily_counts[-5:]
-    
+                                            schedule_score -= diff * 30000
+                                    
+                                    
+                                    for i in range(len(tail_counts)-1):
+                                    
+                                        if tail_counts[i+1] > tail_counts[i]:
+                                    
+                                            schedule_score -= 20000
+                                    
+                                    
+                                    for i in range(len(tail_counts)-1):
+                                    
+                                        diff = tail_counts[i] - tail_counts[i+1]
+                                    
+                                        if diff > 6:
+                                    
+                                            schedule_score -= 8000
+                                    
+                                    
+                                    last_day = tail_counts[-1]
+                                    
+                                    if last_day <= 2:
+                                    
+                                        schedule_score -= 5000
+                                    
+                                    elif last_day <= 5:
+                                    
+                                        schedule_score -= 2500
+                                    
+                                    elif last_day <= 8:
+                                    
+                                        schedule_score -= 1000
+                                    
+                                    
+                                    tail_avg = np.mean(tail_counts)
+                                    
+                                    schedule_score += tail_avg * 200
+                                    
+                                    
+                                    tail_balance_score = 0
+                                    
+                                    for count in tail_counts:
+                                    
+                                        tail_balance_score -= abs(
+                                            count - tail_avg
+                                        ) * 300
+                                    
+                                    schedule_score += tail_balance_score
+                                    
+                                    
                                     tail_ok = True
                                     
                                     for i in range(len(tail_counts)-1):
@@ -3162,27 +3299,17 @@ elif mode == "修正當前進度表":
                                         if tail_counts[i+1] > tail_counts[i]:
                                     
                                             tail_ok = False
+                                    
                                             break
                                     
                                     if not tail_ok:
                                     
                                         continue
-    
-                                    for i in range(len(tail_counts)-1):
                                     
-                                        diff = tail_counts[i] - tail_counts[i+1]
                                     
-                                        if diff > 4:
+                                    if schedule_score > best_total_score:
                                     
-                                            score -= diff * 10000
-    
-                                    tail_avg = sum(tail_counts) / len(tail_counts)
-                                    
-                                    score += tail_avg * 1000
-    
-                                    if score > best_score:
-                                    
-                                        best_score = score
+                                        best_total_score = schedule_score
                                     
                                         best_schedule = temp_schedule
 
