@@ -2885,9 +2885,7 @@ elif mode == "修正當前進度表":
                         st.markdown("---")
                         st.write("✏️ 請於下方修改施工樁號")
                         
-                        editor_df = original_df.drop(
-                            columns=["日期顏色"]
-                        )
+                        editor_df = original_df.copy()
 
                         editor_df["施工數量"] = (
                             editor_df["施工數量"]
@@ -3364,18 +3362,7 @@ elif mode == "修正當前進度表":
                                         (180,180,180)
                                     )
                                 
-                                    rr = int(r * 0.85)
-                                
-                                    draw.text(
-                                        (
-                                            x - pile_width//2,
-                                            y - r - 25
-                                        ),
-                                        fill=color,
-                                        outline="black",
-                                        width=2
-                                    )
-                                
+                                                                   
                                     pile_text = str(pile_no)
                                 
                                     pile_bbox = draw.textbbox(
