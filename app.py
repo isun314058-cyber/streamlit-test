@@ -3646,8 +3646,8 @@ elif mode == "修正當前進度表":
                 
                 except Exception as e:
         
-                    st.error(str(e))
-                
-                    st.code(
-                        traceback.format_exc()
-                    )
+                    st.error(f"錯誤內容：{e}")
+                    
+                    import traceback
+                    
+                    st.text(traceback.format_exc())
