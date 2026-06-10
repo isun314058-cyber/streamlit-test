@@ -694,6 +694,10 @@ def optimize_tail_days(
 
             move_candidate = None
 
+            if len(today["施工樁號"]) <= daily_count * 0.7:
+            
+                continue
+
             for pile in reversed(today["施工樁號"]):
 
                 conflict = False
@@ -929,7 +933,7 @@ def create_schedule(
     result = []
     
     day = 1
-
+    TAIL_TRIGGER = daily_count * 1
     # =====================================================
     # 開始排程
     # =====================================================
@@ -965,13 +969,32 @@ def create_schedule(
 
         tail_mode = False
         
-        if len(remaining) <= daily_count * 2:
+        if len(remaining) <= TAIL_TRIGGER:
             tail_mode = True
+            remaining_days = math.ceil(
+                len(remaining)
+                /
+                daily_count
+            )
+            
+            target_tail_count = math.ceil(
+                len(remaining)
+                /
+                remaining_days
+            )
         
-        while len(today_piles) < daily_count:
+
+        today_target = daily_count
+        
+        if len(remaining) <= TAIL_TRIGGER:
+        
+            today_target = target_tail_count
+        
+        while len(today_piles) < today_target:
+            
             future_count = max(
                 0,
-                len(remaining)
+                len(remaining) - 1
             )
             
             safe_daily_count = max(
@@ -994,18 +1017,27 @@ def create_schedule(
             # =====================================
         
             candidate_piles = []
+
+            allow_relax = (
+                len(remaining)
+                <=
+                daily_count * 2
+            )
             
             for p in remaining:
             
                 if p in today_piles:
                     continue
             
-                if (
-                    p in blocked_until
-                    and
-                    day <= blocked_until[p]
-                ):
-                    continue
+                # 前面天數嚴格遵守冷卻
+                if not allow_relax:
+            
+                    if (
+                        p in blocked_until
+                        and
+                        day <= blocked_until[p]
+                    ):
+                        continue
             
                 candidate_piles.append(p)
         
@@ -1042,11 +1074,13 @@ def create_schedule(
                 # 冷卻判定
                 # =========================================
 
-                if pile in blocked_until:
-
-                    if day <= blocked_until[pile]:
-
-                        continue
+                if not allow_relax:
+                
+                    if pile in blocked_until:
+                
+                        if day <= blocked_until[pile]:
+                
+                            continue
 
                 # =========================================
                 # 十字衝突檢查
@@ -1104,11 +1138,11 @@ def create_schedule(
                 # 未來剩餘數量
                 # =========================================
             
-                score += future_avg * 80
+                score += future_avg * 500
                 
                 if future_avg < safe_daily_count * 0.8:
                 
-                    score -= 400
+                    score -= 5000
                 
                 if (
                     future_count > 0
@@ -1176,33 +1210,6 @@ def create_schedule(
             
                 else:
                     break
-            
-                relaxed_candidates = []
-            
-                for p in remaining:
-            
-                    if p in today_piles:
-                        continue
-            
-                    if (
-                        p in blocked_until
-                        and
-                        day <= blocked_until[p]
-                    ):
-                        continue
-            
-                    relaxed_candidates.append(p)
-            
-                if relaxed_candidates:
-            
-                    best_pile = max(
-                        relaxed_candidates,
-                        key=lambda p: neighbor_score[p]
-                    )
-            
-                else:
-                    break
-
             # =============================================
             # 加入今日施工
             # =============================================
@@ -1218,7 +1225,9 @@ def create_schedule(
             
             for neighbor in neighbor_map.get(best_pile, []):
             
-                blocked_until[neighbor] = day + 1
+                blocked_until[neighbor] = (
+                    day + cooldown_days
+                )
         
         # =================================================
         # 避免卡死
@@ -1830,7 +1839,7 @@ if mode == "新建預定進度表":
                             
                                 if diff > 0:
                             
-                                    schedule_score -= diff * 500
+                                    schedule_score -= diff * 30000
 
                             # ======================
                             # 尾盤品質
