@@ -2313,7 +2313,7 @@ if mode == "新建預定進度表":
                 # 排樁施工圖 + 下載圖面
                 # =====================================================
             
-                left_result, right_download = st.columns([4, 1.5])
+                left_result, right_download = st.columns([3, 1])
                 
                 with left_result:
                 
@@ -2321,11 +2321,14 @@ if mode == "新建預定進度表":
                 
                     st.image(
                         st.session_state.result_image,
-                        width=900
+                        use_container_width=True
                     )
                 
                 with right_download:
-                
+                    st.markdown(
+                        '<div class="download-panel">',
+                        unsafe_allow_html=True
+                    )
                     st.subheader("📥 下載圖面")
                 
                     export_type = st.selectbox(
@@ -2361,6 +2364,10 @@ if mode == "新建預定進度表":
                             file_name="pile_schedule.jpg",
                             mime="image/jpeg",
                             use_container_width=True
+                        )
+                        st.markdown(
+                            '</div>',
+                            unsafe_allow_html=True
                         )
             
                     else:
