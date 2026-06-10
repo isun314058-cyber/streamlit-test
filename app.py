@@ -30,6 +30,11 @@ st.set_page_config(
 st.markdown("""
 <style>
 
+.download-panel{
+    position: sticky;
+    top: 20px;
+}
+
 .stApp{
     background-color:#020617;
     color:white;
@@ -2308,19 +2313,26 @@ if mode == "新建預定進度表":
                 # 排樁施工圖 + 下載圖面
                 # =====================================================
             
-                left_result, right_download = st.columns([3, 1])
-            
+                left_result, right_download = st.columns([5, 1])
+                
                 with left_result:
-            
+                
                     st.subheader("🗺️ 排樁施工圖")
-            
+                
                     st.image(
                         st.session_state.result_image,
-                        width=900
+                        use_container_width=True
                     )
-            
+                
                 with right_download:
-            
+                
+                    st.markdown("""
+                    <div style="
+                        position: sticky;
+                        top: 80px;
+                    ">
+                    """, unsafe_allow_html=True)
+                
                     st.subheader("📥 下載圖面")
             
                     export_type = st.selectbox(
@@ -2343,7 +2355,7 @@ if mode == "新建預定進度表":
                             mime="image/png",
                             use_container_width=True
                         )
-            
+                        
                     elif export_type == "JPG":
             
                         rgb_img = result_img.convert("RGB")
@@ -2371,6 +2383,8 @@ if mode == "新建預定進度表":
                             mime="application/pdf",
                             use_container_width=True
                         )
+
+                    st.markdown("</div>", unsafe_allow_html=True)
 elif mode == "修正當前進度表":
     # ============================================
     # 初始化修正模式
