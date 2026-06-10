@@ -3372,6 +3372,10 @@ elif mode == "修正當前進度表":
                                         len(day_data["施工樁號"])
                                     )
 
+                                new_df = new_df[
+                                    new_df["施工數量"].astype(str) != "0"
+                                ].reset_index(drop=True)
+
                                 st.session_state.repair_schedule_df = new_df
                                 
                                 st.success("✅ AI續排完成")
@@ -3387,6 +3391,11 @@ elif mode == "修正當前進度表":
                                     if pd.notna(x)
                                     else 0
                                 )
+
+                                # 刪除施工數量為0的列
+                                repair_df = repair_df[
+                                    repair_df["施工數量"] > 0
+                                ].reset_index(drop=True)
                                 
                                 st.dataframe(
                                     repair_df,
