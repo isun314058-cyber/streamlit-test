@@ -112,39 +112,64 @@ if "last_mode" not in st.session_state:
 
 if st.session_state.last_mode != mode:
 
-    keys_to_reset = [
-    
-        "points",
-        "last_clicked",
-    
-        "repair_points",
-        "repair_piles",
-        "excluded_piles",
-        "repair_last_clicked",
-        "exclude_last_click",
-    
-        "repair_canvas_key",
-        "repair_current_file",
-    
-        "schedule_df",
-        "repair_schedule_df",
-    
-        "result_image",
-        "original_image",
-    
-        "pile_positions"
-    ]
+    # ==========================
+    # 切到修正模式
+    # ==========================
+    if mode == "修正當前進度表":
 
-    for k in keys_to_reset:
+        for k in list(st.session_state.keys()):
 
-        if k in st.session_state:
+            if k.startswith("repair_"):
 
-            if isinstance(st.session_state[k], list):
-                st.session_state[k] = []
-            else:
-                st.session_state[k] = None
+                del st.session_state[k]
 
-    st.session_state.processed = False
+        # 額外清除修正模式會用到但不是 repair_ 開頭的
+        extra_keys = [
+        
+            "exclude_last_click",
+        
+            "repair_editor"
+        ]
+
+        for k in extra_keys:
+
+            if k in st.session_state:
+
+                del st.session_state[k]
+
+    # ==========================
+    # 切到新建模式
+    # ==========================
+    else:
+
+        # 清除所有 repair 開頭資料
+    
+        for k in list(st.session_state.keys()):
+    
+            if k.startswith("repair_"):
+    
+                del st.session_state[k]
+    
+        new_keys = [
+    
+            "points",
+            "last_clicked",
+    
+            "schedule_df",
+    
+            "result_image",
+            "original_image",
+    
+            "pile_positions",
+    
+            "processed"
+        ]
+
+        for k in new_keys:
+
+            if k in st.session_state:
+
+                del st.session_state[k]
 
     st.session_state.last_mode = mode
 
