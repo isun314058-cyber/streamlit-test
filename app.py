@@ -1724,7 +1724,7 @@ if mode == "新建預定進度表":
                             progress_bar.progress(percent)
                         
                             progress_text.info(
-                                f"AI分析進度：{percent}% ({sim+1}/{total_sim})"
+                                f"AI分析進度：{percent}%"
                             )
                                                        
                             schedule = create_schedule(
