@@ -1678,7 +1678,7 @@ if mode == "新建預定進度表":
                         backup_schedule = None
                         
                         # AI 多次模擬
-                        for sim in range(15):
+                        for sim in range(10):
                                                        
                             schedule = create_schedule(
                             
