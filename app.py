@@ -2153,13 +2153,13 @@ if mode == "新建預定進度表":
                         )
         
                         day_no = row["施工日"].replace("Day ", "D")
-        
+                        
                         draw.text(
                             (
                                 legend_x + 35,
                                 yy
                             ),
-                            f"D{start_day_no + day_idx}",
+                            day_no,
                             fill="black",
                             font=pile_font
                         )
@@ -3087,25 +3087,102 @@ elif mode == "修正當前進度表":
                                 # AI續排
                                 # ==================================
                                 
-                                new_schedule = create_schedule(
+                                best_schedule = None
                                 
-                                    pile_positions=remaining_positions,
-                                
-                                    total_piles=len(remaining_positions),
-                                
-                                    daily_count=daily_count,
-                                
-                                    start_date=start_date,
-                                
-                                    start_no=1,
-                                
-                                    cooldown_days=2,
-                                
-                                    neighbor_map=neighbor_map
-                                )
+                                best_score = -999999
 
+                                backup_schedule = None
+                                
+                                for sim in range(10):
+                                
+                                    temp_schedule = create_schedule(
+                                
+                                        pile_positions=remaining_positions,
+                                
+                                        total_piles=len(remaining_positions),
+                                
+                                        daily_count=daily_count,
+                                
+                                        start_date=start_date,
+                                
+                                        start_no=1,
+                                
+                                        cooldown_days=2,
+                                
+                                        neighbor_map=neighbor_map
+                                    )
+
+                                    if backup_schedule is None:
+                                    
+                                        backup_schedule = temp_schedule
+
+                                    daily_counts = [
+                                    
+                                        len(x["施工樁號"])
+                                    
+                                        for x in temp_schedule
+                                    
+                                    ]
+                                
+                                    score = 0
+    
+                                    for c in daily_counts[:-3]:
+                                    
+                                        diff = daily_count - c
+                                    
+                                        if diff > 0:
+                                    
+                                            score -= diff * 5000
+    
+                                    tail_counts = daily_counts[-5:]
+    
+                                    tail_ok = True
+                                    
+                                    for i in range(len(tail_counts)-1):
+                                    
+                                        if tail_counts[i+1] > tail_counts[i]:
+                                    
+                                            tail_ok = False
+                                            break
+                                    
+                                    if not tail_ok:
+                                    
+                                        continue
+    
+                                    for i in range(len(tail_counts)-1):
+                                    
+                                        diff = tail_counts[i] - tail_counts[i+1]
+                                    
+                                        if diff > 4:
+                                    
+                                            score -= diff * 10000
+    
+                                    tail_avg = sum(tail_counts) / len(tail_counts)
+                                    
+                                    score += tail_avg * 1000
+    
+                                    if score > best_score:
+                                    
+                                        best_score = score
+                                    
+                                        best_schedule = temp_schedule
+
+                                # ==================================
+                                # 如果10次模擬都失敗
+                                # ==================================
+                                
+                                if best_schedule is None:
+                                
+                                    best_schedule = backup_schedule
+                                
+                                # ==================================
+                                # 轉回原始樁號
+                                # ==================================
+                                
+                                new_schedule = best_schedule
+                                
                                 for day in new_schedule:
-
+                                
                                     day["施工樁號"] = [
                                 
                                         pile_mapping[p]
@@ -3113,6 +3190,8 @@ elif mode == "修正當前進度表":
                                         for p in day["施工樁號"]
                                 
                                     ]
+
+                                    
 
                                 # ==================================
                                 # 回填到原排程
@@ -3181,6 +3260,11 @@ elif mode == "修正當前進度表":
                                     pile_font = ImageFont.truetype(
                                         "DejaVuSans.ttf",
                                         18
+                                    )
+
+                                    day_font = ImageFont.truetype(
+                                        "DejaVuSans.ttf",
+                                        14
                                     )
                                 
                                 except:
