@@ -1723,7 +1723,7 @@ if mode == "新建預定進度表":
                             progress_bar.progress(percent)
                         
                             progress_text.info(
-                                f"🤖 AI正在分析最佳施工排程中，請稍候...\n\nAI分析進度：{percent}% "
+                                f"🤖 AI正在分析最佳施工排程中，請稍候...\n\nAI分析進度：{percent}%"
                             )
                                                        
                             schedule = create_schedule(
