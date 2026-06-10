@@ -963,6 +963,11 @@ def create_schedule(
         # AI 智慧選樁
         # =================================================
 
+        tail_mode = False
+        
+        if len(remaining) <= daily_count * 2:
+            tail_mode = True
+        
         while len(today_piles) < daily_count:
             future_count = max(
                 0,
@@ -1213,7 +1218,7 @@ def create_schedule(
             
             for neighbor in neighbor_map.get(best_pile, []):
             
-                blocked_until[neighbor] = day + 2
+                blocked_until[neighbor] = day + 1
         
         # =================================================
         # 避免卡死
@@ -1233,7 +1238,7 @@ def create_schedule(
 
         # 更新封鎖
         
-        if len(remaining) > daily_count:
+        if len(remaining) > daily_count * 3:
         
             for pile in today_piles:
         
@@ -1292,11 +1297,11 @@ def create_schedule(
         
             break
 
-    #result = optimize_tail_days(
-        #result,
-        #neighbor_map,
-        #daily_count
-    #)
+    result = optimize_tail_days(
+        result,
+        neighbor_map,
+        daily_count
+    )
 
     return result
 
