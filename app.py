@@ -3399,8 +3399,9 @@ elif mode == "修正當前進度表":
                                 
                                 st.dataframe(
                                     repair_df,
-                                    use_container_width=True
-                                )  
+                                    use_container_width=True,
+                                    hide_index=True
+                                )
                                 
                                 # =====================================
                                 # 產生續排施工圖
