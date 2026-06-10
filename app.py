@@ -2313,7 +2313,7 @@ if mode == "新建預定進度表":
                 # 排樁施工圖 + 下載圖面
                 # =====================================================
             
-                left_result, right_download = st.columns([5, 1])
+                left_result, right_download = st.columns([4, 1.5])
                 
                 with left_result:
                 
@@ -2321,7 +2321,7 @@ if mode == "新建預定進度表":
                 
                     st.image(
                         st.session_state.result_image,
-                        use_container_width=True
+                        width=900
                     )
                 
                 with right_download:
