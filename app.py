@@ -3349,7 +3349,18 @@ elif mode == "修正當前進度表":
                                         pile_no,
                                         (180,180,180)
                                     )
-                                
+
+                                    draw.ellipse(
+                                        (
+                                            x-r,
+                                            y-r,
+                                            x+r,
+                                            y+r
+                                        ),
+                                        fill=color,
+                                        outline="black",
+                                        width=2
+                                    )                                
                                                                    
                                     pile_text = str(pile_no)
                                 
