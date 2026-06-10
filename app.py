@@ -3055,14 +3055,9 @@ elif mode == "修正當前進度表":
                                     
                                 
                                     for pile_no in pile_list:
-
-                                        st.write(
-                                            pile_no,
-                                            color_hex
-                                        )
-                                
+                                    
                                         completed_piles.append(pile_no)
-                                
+                                    
                                         completed_pile_colors[pile_no] = color_rgb
                                     
                                 all_piles = set(
@@ -3121,9 +3116,9 @@ elif mode == "修正當前進度表":
                                 best_score = -999999
 
                                 backup_schedule = None
-                                
+                                st.write("開始續排...")
                                 for sim in range(10):
-                                
+                                    st.write(f"模擬第 {sim+1} 次")                                
                                     temp_schedule = create_schedule(
                                 
                                         pile_positions=remaining_positions,
