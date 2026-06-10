@@ -2326,22 +2326,15 @@ if mode == "新建預定進度表":
                 
                 with right_download:
                 
-                    st.markdown("""
-                    <div style="
-                        position: sticky;
-                        top: 80px;
-                    ">
-                    """, unsafe_allow_html=True)
-                
                     st.subheader("📥 下載圖面")
-            
+                
                     export_type = st.selectbox(
                         "選擇匯出格式",
-                        ["PNG", "JPG", "PDF"]
+                        ["PNG","JPG","PDF"]
                     )
-            
+                
                     img_buffer = io.BytesIO()
-            
+                
                     result_img = st.session_state.result_image
             
                     if export_type == "PNG":
