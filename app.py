@@ -2859,6 +2859,12 @@ elif mode == "修正當前進度表":
                 try:
         
                     original_df = pd.read_excel(excel_file)
+
+                    if "日期顏色" not in original_df.columns:
+                    
+                        original_df["日期顏色"] = "#cccccc"
+
+                    st.write(original_df.columns.tolist())
         
                     required_cols = [
                         "施工日",
@@ -3037,7 +3043,13 @@ elif mode == "修正當前進度表":
                                         if x.strip().isdigit()
                                     ]
                                 
-                                    color_hex = row["日期顏色"]
+                                    color_hex = row.get(
+                                        "日期顏色",
+                                        "#cccccc"
+                                    )
+
+                                    if pd.isna(color_hex):
+                                        color_hex = "#cccccc"
                                 
                                     color_rgb = tuple(
                                         int(color_hex[i:i+2],16)
