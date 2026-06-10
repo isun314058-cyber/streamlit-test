@@ -2159,9 +2159,9 @@ if mode == "新建預定進度表":
                                 legend_x + 35,
                                 yy
                             ),
-                            day_no,
+                            f"D{start_day_no + day_idx}",
                             fill="black",
-                            font=day_font
+                            font=pile_font
                         )
         
                     st.session_state.result_image = result_img
@@ -2890,6 +2890,19 @@ elif mode == "修正當前進度表":
                         if "repair_edit_df" not in st.session_state:
                         
                             st.session_state.repair_edit_df = editor_df.copy()
+
+                        if "repair_excel_name" not in st.session_state:
+                            st.session_state.repair_excel_name = ""
+                        
+                        if (
+                            st.session_state.repair_excel_name
+                            != excel_file.name
+                        ):
+                        
+                            st.session_state.repair_excel_name = excel_file.name
+                        
+                            st.session_state.repair_edit_df = editor_df.copy()
+                            
                         edited_df = st.data_editor(
                         
                             st.session_state.repair_edit_df,
@@ -2985,6 +2998,8 @@ elif mode == "修正當前進度表":
                                     st.error("全部施工日都有樁號，沒有可續排的施工日")
                                 
                                     st.stop()
+
+                                start_day_no = first_empty_index + 1
                                 
                                 
                                 # 自動抓續排開始日期
@@ -3120,14 +3135,21 @@ elif mode == "修正當前進度表":
                                 # 回填到原排程
                                 # ==================================
                                 
-                                new_df = edit_df.copy()
+                                new_df = original_df.copy()
+
+                                new_df["施工樁號"] = edit_df["施工樁號"]
+                                new_df["施工數量"] = edit_df["施工數量"]
                                 
                                 for i, day_data in enumerate(new_schedule):
                                 
                                     target_row = first_empty_index + i
                                 
                                     if target_row >= len(new_df):
-                                
+                                    
+                                        st.warning(
+                                            "Excel施工日不足，部分續排資料未寫入"
+                                        )
+                                    
                                         break
                                 
                                     pile_text = ",".join(
@@ -3135,6 +3157,8 @@ elif mode == "修正當前進度表":
                                     )
                                 
                                     new_df.at[target_row, "施工樁號"] = pile_text
+
+                                    new_df.at[target_row, "日期顏色"] = day_data["日期顏色"]
                                 
                                     new_df.at[target_row, "施工數量"] = len(
                                         day_data["施工樁號"]
@@ -3143,14 +3167,265 @@ elif mode == "修正當前進度表":
                                 st.session_state.repair_schedule_df = new_df
                                 
                                 st.success("✅ AI續排完成")
-
+                                
+                                repair_df = st.session_state.repair_schedule_df.copy()
+                                
+                                repair_df["施工數量"] = repair_df["施工樁號"].apply(
+                                    lambda x:
+                                    len([
+                                        p for p in str(x).split(",")
+                                        if p.strip()
+                                    ])
+                                    if pd.notna(x)
+                                    else 0
+                                )
+                                
                                 st.dataframe(
-                                    st.session_state.repair_schedule_df,
+                                    repair_df,
+                                    use_container_width=True
+                                )  
+                                
+                                # =====================================
+                                # 產生續排施工圖
+                                # =====================================
+                                
+                                repair_result_img = image.copy()
+                                
+                                draw = ImageDraw.Draw(repair_result_img)
+
+                                try:
+                                
+                                    pile_font = ImageFont.truetype(
+                                        "DejaVuSans.ttf",
+                                        18
+                                    )
+                                
+                                except:
+                                
+                                    pile_font = ImageFont.load_default()
+
+                                LEGEND_WIDTH = 165
+                                
+                                new_width = image.width + LEGEND_WIDTH
+                                
+                                repair_result_img = Image.new(
+                                    "RGB",
+                                    (new_width, image.height),
+                                    (255,255,255)
+                                )
+                                
+                                repair_result_img.paste(
+                                    image,
+                                    (0,0)
+                                )
+                                
+                                draw = ImageDraw.Draw(
+                                    repair_result_img
+                                )
+
+                                colors = []
+                                
+                                for i in range(100):
+                                
+                                    colors.append(
+                                        (
+                                            random.randint(80,230),
+                                            random.randint(80,230),
+                                            random.randint(80,230)
+                                        )
+                                    )
+
+                                for pile_no in completed_piles:
+                                
+                                    idx = pile_no - 1
+                                
+                                    x,y,r = piles[idx]
+                                
+                                    draw.ellipse(
+                                        (
+                                            x-r,
+                                            y-r,
+                                            x+r,
+                                            y+r
+                                        ),
+                                        fill=(180,180,180),
+                                        outline="black",
+                                        width=2
+                                    )
+
+                                for day_idx,row in enumerate(new_schedule):
+                                
+                                    color = colors[day_idx]
+                                
+                                    for pile_no in row["施工樁號"]:
+                                
+                                        idx = pile_no - 1
+                                
+                                        x,y,r = piles[idx]
+                                
+                                        draw.ellipse(
+                                            (
+                                                x-r,
+                                                y-r,
+                                                x+r,
+                                                y+r
+                                            ),
+                                            fill=color,
+                                            outline="black",
+                                            width=2
+                                        )
+                                
+                                        pile_text = str(pile_no)
+                                
+                                        pile_bbox = draw.textbbox(
+                                            (0, 0),
+                                            pile_text,
+                                            font=pile_font
+                                        )
+                                
+                                        pile_width = pile_bbox[2] - pile_bbox[0]
+                                
+                                        pile_x = x - (pile_width // 2)
+                                
+                                        draw.text(
+                                            (
+                                                pile_x,
+                                                y - r - 25
+                                            ),
+                                            pile_text,
+                                            fill="black",
+                                            font=pile_font
+                                        )   
+
+                                        day_text = f"D{start_day_no + day_idx}"
+                                        
+                                        day_bbox = draw.textbbox(
+                                            (0,0),
+                                            day_text,
+                                            font=pile_font
+                                        )
+                                        
+                                        day_width = day_bbox[2] - day_bbox[0]
+                                        
+                                        draw.text(
+                                            (
+                                                x - day_width // 2,
+                                                y + r + 5
+                                            ),
+                                            day_text,
+                                            fill="black",
+                                            font=pile_font
+                                        )
+
+                                legend_x = image.width + 25
+                                
+                                legend_y = 80
+
+                                draw.text(
+                                    (
+                                        legend_x,
+                                        legend_y - 35
+                                    ),
+                                    "施工日圖例",
+                                    fill="black",
+                                    font=pile_font
+                                )
+
+                                for day_idx,row in enumerate(new_schedule):
+                                
+                                    color = colors[day_idx]
+                                
+                                    yy = legend_y + day_idx * 30
+                                
+                                    draw.rectangle(
+                                        (
+                                            legend_x,
+                                            yy,
+                                            legend_x+22,
+                                            yy+22
+                                        ),
+                                        fill=color,
+                                        outline="black"
+                                    )
+                                
+                                    draw.text(
+                                        (
+                                            legend_x+35,
+                                            yy
+                                        ),
+                                        f"D{start_day_no + day_idx}",
+                                        fill="black",
+                                        font=pile_font
+                                    )
+
+                                
+                                st.image(
+                                    repair_result_img,
+                                    width=900
+                                )
+
+                                excel_buffer = io.BytesIO()
+                                
+                                with pd.ExcelWriter(
+                                    excel_buffer,
+                                    engine="openpyxl"
+                                ) as writer:
+                                
+                                    repair_df.to_excel(
+                                        writer,
+                                        index=False
+                                    )
+                                
+                                st.download_button(
+                                    "📊下載續排Excel",
+                                    excel_buffer.getvalue(),
+                                    "repair_schedule.xlsx",
                                     use_container_width=True
                                 )
 
-                                st.write(st.session_state.repair_schedule_df.head())
-        
+                                png_buffer = io.BytesIO()
+                                
+                                repair_result_img.save(
+                                    png_buffer,
+                                    format="PNG"
+                                )
+                                
+                                st.download_button(
+                                    "🖼️下載PNG",
+                                    png_buffer.getvalue(),
+                                    "repair_schedule.png",
+                                    use_container_width=True
+                                )
+
+                                jpg_buffer = io.BytesIO()
+                                
+                                repair_result_img.convert("RGB").save(
+                                    jpg_buffer,
+                                    format="JPEG"
+                                )
+                                
+                                st.download_button(
+                                    "🖼️下載JPG",
+                                    jpg_buffer.getvalue(),
+                                    "repair_schedule.jpg",
+                                    use_container_width=True
+                                )
+
+                                pdf_buffer = io.BytesIO()
+                                
+                                repair_result_img.convert("RGB").save(
+                                    pdf_buffer,
+                                    format="PDF"
+                                )
+                                
+                                st.download_button(
+                                    "📄下載PDF",
+                                    pdf_buffer.getvalue(),
+                                    "repair_schedule.pdf",
+                                    use_container_width=True
+                                )
+
+                
                 except Exception as e:
         
                     st.error(f"Excel讀取失敗：{e}")
