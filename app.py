@@ -2313,7 +2313,9 @@ if mode == "新建預定進度表":
                 # 排樁施工圖 + 下載圖面
                 # =====================================================
             
-                left_result, right_download = st.columns([3, 1])
+                left_result, right_download = st.columns(
+                    [4,1.2]
+                )
                 
                 with left_result:
                 
@@ -2384,7 +2386,10 @@ if mode == "新建預定進度表":
                             use_container_width=True
                         )
 
-                    st.markdown("</div>", unsafe_allow_html=True)
+                    st.markdown(
+                        '</div>',
+                        unsafe_allow_html=True
+                    )
 elif mode == "修正當前進度表":
     # ============================================
     # 初始化修正模式
