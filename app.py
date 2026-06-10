@@ -470,25 +470,25 @@ def build_neighbor_map(
     # 第二層鄰樁擴充
     # =========================
     
-    for pile_no in neighbor_map:
+    # for pile_no in neighbor_map:
     
-        extra_neighbors = []
+    #     extra_neighbors = []
     
-        for n in neighbor_map[pile_no]:
+    #     for n in neighbor_map[pile_no]:
     
-            extra_neighbors.extend(
-                neighbor_map.get(n, [])
-            )
+    #         extra_neighbors.extend(
+    #             neighbor_map.get(n, [])
+    #         )
     
-        for n in extra_neighbors:
+    #     for n in extra_neighbors:
     
-            if (
-                n != pile_no
-                and
-                n not in neighbor_map[pile_no]
-            ):
+    #         if (
+    #             n != pile_no
+    #             and
+    #             n not in neighbor_map[pile_no]
+    #         ):
     
-                neighbor_map[pile_no].append(n)
+    #             neighbor_map[pile_no].append(n)
 
     return neighbor_map
 
@@ -988,20 +988,21 @@ def create_schedule(
             # 先過濾還能施工的樁
             # =====================================
         
-            candidate_piles = [
+            candidate_piles = []
             
-                p for p in remaining
+            for p in remaining:
+            
+                if p in today_piles:
+                    continue
             
                 if (
-                    p not in today_piles
+                    p in blocked_until
                     and
-                    (
-                        p not in blocked_until
-                        or
-                        day > blocked_until[p]
-                    )
-                )
-            ]
+                    day <= blocked_until[p]
+                ):
+                    continue
+            
+                candidate_piles.append(p)
         
             # 沒候選樁就停止
             if len(candidate_piles) == 0:
@@ -1083,20 +1084,16 @@ def create_schedule(
                 if len(today_piles) > 0:
                 
                     min_dist = min(
-                    
+                
                         distance_cache.get(
                             (pile,p2),
                             999999
                         )
-                    
+                
                         for p2 in today_piles
                     )
                 
                     score += min_dist * 0.2
-                
-                # 靠近起始樁
-                
-                score -= abs(pile - start_no) * 0.03
                 
                 # =========================================
                 # 未來剩餘數量
@@ -1147,17 +1144,32 @@ def create_schedule(
             # =============================================
 
             if best_pile is None:
+                
+                
+                relaxed_candidates = []
             
-                remaining_count = len(remaining)
+                for p in remaining:
             
-                remain_days = math.ceil(
-                    remaining_count / daily_count
-                )
+                    if p in today_piles:
+                        continue
             
-                # 前面天數必須塞滿
+                    if (
+                        p in blocked_until
+                        and
+                        day <= blocked_until[p]
+                    ):
+                        continue
             
-                if remain_days > 3:
+                    relaxed_candidates.append(p)
             
+                if relaxed_candidates:
+            
+                    best_pile = max(
+                        relaxed_candidates,
+                        key=lambda p: neighbor_score[p]
+                    )
+            
+                else:
                     break
             
                 relaxed_candidates = []
@@ -1201,9 +1213,7 @@ def create_schedule(
             
             for neighbor in neighbor_map.get(best_pile, []):
             
-                blocked_until[neighbor] = (
-                    day + cooldown_days
-                )
+                blocked_until[neighbor] = day + 2
         
         # =================================================
         # 避免卡死
@@ -1822,7 +1832,7 @@ if mode == "新建預定進度表":
                             # ======================
                             
                             tail_counts = daily_counts[-5:]
-
+                         
                             # =========================
                             # 禁止尾盤反彈
                             # =========================
