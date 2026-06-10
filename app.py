@@ -1692,20 +1692,20 @@ if mode == "新建預定進度表":
                     
                     progress_text = st.empty()
                     
-                        # ============================
-                        # 只計算一次鄰樁
-                        # ============================
-                        
-                        median_radius = np.median(
-                            [r for _, _, r in piles]
-                        )
-                        
-                        neighbor_map = build_neighbor_map(
-                            piles,
-                            row_tolerance=int(median_radius * 3)
-                        )
-            
-                        best_schedule = None
+                    # ============================
+                    # 只計算一次鄰樁
+                    # ============================
+                    
+                    median_radius = np.median(
+                        [r for _, _, r in piles]
+                    )
+                    
+                    neighbor_map = build_neighbor_map(
+                        piles,
+                        row_tolerance=int(median_radius * 3)
+                    )
+        
+                    best_schedule = None
                         
                         best_total_score = -999999
                         
