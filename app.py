@@ -466,6 +466,30 @@ def build_neighbor_map(
                         nearest_lower["pile"]
                     )
 
+    # =========================
+    # 第二層鄰樁擴充
+    # =========================
+    
+    for pile_no in neighbor_map:
+    
+        extra_neighbors = []
+    
+        for n in neighbor_map[pile_no]:
+    
+            extra_neighbors.extend(
+                neighbor_map.get(n, [])
+            )
+    
+        for n in extra_neighbors:
+    
+            if (
+                n != pile_no
+                and
+                n not in neighbor_map[pile_no]
+            ):
+    
+                neighbor_map[pile_no].append(n)
+
     return neighbor_map
 
 
@@ -994,7 +1018,7 @@ def create_schedule(
             )
             
             TOP_K = min(
-                30,
+                60,
                 len(sorted_remaining)
             )
             
@@ -1124,6 +1148,18 @@ def create_schedule(
 
             if best_pile is None:
             
+                remaining_count = len(remaining)
+            
+                remain_days = math.ceil(
+                    remaining_count / daily_count
+                )
+            
+                # 前面天數必須塞滿
+            
+                if remain_days > 3:
+            
+                    break
+            
                 relaxed_candidates = []
             
                 for p in remaining:
@@ -1246,11 +1282,11 @@ def create_schedule(
         
             break
 
-    result = optimize_tail_days(
-        result,
-        neighbor_map,
-        daily_count
-    )
+    #result = optimize_tail_days(
+        #result,
+        #neighbor_map,
+        #daily_count
+    #)
 
     return result
 
@@ -1618,7 +1654,7 @@ if mode == "新建預定進度表":
                         backup_schedule = None
                         
                         # AI 多次模擬
-                        for sim in range(5):
+                        for sim in range(15):
                                                        
                             schedule = create_schedule(
                             
@@ -1675,8 +1711,6 @@ if mode == "新建預定進度表":
                             schedule_score += first_days_score
                             schedule_score += full_days * 5000
                             
-                            schedule_score += full_days * 5000
-                        
                             # 天數越少越好
                             schedule_score -= len(schedule) * 5000
                         
@@ -1854,6 +1888,30 @@ if mode == "新建預定進度表":
                                 ) * 300
                             
                             schedule_score += tail_balance_score
+
+                            # =========================
+                            # 強制尾盤遞減
+                            # =========================
+                            
+                            tail_ok = True
+                            
+                            tail_counts = [
+                                len(x["施工樁號"])
+                                for x in schedule[-5:]
+                            ]
+                            
+                            for i in range(
+                                len(tail_counts)-1
+                            ):
+                            
+                                if tail_counts[i+1] > tail_counts[i]:
+                            
+                                    tail_ok = False
+                                    break
+                            
+                            if not tail_ok:
+                            
+                                continue
                             
                             if schedule_score > best_total_score:
                             
