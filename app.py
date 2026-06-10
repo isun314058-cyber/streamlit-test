@@ -661,7 +661,7 @@ def optimize_tail_days(
             last_day = schedule[-1]
 
             # 最後一天已達目標
-            if len(last_day["施工樁號"]) >= daily_count * 0.7:
+            if len(last_day["施工樁號"]) >= daily_count * 0.5:
                 return schedule
 
             # 今日只剩少量不能搬
@@ -996,7 +996,7 @@ def create_schedule(
             )
             
             TOP_K = min(
-                12,
+                30,
                 len(sorted_remaining)
             )
             
@@ -1598,7 +1598,7 @@ if mode == "新建預定進度表":
                         backup_schedule = None
                         
                         # AI 多次模擬
-                        for sim in range(30):
+                        for sim in range(3):
                                                        
                             schedule = create_schedule(
                             
@@ -1623,9 +1623,6 @@ if mode == "新建預定進度表":
                                 schedule[-1]["施工樁號"]
                             )
                             
-                            if last_day_count <= 2:
-                                continue
-                        
                             # =====================================
                             # AI 總體評分
                             # =====================================
@@ -1638,11 +1635,11 @@ if mode == "新建預定進度表":
                             
                             full_days = sum(
                                 1
-                                for day in schedule
+                                for day in schedule[:-3]
                                 if len(day["施工樁號"]) >= daily_count
                             )
                             
-                            schedule_score += full_days * 500
+                            schedule_score += full_days * 5000
                         
                             # 天數越少越好
                             schedule_score -= len(schedule) * 5000
@@ -1744,11 +1741,45 @@ if mode == "新建預定進度表":
                             
                             ]
 
+                            # =========================
+                            # 前面天數不得提前掉量
+                            # =========================
+                            
+                            for count in daily_counts[:-3]:
+                            
+                                diff = daily_count - count
+                            
+                                if diff > 0:
+                            
+                                    schedule_score -= diff * 500
+
                             # ======================
                             # 尾盤品質
                             # ======================
                             
                             tail_counts = daily_counts[-5:]
+
+                            # =========================
+                            # 禁止尾盤反彈
+                            # =========================
+                            
+                            for i in range(len(tail_counts)-1):
+                            
+                                if tail_counts[i+1] > tail_counts[i]:
+                            
+                                    schedule_score -= 20000
+
+                            # =========================
+                            # 尾盤不可暴跌
+                            # =========================
+                            
+                            for i in range(len(tail_counts)-1):
+                            
+                                diff = tail_counts[i] - tail_counts[i+1]
+                            
+                                if diff > 6:
+                                
+                                    schedule_score -= 8000
                             
                             # 最後一天
                             
