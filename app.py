@@ -3010,10 +3010,6 @@ elif mode == "修正當前進度表":
                                 
                                 )
                                 
-                                st.write("續排開始日期")
-                                
-                                st.write(start_date)
-                                
                                 for idx, row in edit_df.iterrows():
                                     if idx >= first_empty_index:
                                         break
@@ -3068,15 +3064,6 @@ elif mode == "修正當前進度表":
                                     piles[p-1]
                                     for p in remaining_piles
                                 ]
-                                
-                                st.write("已完成樁體")
-                                st.write(completed_piles)
-                                
-                                st.write("剩餘未施工樁體")
-                                st.write(remaining_piles)
-                                
-                                st.write("續排開始日期")
-                                st.write(start_date)
 
                                 # ==================================
                                 # 建立樁號對照表
@@ -3160,8 +3147,8 @@ elif mode == "修正當前進度表":
 
                                     new_df.at[target_row, "日期顏色"] = day_data["日期顏色"]
                                 
-                                    new_df.at[target_row, "施工數量"] = len(
-                                        day_data["施工樁號"]
+                                    new_df.at[target_row, "施工數量"] = str(
+                                        len(day_data["施工樁號"])
                                     )
 
                                 st.session_state.repair_schedule_df = new_df
@@ -3223,18 +3210,6 @@ elif mode == "修正當前進度表":
                                     repair_result_img
                                 )
 
-                                colors = []
-                                
-                                for i in range(100):
-                                
-                                    colors.append(
-                                        (
-                                            random.randint(80,230),
-                                            random.randint(80,230),
-                                            random.randint(80,230)
-                                        )
-                                    )
-
                                 for pile_no in completed_piles:
                                 
                                     idx = pile_no - 1
@@ -3255,7 +3230,12 @@ elif mode == "修正當前進度表":
 
                                 for day_idx,row in enumerate(new_schedule):
                                 
-                                    color = colors[day_idx]
+                                    hex_color = row["日期顏色"]
+                                
+                                    color = tuple(
+                                        int(hex_color[i:i+2],16)
+                                        for i in (1,3,5)
+                                    )
                                 
                                     for pile_no in row["施工樁號"]:
                                 
@@ -3310,11 +3290,13 @@ elif mode == "修正當前進度表":
                                         draw.text(
                                             (
                                                 x - day_width // 2,
-                                                y + r + 5
+                                                y + r + 8
                                             ),
                                             day_text,
                                             fill="black",
-                                            font=pile_font
+                                            font=day_font,
+                                            stroke_width=2,
+                                            stroke_fill="white"
                                         )
 
                                 legend_x = image.width + 25
@@ -3333,7 +3315,12 @@ elif mode == "修正當前進度表":
 
                                 for day_idx,row in enumerate(new_schedule):
                                 
-                                    color = colors[day_idx]
+                                    hex_color = row["日期顏色"]
+                                
+                                    color = tuple(
+                                        int(hex_color[i:i+2],16)
+                                        for i in (1,3,5)
+                                    )
                                 
                                     yy = legend_y + day_idx * 30
                                 
@@ -3358,6 +3345,7 @@ elif mode == "修正當前進度表":
                                         font=pile_font
                                     )
 
+                                st.session_state.repair_result_image = repair_result_img
                                 
                                 st.image(
                                     repair_result_img,
