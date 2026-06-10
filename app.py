@@ -471,30 +471,6 @@ def build_neighbor_map(
                         nearest_lower["pile"]
                     )
 
-    # =========================
-    # 第二層鄰樁擴充
-    # =========================
-    
-    # for pile_no in neighbor_map:
-    
-    #     extra_neighbors = []
-    
-    #     for n in neighbor_map[pile_no]:
-    
-    #         extra_neighbors.extend(
-    #             neighbor_map.get(n, [])
-    #         )
-    
-    #     for n in extra_neighbors:
-    
-    #         if (
-    #             n != pile_no
-    #             and
-    #             n not in neighbor_map[pile_no]
-    #         ):
-    
-    #             neighbor_map[pile_no].append(n)
-
     return neighbor_map
 
 
@@ -3488,7 +3464,7 @@ elif mode == "修正當前進度表":
                                 draw.text(
                                     (
                                         x - pile_width//2,
-                                        y - rr - 25
+                                        y - r - 25
                                     ),
                                     pile_text,
                                     fill="black",
