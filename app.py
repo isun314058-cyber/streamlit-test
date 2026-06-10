@@ -2834,7 +2834,28 @@ elif mode == "修正當前進度表":
         
                 try:
         
+                    from openpyxl import load_workbook
+                    
                     original_df = pd.read_excel(excel_file)
+                    
+                    wb = load_workbook(excel_file)
+                    
+                    ws = wb["施工排程"]
+                    
+                    date_colors = []
+                    
+                    for row_no in range(2, ws.max_row + 1):
+                    
+                        fill = ws[f"C{row_no}"].fill
+                    
+                        rgb = fill.start_color.rgb
+                        
+                        if not rgb or rgb in ["00000000", "000000"]:
+                            date_colors.append("#cccccc")
+                        else:
+                            date_colors.append(f"#{rgb[-6:]}")
+                    
+                    original_df["日期顏色"] = date_colors
 
                     if "日期顏色" not in original_df.columns:
                     
@@ -3031,8 +3052,14 @@ elif mode == "修正當前進度表":
                                         int(color_hex[i:i+2],16)
                                         for i in (1,3,5)
                                     )
+                                    
                                 
                                     for pile_no in pile_list:
+
+                                        st.write(
+                                            pile_no,
+                                            color_hex
+                                        )
                                 
                                         completed_piles.append(pile_no)
                                 
