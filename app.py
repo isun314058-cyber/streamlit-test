@@ -716,7 +716,7 @@ def create_schedule(
 
     start_no=1,
 
-    cooldown_days=1,
+    cooldown_days=2,
 
     neighbor_map=None
 ):
@@ -968,7 +968,15 @@ def create_schedule(
             
                 p for p in remaining
             
-                if p not in today_piles
+                if (
+                    p not in today_piles
+                    and
+                    (
+                        p not in blocked_until
+                        or
+                        day > blocked_until[p]
+                    )
+                )
             ]
         
             # 沒候選樁就停止
@@ -1116,14 +1124,28 @@ def create_schedule(
 
             if best_pile is None:
             
-                available = [
-                    p for p in remaining
-                    if p not in today_piles
-                ]
+                relaxed_candidates = []
             
-                if available:
+                for p in remaining:
             
-                    best_pile = available[0]
+                    if p in today_piles:
+                        continue
+            
+                    if (
+                        p in blocked_until
+                        and
+                        day <= blocked_until[p]
+                    ):
+                        continue
+            
+                    relaxed_candidates.append(p)
+            
+                if relaxed_candidates:
+            
+                    best_pile = max(
+                        relaxed_candidates,
+                        key=lambda p: neighbor_score[p]
+                    )
             
                 else:
                     break
@@ -1141,30 +1163,11 @@ def create_schedule(
             # 立即更新封鎖
             blocked_until[best_pile] = day + cooldown_days
             
-            if len(today_piles) < daily_count - 1:
+            for neighbor in neighbor_map.get(best_pile, []):
             
-                for neighbor in neighbor_map.get(best_pile, []):
-            
-                    blocked_until[neighbor] = day + cooldown_days
-
-        # =================================================
-        # 強制補滿每日施工數量
-        # =================================================
-        
-        if len(today_piles) < daily_count and len(remaining) > 0:
-        
-            remain_need = daily_count - len(today_piles)
-        
-            extra_piles = [
-                p for p in remaining
-                if p not in today_piles
-            ][:remain_need]
-        
-            for p in extra_piles:
-        
-                today_piles.append(p)
-        
-                remaining.remove(p)
+                blocked_until[neighbor] = (
+                    day + cooldown_days
+                )
         
         # =================================================
         # 避免卡死
@@ -1615,7 +1618,7 @@ if mode == "新建預定進度表":
                         backup_schedule = None
                         
                         # AI 多次模擬
-                        for sim in range(3):
+                        for sim in range(5):
                                                        
                             schedule = create_schedule(
                             
@@ -1629,7 +1632,7 @@ if mode == "新建預定進度表":
                             
                                 start_no=start_no,
                             
-                                cooldown_days=1,
+                                cooldown_days=2,
                             
                                 neighbor_map=neighbor_map
                             )
@@ -3016,7 +3019,7 @@ elif mode == "修正當前進度表":
                                 
                                     start_no=1,
                                 
-                                    cooldown_days=1,
+                                    cooldown_days=2,
                                 
                                     neighbor_map=neighbor_map
                                 )
