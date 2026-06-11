@@ -3324,7 +3324,7 @@ elif mode == "修正當前進度表":
                     repair_result_img.convert("RGB").save(
                         pdf_buffer,
                         format="PDF",
-                        resolution=300.0
+                        resolution=600.0
                     )
                     
                     st.download_button(
