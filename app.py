@@ -2968,7 +2968,7 @@ elif mode == "修正當前進度表":
                                                      
                         st.markdown("---")
                         st.write("✏️ 請於下方修改施工樁號")
-                        
+                        editor_df = original_df.copy()
 
                         editor_df["施工數量"] = (
                             editor_df["施工數量"]
