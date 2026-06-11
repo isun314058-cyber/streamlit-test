@@ -3117,10 +3117,12 @@ elif mode == "修正當前進度表":
                                     repair_df["施工數量"] > 0
                                 ].reset_index(drop=True)
                                 
-                                st.dataframe(
-                                    repair_df,
-                                    use_container_width=True,
-                                    hide_index=True
+                                st.markdown(
+                                    repair_df.to_html(
+                                        index=False,
+                                        justify="center"
+                                    ),
+                                    unsafe_allow_html=True
                                 )
     
                                 repair_result_img = image.copy()
