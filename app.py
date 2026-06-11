@@ -1274,7 +1274,7 @@ if mode == "新建預定進度表":
         
                 coords = streamlit_image_coordinates(
                     preview_canvas,
-                    key="pile_roi_selector"
+                    key=f"pile_roi_selector_{st.session_state.canvas_key}"
                 )
         
             if coords is not None:
@@ -1358,6 +1358,9 @@ if mode == "新建預定進度表":
                     st.session_state.result_image = None
                 
                     st.session_state.processed = False
+                
+                    # 強制重建元件
+                    st.session_state.canvas_key += 1
                 
                     st.rerun()
         
