@@ -3111,24 +3111,6 @@ elif mode == "修正當前進度表":
                                     repair_result_img
                                 )
 
-                                for pile_no in completed_piles:
-                                
-                                    idx = pile_no - 1
-                                
-                                    x,y,r = piles[idx]
-                                
-                                    draw.ellipse(
-                                        (
-                                            x-r,
-                                            y-r,
-                                            x+r,
-                                            y+r
-                                        ),
-                                        fill=(180,180,180),
-                                        outline="black",
-                                        width=2
-                                    )
-
                                 for day_idx,row in enumerate(new_schedule):
                                 
                                     hex_color = row["日期顏色"]
@@ -3247,74 +3229,107 @@ elif mode == "修正當前進度表":
                                     )
 
                                 st.session_state.repair_result_image = repair_result_img
-                                
-                                st.image(
-                                    repair_result_img,
-                                    width=900
-                                )
 
-                                excel_buffer = io.BytesIO()
-                                
-                                with pd.ExcelWriter(
-                                    excel_buffer,
-                                    engine="openpyxl"
-                                ) as writer:
-                                
-                                    repair_df.to_excel(
-                                        writer,
-                                        index=False
-                                    )
-                                
-                                st.download_button(
-                                    "📊下載續排Excel",
-                                    excel_buffer.getvalue(),
-                                    "repair_schedule.xlsx",
-                                    use_container_width=True
-                                )
+                                st.session_state.repair_finished = True
 
-                                png_buffer = io.BytesIO()
-                                
-                                repair_result_img.save(
-                                    png_buffer,
-                                    format="PNG"
-                                )
-                                
-                                st.download_button(
-                                    "🖼️下載PNG",
-                                    png_buffer.getvalue(),
-                                    "repair_schedule.png",
-                                    use_container_width=True
-                                )
-
-                                jpg_buffer = io.BytesIO()
-                                
-                                repair_result_img.convert("RGB").save(
-                                    jpg_buffer,
-                                    format="JPEG"
-                                )
-                                
-                                st.download_button(
-                                    "🖼️下載JPG",
-                                    jpg_buffer.getvalue(),
-                                    "repair_schedule.jpg",
-                                    use_container_width=True
-                                )
-
-                                pdf_buffer = io.BytesIO()
-                                
-                                repair_result_img.convert("RGB").save(
-                                    pdf_buffer,
-                                    format="PDF"
-                                )
-                                
-                                st.download_button(
-                                    "📄下載PDF",
-                                    pdf_buffer.getvalue(),
-                                    "repair_schedule.pdf",
-                                    use_container_width=True
-                                )
-
-                
+                                st.session_state.repair_schedule_df = new_df
+                          
                 except Exception as e:
         
                     st.error(f"Excel讀取失敗：{e}")
+                    
+                if st.session_state.get("repair_finished", False):
+                
+                    repair_df = st.session_state.repair_schedule_df
+                
+                    repair_result_img = st.session_state.repair_result_image
+                    
+                    st.image(
+                        repair_result_img,
+                        width=900
+                    )
+    
+                    excel_buffer = io.BytesIO()
+                    
+                    from openpyxl.styles import PatternFill
+
+                    with pd.ExcelWriter(
+                        excel_buffer,
+                        engine="openpyxl"
+                    ) as writer:
+                    
+                        repair_df.to_excel(
+                            writer,
+                            sheet_name="施工排程",
+                            index=False
+                        )
+                    
+                        ws = writer.book["施工排程"]
+                    
+                        for row in range(2, ws.max_row + 1):
+                    
+                            hex_color = ws[f"C{row}"].value
+                    
+                            if hex_color:
+                    
+                                fill = PatternFill(
+                                    fill_type="solid",
+                                    start_color=hex_color.replace("#",""),
+                                    end_color=hex_color.replace("#","")
+                                )
+                    
+                                ws[f"C{row}"].fill = fill
+                    
+                                ws[f"C{row}"].value = ""
+                    
+                    today_str = pd.Timestamp.today().strftime("%Y%m%d")
+                    
+                    st.download_button(
+                        "📊下載續排Excel",
+                        excel_buffer.getvalue(),
+                        f"{today_str}_續排施工計畫.xlsx",
+                        use_container_width=True
+                    )
+    
+                    png_buffer = io.BytesIO()
+                    
+                    repair_result_img.save(
+                        png_buffer,
+                        format="PNG"
+                    )
+                    
+                    st.download_button(
+                        "🖼️下載PNG",
+                        png_buffer.getvalue(),
+                        "repair_schedule.png",
+                        use_container_width=True
+                    )
+    
+                    jpg_buffer = io.BytesIO()
+                    
+                    repair_result_img.convert("RGB").save(
+                        jpg_buffer,
+                        format="JPEG"
+                    )
+                    
+                    st.download_button(
+                        "🖼️下載JPG",
+                        jpg_buffer.getvalue(),
+                        "repair_schedule.jpg",
+                        use_container_width=True
+                    )
+    
+                    pdf_buffer = io.BytesIO()
+                    
+                    repair_result_img.convert("RGB").save(
+                        pdf_buffer,
+                        format="PDF",
+                        resolution=300.0
+                    )
+                    
+                    st.download_button(
+                        "📄下載PDF",
+                        pdf_buffer.getvalue(),
+                        "repair_schedule.pdf",
+                        use_container_width=True
+                    )
