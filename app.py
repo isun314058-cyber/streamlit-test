@@ -2043,7 +2043,8 @@ if mode == "新建預定進度表":
                     )
 
                 left_result, right_download = st.columns(
-                    [4,1.2]
+                    [3,1],
+                    gap="large"
                 )
                 
                 with left_result:
