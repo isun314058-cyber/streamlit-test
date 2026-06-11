@@ -8,7 +8,6 @@ import math
 import random
 import io
 import cv2
-import time
 from streamlit_image_coordinates import streamlit_image_coordinates
 
 st.set_page_config(
@@ -2571,9 +2570,6 @@ elif mode == "修正當前進度表":
                         editor_df["施工數量"]
                         .astype(str)
                     )
-
-                    if "updating" not in st.session_state:
-                        st.session_state.updating = False
                     if "repair_edit_df" not in st.session_state:
                     
                         st.session_state.repair_edit_df = editor_df.copy()
@@ -2589,30 +2585,22 @@ elif mode == "修正當前進度表":
                         st.session_state.repair_excel_name = excel_file.name
                     
                         st.session_state.repair_edit_df = editor_df.copy()
-
-                    if st.session_state.updating:
-                    
-                        st.warning(
-                            "⏳ 資料更新中，請稍候..."
-                        )
-                    
-                        time.sleep(1)
-                    
-                        st.session_state.updating = False
-                    
-                        st.rerun()
-                    
+                        
                     edited_df = st.data_editor(
+                    
                         st.session_state.repair_edit_df,
+                    
                         use_container_width=True,
+                    
                         height=500,
+                    
                         hide_index=True,
                     
-                        disabled=(
-                            ["施工日","日期","施工數量"]
-                            if not st.session_state.updating
-                            else True
-                        ),
+                        disabled=[
+                            "施工日",
+                            "日期",
+                            "施工數量"
+                        ],
                     
                         key="repair_editor"
                     )
@@ -2622,29 +2610,23 @@ elif mode == "修正當前進度表":
                         st.session_state.repair_total_piles
                     )
                     
-                    if not validated_df.equals(
-                        st.session_state.repair_edit_df
-                    ):
-                    
-                        st.session_state.updating = True
-                    
-                        st.session_state.repair_edit_df = validated_df.copy()
-                    
-                        st.rerun()
+                    st.session_state.repair_edit_df = validated_df.copy()
                     
                     st.markdown("### 🔍 驗證結果")
                     
+                    msg_box = st.empty()
+                    
                     if error_messages:
                     
-                        st.error(
+                        msg_box.error(
                             "\n".join(error_messages)
                         )
                     
                     else:
                     
-                        if len(error_messages) == 0:
-                        
-                            st.success("✅ 更改完成")
+                        msg_box.success(
+                            "✅ 已自動儲存"
+                        )
 
                     if "repair_edit_df" in st.session_state:
                     
@@ -3350,7 +3332,7 @@ elif mode == "修正當前進度表":
                 repair_result_img.convert("RGB").save(
                     pdf_buffer,
                     format="PDF",
-                    resolution=1200.0
+                    resolution=600.0
                 )
                 
                 st.download_button(
