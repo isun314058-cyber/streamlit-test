@@ -2610,23 +2610,25 @@ elif mode == "修正當前進度表":
                         st.session_state.repair_total_piles
                     )
                     
-                    st.session_state.repair_edit_df = validated_df.copy()
+                    if not validated_df.equals(
+                        st.session_state.repair_edit_df
+                    ):
+                        st.session_state.repair_edit_df = validated_df.copy()
+                        st.rerun()
                     
                     st.markdown("### 🔍 驗證結果")
                     
-                    msg_box = st.empty()
-                    
                     if error_messages:
                     
-                        msg_box.error(
+                        st.error(
                             "\n".join(error_messages)
                         )
                     
                     else:
                     
-                        msg_box.success(
-                            "✅ 已自動儲存"
-                        )
+                        if len(error_messages) == 0:
+                        
+                            st.success("✅ 更改完成")
 
                     if "repair_edit_df" in st.session_state:
                     
