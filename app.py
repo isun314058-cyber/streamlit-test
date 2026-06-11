@@ -1,7 +1,3 @@
-# =====================================================
-# AI 排樁施工系統 完整版
-# =====================================================
-
 import streamlit as st
 from PIL import Image, ImageDraw, ImageFont
 from pdf2image import convert_from_bytes
@@ -14,18 +10,10 @@ import io
 import cv2
 from streamlit_image_coordinates import streamlit_image_coordinates
 
-# =====================================================
-# 頁面設定
-# =====================================================
-
 st.set_page_config(
     page_title="AI 排樁施工系統",
     layout="wide"
 )
-
-# =====================================================
-# 深色模式
-# =====================================================
 
 st.markdown("""
 <style>
@@ -88,15 +76,7 @@ h1,h2,h3,h4,h5,h6,p,span,label{
 </style>
 """, unsafe_allow_html=True)
 
-# =====================================================
-# Title
-# =====================================================
-
 st.title("🏗️ AI 排樁施工系統")
-
-# =====================================================
-# 功能模式
-# =====================================================
 
 mode = st.radio(
     "請選擇功能模式",
@@ -112,9 +92,6 @@ if "last_mode" not in st.session_state:
 
 if st.session_state.last_mode != mode:
 
-    # ==========================
-    # 切到修正模式
-    # ==========================
     if mode == "修正當前進度表":
 
         for k in list(st.session_state.keys()):
@@ -123,7 +100,6 @@ if st.session_state.last_mode != mode:
 
                 del st.session_state[k]
 
-        # 額外清除修正模式會用到但不是 repair_ 開頭的
         extra_keys = [
         
             "exclude_last_click",
@@ -136,13 +112,7 @@ if st.session_state.last_mode != mode:
             if k in st.session_state:
 
                 del st.session_state[k]
-
-    # ==========================
-    # 切到新建模式
-    # ==========================
     else:
-
-        # 清除所有 repair 開頭資料
     
         for k in list(st.session_state.keys()):
     
@@ -177,10 +147,6 @@ if st.session_state.last_mode != mode:
         
 st.markdown("---")
 
-# =====================================================
-# Session State
-# =====================================================
-
 DEFAULT_STATES = {
     "result_image": None,
     "schedule_df": None,
@@ -196,10 +162,6 @@ for key, value in DEFAULT_STATES.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
-# =====================================================
-# 點位顏色
-# =====================================================
-
 POINT_COLORS = [
     ("第一點", "red"),
     ("第二點", "blue"),
@@ -213,10 +175,6 @@ COLOR_TEXT = {
     "orange": "橘色",
     "lime": "綠色"
 }
-
-# =====================================================
-# AI辨識樁位
-# =====================================================
 
 def detect_piles(pil_image, roi=None):
 
@@ -305,10 +263,6 @@ def detect_piles(pil_image, roi=None):
             row = sorted(row, key=lambda p: p[0])
 
             final_sorted.extend(row)
-
-        # =====================================
-        # AI 自動統一樁半徑
-        # =====================================
         
         all_radius = [r for (_, _, r) in final_sorted]
         
@@ -324,7 +278,6 @@ def detect_piles(pil_image, roi=None):
         median_radius = int(np.median(valid_radius))
         row_tolerance = median_radius * 2.2
         
-        # 避免極端值
         median_radius = max(10, median_radius)
         median_radius = min(22, median_radius)
         
@@ -347,10 +300,6 @@ def detect_piles(pil_image, roi=None):
     hash_funcs={Image.Image: id}
 )
 
-# =====================================================
-# 智慧避鄰排程
-# =====================================================
-
 def calculate_distance(p1, p2):
 
     x1, y1, _ = p1
@@ -358,21 +307,12 @@ def calculate_distance(p1, p2):
 
     return ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
 
-
-# =====================================================
-# 建立鄰樁關係
-# =====================================================
-
 def build_neighbor_map(
     pile_positions,
     row_tolerance=40
 ):
 
     neighbor_map = {}
-
-    # =========================
-    # 依Y座標分列
-    # =========================
 
     pile_data = []
 
@@ -410,20 +350,11 @@ def build_neighbor_map(
         if not found:
 
             rows.append([pile])
-
-    # =========================
-    # 每列由左到右排序
-    # =========================
-
     for row in rows:
 
         row.sort(
             key=lambda p: p["x"]
         )
-
-    # =========================
-    # 建立上下左右鄰樁
-    # =========================
 
     for row_idx, row in enumerate(rows):
 
@@ -432,25 +363,16 @@ def build_neighbor_map(
             pile_no = pile["pile"]
 
             neighbor_map[pile_no] = []
-
-            # 左
-
             if col_idx > 0:
 
                 neighbor_map[pile_no].append(
                     row[col_idx - 1]["pile"]
                 )
-
-            # 右
-
             if col_idx < len(row) - 1:
 
                 neighbor_map[pile_no].append(
                     row[col_idx + 1]["pile"]
                 )
-
-            # 上
-
             if row_idx > 0:
             
                 upper_row = rows[row_idx - 1]
@@ -472,9 +394,6 @@ def build_neighbor_map(
                     neighbor_map[pile_no].append(
                         nearest_upper["pile"]
                     )
-
-            # 下
-
             if row_idx < len(rows) - 1:
 
                 lower_row = rows[row_idx + 1]
@@ -497,32 +416,7 @@ def build_neighbor_map(
                         nearest_lower["pile"]
                     )
 
-    # =========================
-    # 第二層鄰樁擴充
-    # =========================
-    
-    # for pile_no in neighbor_map:
-    
-    #     extra_neighbors = []
-    
-    #     for n in neighbor_map[pile_no]:
-    
-    #         extra_neighbors.extend(
-    #             neighbor_map.get(n, [])
-    #         )
-    
-    #     for n in extra_neighbors:
-    
-    #         if (
-    #             n != pile_no
-    #             and
-    #             n not in neighbor_map[pile_no]
-    #         ):
-    
-    #             neighbor_map[pile_no].append(n)
-
     return neighbor_map
-
 
 def validate_pile_input(edit_df, total_piles):
 
@@ -544,14 +438,12 @@ def validate_pile_input(edit_df, total_piles):
 
         pile_text = pile_text.replace("，", ",")
 
-        # 空白允許
         if pile_text == "":
 
             result_df.at[idx, "施工數量"] = "0"
 
             continue
 
-        # 格式檢查
         if not re.fullmatch(
             r"\d+(\s*,\s*\d+)*",
             pile_text
@@ -570,7 +462,6 @@ def validate_pile_input(edit_df, total_piles):
             for x in pile_text.split(",")
         ]
 
-        # 同一天重複
         if len(pile_list) != len(set(pile_list)):
 
             result_df.at[idx, "施工數量"] = "重複樁號"
@@ -581,7 +472,6 @@ def validate_pile_input(edit_df, total_piles):
 
             continue
 
-        # 範圍檢查
         out_range = False
 
         for p in pile_list:
@@ -615,10 +505,6 @@ def validate_pile_input(edit_df, total_piles):
             )
 
         all_piles.extend(pile_list)
-
-    # =================================
-    # 跨天重複檢查
-    # =================================
 
     duplicated_piles = {
 
@@ -682,8 +568,7 @@ def validate_pile_input(edit_df, total_piles):
                     f"樁號 {dup_pile} 重複，出現在："
                     f"{','.join(duplicate_detail[dup_pile])}"
                 )
-            
-    # 最後統一轉字串
+
     result_df["施工數量"] = (
         result_df["施工數量"]
         .fillna("")
@@ -691,9 +576,6 @@ def validate_pile_input(edit_df, total_piles):
     )
 
     return result_df, error_messages
-# =====================================================
-# AI 智慧避鄰排程
-# =====================================================
 
 def optimize_tail_days(
     schedule,
@@ -715,11 +597,9 @@ def optimize_tail_days(
             today = schedule[i]
             last_day = schedule[-1]
 
-            # 最後一天已達目標
             if len(last_day["施工樁號"]) >= daily_count * 0.5:
                 return schedule
 
-            # 今日只剩少量不能搬
             if len(today["施工樁號"]) <= 3:
                 continue
 
@@ -780,21 +660,12 @@ def create_schedule(
     neighbor_map=None
 ):
 
-    # 避免 NameError
     future_count = 0
     future_days = 1
     future_avg = 0
 
     import random
     import pandas as pd
-
-    # =====================================================
-    # AI 自動學習最近鄰距離
-    # =====================================================
-
-    # ====================================
-    # 距離快取
-    # ====================================
     
     distance_cache = {}
     
@@ -834,12 +705,7 @@ def create_schedule(
             min_dist
         )
     
-    # AI 學習真正樁距
     base_distance = np.median(nearest_distances)
-
-    # =====================================================
-    # Delaunay AI 鄰樁判定
-    # =====================================================
     
     if neighbor_map is None:
     
@@ -920,10 +786,6 @@ def create_schedule(
                         pile_positions[n - 1]
                     )
                 )
-    # =====================================================
-    # 顏色
-    # =====================================================
-
     colors = []
 
     for _ in range(100):
@@ -936,10 +798,6 @@ def create_schedule(
             )
         )
 
-    # =====================================================
-    # 初始化
-    # =====================================================
-
     remaining = list(
         range(
             1,
@@ -947,7 +805,6 @@ def create_schedule(
         )
     )
     
-    # 預先計算鄰樁數量
     neighbor_score = {}
     
     for p in range(
@@ -965,17 +822,11 @@ def create_schedule(
     
     day = 1
     TAIL_TRIGGER = daily_count * 1
-    # =====================================================
-    # 開始排程
-    # =====================================================
+    
     loop_guard = 0
     while remaining:
     
         today_piles = []
-
-        # =================================================
-        # 第一天第一支固定起始樁
-        # =================================================
 
         if day == 1:
 
@@ -994,10 +845,6 @@ def create_schedule(
                         day + cooldown_days
                     )
 
-        # =================================================
-        # AI 智慧選樁
-        # =================================================
-
         tail_mode = False
         
         if len(remaining) <= TAIL_TRIGGER:
@@ -1014,7 +861,6 @@ def create_schedule(
                 remaining_days
             )
         
-
         today_target = daily_count
         
         if len(remaining) <= TAIL_TRIGGER:
@@ -1043,9 +889,6 @@ def create_schedule(
             future_avg = (
                 future_count / future_days
             )
-            # =====================================
-            # 先過濾還能施工的樁
-            # =====================================
         
             candidate_piles = []
 
@@ -1071,15 +914,10 @@ def create_schedule(
                         continue
             
                 candidate_piles.append(p)
-        
-            # 沒候選樁就停止
+
             if len(candidate_piles) == 0:
                 break
-        
-            # =====================================
-            # AI排序
-            # =====================================
-            #random.shuffle(candidate_piles)          
+            
             sorted_remaining = sorted(
                 candidate_piles,
                 key=lambda p: neighbor_score[p],
@@ -1101,10 +939,6 @@ def create_schedule(
         
             for pile in sorted_remaining:
 
-                # =========================================
-                # 冷卻判定
-                # =========================================
-
                 if not allow_relax:
                 
                     if pile in blocked_until:
@@ -1112,11 +946,7 @@ def create_schedule(
                         if day <= blocked_until[pile]:
                 
                             continue
-
-                # =========================================
-                # 十字衝突檢查
-                # =========================================
-
+                            
                 conflict = False
 
                 for existing in today_piles:
@@ -1136,21 +966,13 @@ def create_schedule(
 
                 if conflict:
                     continue
-
-                # =========================================
-                # AI 評分
-                # =========================================
                 
                 score = 0
-                
-                # 鄰居越多越優先
                 
                 score += len(
                     neighbor_map.get(pile, [])
                 ) * 10
-                
-                # 避免集中同區域
-                
+
                 if len(today_piles) > 0:
                 
                     min_dist = min(
@@ -1164,10 +986,6 @@ def create_schedule(
                     )
                 
                     score += min_dist * 0.2
-                
-                # =========================================
-                # 未來剩餘數量
-                # =========================================
             
                 score += future_avg * 500
                 
@@ -1183,10 +1001,6 @@ def create_schedule(
                 
                     score -= 150
                 
-                # ==================================================
-                # 7. 靠近目前群組
-                # ==================================================
-                
                 if len(today_piles) > 0:
                 
                     cluster_score = 0
@@ -1199,19 +1013,12 @@ def create_schedule(
                         )
                 
                     score -= cluster_score * 0.08
-                # =========================================
-                # 更新最佳選擇
-                # =========================================
                 
                 if score > best_score:
                 
                     best_score = score
                 
                     best_pile = pile
-                    
-            # =============================================
-            # 找不到可施工樁
-            # =============================================
 
             if best_pile is None:
                 
@@ -1241,9 +1048,6 @@ def create_schedule(
             
                 else:
                     break
-            # =============================================
-            # 加入今日施工
-            # =============================================
 
             today_piles.append(best_pile)
 
@@ -1251,7 +1055,6 @@ def create_schedule(
 
                 remaining.remove(best_pile)
 
-            # 立即更新封鎖
             blocked_until[best_pile] = day + cooldown_days
             
             for neighbor in neighbor_map.get(best_pile, []):
@@ -1259,10 +1062,6 @@ def create_schedule(
                 blocked_until[neighbor] = (
                     day + cooldown_days
                 )
-        
-        # =================================================
-        # 避免卡死
-        # =================================================
 
         if len(today_piles) == 0:
         
@@ -1276,8 +1075,6 @@ def create_schedule(
         
             remaining.remove(first_pile)
 
-        # 更新封鎖
-        
         if len(remaining) > daily_count * 3:
         
             for pile in today_piles:
@@ -1292,10 +1089,6 @@ def create_schedule(
                         day + cooldown_days
                     )
 
-        # =================================================
-        # 日期
-        # =================================================
-
         current_date = (
 
             pd.to_datetime(start_date)
@@ -1303,19 +1096,11 @@ def create_schedule(
             + pd.Timedelta(days=day - 1)
 
         )
-
-        # =================================================
-        # 顏色
-        # =================================================
-
+        
         color = colors[(day - 1) % len(colors)]
 
         hex_color = '#%02x%02x%02x' % color
-
-        # =================================================
-        # 儲存結果
-        # =================================================
-
+        
         result.append({
 
             "施工日": f"Day {day}",
@@ -1345,10 +1130,6 @@ def create_schedule(
 
     return result
 
-# =====================================================
-# 模式：新建預定進度表
-# =====================================================
-
 if mode == "新建預定進度表":
 
     uploaded_file = st.file_uploader(
@@ -1360,10 +1141,6 @@ if mode == "新建預定進度表":
         key="new_schedule"
 
     )
-
-# =====================================================
-# 模式：修正當前進度表
-# =====================================================
 
 else:
 
@@ -1383,9 +1160,6 @@ else:
 
     )
 
-# =====================================================
-# 主流程
-# =====================================================
 if mode == "新建預定進度表":
         if uploaded_file:
         
@@ -1646,11 +1420,7 @@ if mode == "新建預定進度表":
                         fill="red",
                         font=font
                     )
-        
-                # =====================================================
-                # AI辨識結果 + 施工條件
-                # =====================================================
-        
+
                 left_area, right_area = st.columns([3, 1.2])
         
                 with left_area:
@@ -1695,10 +1465,7 @@ if mode == "新建預定進度表":
                     progress_text.markdown(
                         "🤖 AI 正在分析最佳施工排程中，請稍候... 0%"
                     )
-                    # ============================
-                    # 只計算一次鄰樁
-                    # ============================
-                    
+
                     median_radius = np.median(
                         [r for _, _, r in piles]
                     )
@@ -1746,17 +1513,9 @@ if mode == "新建預定進度表":
                         last_day_count = len(
                             schedule[-1]["施工樁號"]
                         )
-                        
-                        # =====================================
-                        # AI 總體評分
-                        # =====================================
-                    
+
                         schedule_score = 0
 
-                        # =====================================
-                        # 滿載獎勵
-                        # =====================================
-                        
                         daily_counts = [
                             len(x["施工樁號"])
                             for x in schedule
@@ -1778,13 +1537,8 @@ if mode == "新建預定進度表":
                         
                         schedule_score += first_days_score
                         schedule_score += full_days * 5000
-                        
-                        # 天數越少越好
                         schedule_score -= len(schedule) * 5000
-                    
-                        # 最後三天不要太少
                         last_days = schedule[-3:]
-                    
                         last_count = sum(
                     
                             len(x["施工樁號"])
@@ -1793,8 +1547,6 @@ if mode == "新建預定進度表":
                         )
                     
                         schedule_score += last_count * 40
-                    
-                        # 平均施工量穩定
                         daily_counts = [
                     
                             len(x["施工樁號"])
@@ -1807,13 +1559,8 @@ if mode == "新建預定進度表":
                         schedule_score += avg_daily * 50
                     
                         variance = np.var(daily_counts)
-                    
-                        # 波動越小越好
+
                         schedule_score -= variance * 30
-                    
-                        # =====================================
-                        # 尾盤修復
-                        # =====================================
                         
                         tail_days = schedule[-5:]
                         
@@ -1821,22 +1568,16 @@ if mode == "新建預定進度表":
                             len(x["施工樁號"])
                             for x in tail_days
                         )
-                        
-                        # 如果最後三天太少
+
                         if tail_total < daily_count * 4:
                         
                             schedule_score -= 200
-                        
-                        # 最後一天不能太少
+
                         last_day_count = len(schedule[-1]["施工樁號"])
                         
                         if last_day_count <= 2:
                         
                             schedule_score -= 300
-
-                        # =====================================
-                        # 尾盤遞減檢查（加強版）
-                        # =====================================
                         
                         tail_counts = [
                         
@@ -1846,25 +1587,16 @@ if mode == "新建預定進度表":
                         
                         ]
 
-                        # 最後一天不要太少
-                        
                         if tail_counts[-1] <= 2:
                         
                             schedule_score -= 500
-                        
-                        # 倒數第二天不要比最後一天多太多
                         
                         if len(tail_counts) >= 2:
                         
                             if tail_counts[-2] - tail_counts[-1] > 5:
                         
                                 schedule_score -= 200
-                        
-                        
-                        # =====================================
-                        # 更新最佳結果
-                        # =====================================
-
+                                
                         daily_counts = [
                         
                             len(x["施工樁號"])
@@ -1872,10 +1604,6 @@ if mode == "新建預定進度表":
                             for x in schedule
                         
                         ]
-
-                        # =========================
-                        # 前面天數不得提前掉量
-                        # =========================
                         
                         for count in daily_counts[:-3]:
                         
@@ -1884,27 +1612,15 @@ if mode == "新建預定進度表":
                             if diff > 0:
                         
                                 schedule_score -= diff * 30000
-
-                        # ======================
-                        # 尾盤品質
-                        # ======================
                         
                         tail_counts = daily_counts[-5:]
-                     
-                        # =========================
-                        # 禁止尾盤反彈
-                        # =========================
-                        
+
                         for i in range(len(tail_counts)-1):
                         
                             if tail_counts[i+1] > tail_counts[i]:
                         
                                 schedule_score -= 20000
 
-                        # =========================
-                        # 尾盤不可暴跌
-                        # =========================
-                        
                         for i in range(len(tail_counts)-1):
                         
                             diff = tail_counts[i] - tail_counts[i+1]
@@ -1912,9 +1628,7 @@ if mode == "新建預定進度表":
                             if diff > 6:
                             
                                 schedule_score -= 8000
-                        
-                        # 最後一天
-                        
+
                         last_day = tail_counts[-1]
                         
                         if last_day <= 2:
@@ -1929,10 +1643,6 @@ if mode == "新建預定進度表":
                         
                             schedule_score -= 1000
 
-                        # ======================
-                        # 遞減檢查
-                        # ======================
-                        
                         for i in range(len(tail_counts)-1):
                         
                             if tail_counts[i] < tail_counts[i+1]:
@@ -1943,10 +1653,6 @@ if mode == "新建預定進度表":
                         
                         schedule_score += tail_avg * 200
 
-                        # ======================
-                        # 尾盤平衡度
-                        # ======================
-                        
                         tail_balance_score = 0
                         
                         for count in tail_counts:
@@ -1957,10 +1663,6 @@ if mode == "新建預定進度表":
                         
                         schedule_score += tail_balance_score
 
-                        # =========================
-                        # 強制尾盤遞減
-                        # =========================
-                        
                         tail_ok = True
                         
                         tail_counts = [
@@ -1986,8 +1688,7 @@ if mode == "新建預定進度表":
                             best_total_score = schedule_score
                         
                             best_schedule = schedule
-                    
-                    # 最終最佳排程                        
+                     
                     if best_schedule is None:
                     
                         best_schedule = backup_schedule
@@ -2095,10 +1796,6 @@ if mode == "新建預定進度表":
                                 outline="black",
                                 width=1
                             )
-        
-                            # =====================================
-                            # 日期固定在圓下方
-                            # =====================================
                             
                             day_bbox = draw.textbbox(
                                 (0, 0),
@@ -2109,14 +1806,9 @@ if mode == "新建預定進度表":
                             day_width = day_bbox[2] - day_bbox[0]
                             
                             day_x = x - (day_width // 2)
-                            
-                            # 日期往下移一點
+
                             day_y = y + 14
-                            
-                            # =====================================
-                            # 畫施工日期 D1 D2
-                            # =====================================
-                            
+
                             draw.text(
                                 (
                                     day_x,
@@ -2128,12 +1820,7 @@ if mode == "新建預定進度表":
                                 stroke_width=2,
                                 stroke_fill="white"
                             )
-                            
-                                                       
-                            # =====================================
-                            # 樁號固定在圓正上方
-                            # 不受圓大小影響
-                            # =====================================
+
                             pile_text = str(pile_no)
                             
                             pile_bbox = draw.textbbox(
@@ -2146,8 +1833,7 @@ if mode == "新建預定進度表":
                             pile_height = pile_bbox[3] - pile_bbox[1]
                             
                             pile_x = x - (pile_width // 2)
-                            
-                            # 自動依字體大小調整高度
+
                             pile_y = y - r - pile_height - 8
                             
                             draw.text(
@@ -2226,11 +1912,7 @@ if mode == "新建預定進度表":
                     st.session_state.processed = True
         
                     st.rerun()
-        
-            # =====================================================
-            # 顯示排程結果
-            # =====================================================
-            
+
             if st.session_state.processed:
             
                 st.markdown("---")
@@ -2279,8 +1961,7 @@ if mode == "新建預定進度表":
                             )
                         
                             ws = writer.book["施工排程"]
-                        
-                            # 日期顏色欄位(C欄)
+
                             for row in range(2, ws.max_row + 1):
                         
                                 hex_color = ws[f"C{row}"].value
@@ -2294,8 +1975,7 @@ if mode == "新建預定進度表":
                                     )
                         
                                     ws[f"C{row}"].fill = fill
-                        
-                                    # 不顯示色碼
+
                                     ws[f"C{row}"].value = ""
                         today_str = pd.Timestamp.today().strftime("%Y%m%d")
                         st.download_button(
@@ -2317,12 +1997,11 @@ if mode == "新建預定進度表":
                     display_df["施工樁號"] = display_df["施工樁號"].apply(
                         lambda x: ", ".join(map(str, x))
                     )
-                    # 刪除 RGB 欄位
+
                     if "RGB" in display_df.columns:
             
                         display_df = display_df.drop(columns=["RGB"])
-                
-                    # 日期顏色改成色塊
+
                     display_df["日期顏色"] = display_df["日期顏色"].apply(
                         lambda c:
                         f'<div style="background:{c}; width:80px; height:28px; border-radius:6px;"></div>'
@@ -2359,13 +2038,7 @@ if mode == "新建預定進度表":
                         """,
                         unsafe_allow_html=True
                     )
-            
-                   
-            
-                # =====================================================
-                # 排樁施工圖 + 下載圖面
-                # =====================================================
-            
+
                 left_result, right_download = st.columns(
                     [4,1.2]
                 )
@@ -2444,10 +2117,6 @@ if mode == "新建預定進度表":
                         unsafe_allow_html=True
                     )
 elif mode == "修正當前進度表":
-    # ============================================
-    # 初始化修正模式
-    # ============================================
-    
     if "repair_mode_init" not in st.session_state:
 
         st.session_state.repair_points = []
@@ -2461,11 +2130,6 @@ elif mode == "修正當前進度表":
         st.session_state.repair_canvas_key = 0
     
         st.session_state.repair_mode_init = True
-    
-    # ============================================
-    # 上傳圖面
-    # ============================================
-    
     if uploaded_file:
         current_file_name = uploaded_file.name
     
@@ -2492,11 +2156,6 @@ elif mode == "修正當前進度表":
         st.markdown("---")
 
         st.subheader("🛠️ 修正當前施工進度")
-
-        # ============================================
-        # 讀取圖面
-        # ============================================
-
         if uploaded_file.type == "application/pdf":
 
             pdf_bytes = uploaded_file.read()
@@ -2513,11 +2172,6 @@ elif mode == "修正當前進度表":
             image = Image.open(
                 uploaded_file
             ).convert("RGB")
-
-        # ============================================
-        # 顯示圖面
-        # ============================================
-
         display_img = image.copy()
 
         display_img.thumbnail((900, 650))
@@ -2534,11 +2188,6 @@ elif mode == "修正當前進度表":
             "orange",
             "lime"
         ]
-
-        # ============================================
-        # 畫點
-        # ============================================
-
         for idx, point in enumerate(
             st.session_state.repair_points
         ):
@@ -2549,11 +2198,6 @@ elif mode == "修正當前進度表":
                 (x-8, y-8, x+8, y+8),
                 fill=point_colors[idx]
             )
-
-        # ============================================
-        # 畫框
-        # ============================================
-        
         if len(st.session_state.repair_points) == 4:
         
             pts = st.session_state.repair_points
@@ -2577,18 +2221,7 @@ elif mode == "修正當前進度表":
                 outline="lime",
                 width=5
             )
-
-
-
-        # ============================================
-        # 左右欄位
-        # ============================================
-        
         left_col, right_col = st.columns([5, 1.3])
-        
-        # ============================================
-        # 左側圖面
-        # ============================================
         
         with left_col:
         
@@ -2596,10 +2229,6 @@ elif mode == "修正當前進度表":
                 draw_img,
                 key=f"repair_roi_{st.session_state.repair_canvas_key}"
             )
-        
-        # ============================================
-        # 右側資訊
-        # ============================================
         
         with right_col:
         
@@ -2651,11 +2280,7 @@ elif mode == "修正當前進度表":
                 st.session_state.repair_canvas_key += 1
             
                 st.rerun()
-        
-        # ============================================
-        # 點擊新增
-        # ============================================
-        
+
         if value is not None:
         
             clicked_point = (
@@ -2695,10 +2320,6 @@ elif mode == "修正當前進度表":
                 
                     st.rerun()
 
-        # ============================================
-        # ROI完成 → AI辨識
-        # ============================================
-
         if len(st.session_state.repair_points) == 4:
 
             pts = st.session_state.repair_points
@@ -2718,8 +2339,6 @@ elif mode == "修正當前進度表":
                 int(x2 * scale_x),
                 int(y2 * scale_y)
             )
-
-            # AI辨識（只執行一次）
 
             if len(st.session_state.repair_piles) == 0:
             
@@ -2745,10 +2364,6 @@ elif mode == "修正當前進度表":
             st.success(
                 f"✅ AI辨識到 {total_piles} 支樁體"
             )
-
-            # ========================================
-            # 顯示辨識結果
-            # ========================================
 
             result_img = image.copy()
 
@@ -2781,8 +2396,7 @@ elif mode == "修正當前進度表":
                 r = int(r / scale_x)
             
                 pile_no = idx + 1
-            
-                # 已排除樁
+
                 if pile_no in st.session_state.excluded_piles:
             
                     draw_result.line(
@@ -2798,8 +2412,7 @@ elif mode == "修正當前進度表":
                     )
             
                     continue
-            
-                # 畫圓
+
                 draw_result.ellipse(
                     (
                         x-r,
@@ -2810,11 +2423,7 @@ elif mode == "修正當前進度表":
                     outline="red",
                     width=2
                 )
-            
-                # ===================
-                # 新增樁號
-                # ===================
-            
+
                 pile_text = str(pile_no)
                 
                 pile_bbox = draw_result.textbbox(
@@ -2883,8 +2492,7 @@ elif mode == "修正當前進度表":
                                 nearest_pile = idx + 1
             
                         if nearest_dist < 30:
-            
-                            # 已排除 → 取消排除
+
                             if (
                                 nearest_pile
                                 in st.session_state.excluded_piles
@@ -2893,8 +2501,7 @@ elif mode == "修正當前進度表":
                                 st.session_state.excluded_piles.remove(
                                     nearest_pile
                                 )
-            
-                            # 未排除 → 排除
+
                             else:
             
                                 st.session_state.excluded_piles.append(
@@ -2903,15 +2510,9 @@ elif mode == "修正當前進度表":
             
                             st.rerun()
             
-                
-            
             with right_result:
             
                 st.subheader("📊 AI辨識結果")
-
-        # ============================================
-        # 有辨識到樁體才往下
-        # ============================================
 
         if len(st.session_state.repair_piles) > 0:
         
@@ -3003,8 +2604,7 @@ elif mode == "修正當前進度表":
                         
                             key="repair_editor"
                         )
-                        
-                        # 只有結果不同才更新
+
                         validated_df, error_messages = validate_pile_input(
                             edited_df,
                             st.session_state.repair_total_piles
@@ -3030,10 +2630,6 @@ elif mode == "修正當前進度表":
                             
                                 st.success("✅ 更改完成")
 
-                        # ============================================
-                        # 重新排程
-                        # ============================================
-                        
                         if "repair_edit_df" in st.session_state:
                         
                             st.markdown("---")
@@ -3080,8 +2676,6 @@ elif mode == "修正當前進度表":
                                 
                                         break
 
-                                # 找不到空白列
-
                                 if first_empty_index is None:
                                 
                                     st.error("全部施工日都有樁號，沒有可續排的施工日")
@@ -3089,10 +2683,7 @@ elif mode == "修正當前進度表":
                                     st.stop()
 
                                 start_day_no = first_empty_index + 1
-                                
-                                
-                                # 自動抓續排開始日期
-                                
+  
                                 start_date = pd.to_datetime(
                                 
                                     edit_df.iloc[first_empty_index]["日期"]
@@ -3145,19 +2736,11 @@ elif mode == "修正當前進度表":
                                     if p not in st.session_state.excluded_piles
                                 ]
 
-                                # ==================================
-                                # 建立剩餘樁體座標
-                                # ==================================
-                                
                                 remaining_positions = [
                                     piles[p-1]
                                     for p in remaining_piles
                                 ]
 
-                                # ==================================
-                                # 建立樁號對照表
-                                # ==================================
-                                
                                 pile_mapping = {}
                                 
                                 for new_no, old_no in enumerate(remaining_piles, start=1):
@@ -3187,10 +2770,6 @@ elif mode == "修正當前進度表":
                                                 reverse_mapping[n]
                                             )
 
-                                # ==================================
-                                # AI續排
-                                # ==================================
-                                
                                 best_schedule = None
                                 
                                 best_total_score = -999999
@@ -3322,7 +2901,6 @@ elif mode == "修正當前進度表":
                                     
                                             schedule_score -= diff * 30000
                                     
-                                    
                                     for i in range(len(tail_counts)-1):
                                     
                                         if tail_counts[i+1] > tail_counts[i]:
@@ -3338,7 +2916,6 @@ elif mode == "修正當前進度表":
                                     
                                             schedule_score -= 8000
                                     
-                                    
                                     last_day = tail_counts[-1]
                                     
                                     if last_day <= 2:
@@ -3352,7 +2929,6 @@ elif mode == "修正當前進度表":
                                     elif last_day <= 8:
                                     
                                         schedule_score -= 1000
-                                    
                                     
                                     tail_avg = np.mean(tail_counts)
                                     
@@ -3369,7 +2945,6 @@ elif mode == "修正當前進度表":
                                     
                                     schedule_score += tail_balance_score
                                     
-                                    
                                     tail_ok = True
                                     
                                     for i in range(len(tail_counts)-1):
@@ -3384,17 +2959,12 @@ elif mode == "修正當前進度表":
                                     
                                         continue
                                     
-                                    
                                     if schedule_score > best_total_score:
                                     
                                         best_total_score = schedule_score
                                     
                                         best_schedule = temp_schedule
 
-                                # ==================================
-                                # 如果10次模擬都失敗
-                                # ==================================
-                                
                                 if best_schedule is None:
                                 
                                     best_schedule = backup_schedule
@@ -3413,10 +2983,6 @@ elif mode == "修正當前進度表":
                                 
                                 progress_text.empty()
                                 
-                                # ==================================
-                                # 轉回原始樁號
-                                # ==================================
-                                
                                 new_schedule = best_schedule
                                 
                                 for day in new_schedule:
@@ -3429,14 +2995,7 @@ elif mode == "修正當前進度表":
                                 
                                     ]
 
-                                    
-
-                                # ==================================
-                                # 回填到原排程
-                                # ==================================
-                                
                                 new_df = original_df.copy()
-
                                 new_df["施工樁號"] = edit_df["施工樁號"]
                                 new_df["施工數量"] = edit_df["施工數量"]
 
@@ -3487,8 +3046,6 @@ elif mode == "修正當前進度表":
                                     if pd.notna(x)
                                     else 0
                                 )
-
-                                # 刪除施工數量為0的列
                                 repair_df = repair_df[
                                     repair_df["施工數量"] > 0
                                 ].reset_index(drop=True)
@@ -3498,11 +3055,6 @@ elif mode == "修正當前進度表":
                                     use_container_width=True,
                                     hide_index=True
                                 )
-                                
-                                # =====================================
-                                # 產生續排施工圖
-                                # =====================================
-                                
                                 repair_result_img = image.copy()
                                 
                                 draw = ImageDraw.Draw(repair_result_img)
