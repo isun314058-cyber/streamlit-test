@@ -2120,6 +2120,8 @@ if mode == "新建預定進度表":
                         unsafe_allow_html=True
                     )
 elif mode == "修正當前進度表":
+    excel_file = None
+    
     if "repair_mode_init" not in st.session_state:
 
         st.session_state.repair_points = []
