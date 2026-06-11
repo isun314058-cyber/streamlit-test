@@ -3117,8 +3117,12 @@ elif mode == "修正當前進度表":
                                     hex_color = str(
                                         row["日期顏色"]
                                     ).strip()
-                                    
-                                    if not hex_color.startswith("#"):
+                                
+                                    if (
+                                        len(hex_color) != 7
+                                        or
+                                        not hex_color.startswith("#")
+                                    ):
                                         hex_color = "#cccccc"
                                 
                                     color = tuple(
