@@ -2043,8 +2043,7 @@ if mode == "新建預定進度表":
                     )
 
                 left_result, right_download = st.columns(
-                    [1.8,1],
-                    gap="large"
+                    [4,1.2]
                 )
                 
                 with left_result:
@@ -2053,17 +2052,19 @@ if mode == "新建預定進度表":
                 
                     st.image(
                         st.session_state.result_image,
-                        width=800
+                        use_container_width=True
                     )
                 
                 with right_download:
-                
-                    st.subheader("📥下載圖面")
+                    st.markdown(
+                        '<div class="download-panel">',
+                        unsafe_allow_html=True
+                    )
+                    st.subheader("📥 下載圖面")
                 
                     export_type = st.selectbox(
-                        "格式",
-                        ["PNG","JPG","PDF"],
-                        key="export_type"
+                        "選擇匯出格式",
+                        ["PNG","JPG","PDF"]
                     )
                 
                     img_buffer = io.BytesIO()
@@ -2071,46 +2072,45 @@ if mode == "新建預定進度表":
                     result_img = st.session_state.result_image
             
                     if export_type == "PNG":
-                    
-                        result_img.save(
-                            img_buffer,
-                            format="PNG"
-                        )
-                    
+            
+                        result_img.save(img_buffer, format="PNG")
+            
                         st.download_button(
-                            "📥下載PNG",
-                            img_buffer.getvalue(),
-                            f"{today_str}_AI智能排樁系統.png",
+                            label="下載 PNG 圖面",
+                            data=img_buffer.getvalue(),
+                            file_name=f"{today_str}_AI智能排樁系統.png",
                             mime="image/png",
                             use_container_width=True
                         )
-                    
+                        
                     elif export_type == "JPG":
-                    
-                        result_img.convert("RGB").save(
-                            img_buffer,
-                            format="JPEG"
-                        )
-                    
+            
+                        rgb_img = result_img.convert("RGB")
+            
+                        rgb_img.save(img_buffer, format="JPEG")
+            
                         st.download_button(
-                            "📥下載JPG",
-                            img_buffer.getvalue(),
-                            f"{today_str}_AI智能排樁系統.jpg",
+                            label="下載 JPG 圖面",
+                            data=img_buffer.getvalue(),
+                            file_name=f"{today_str}_AI智能排樁系統.jpg",
                             mime="image/jpeg",
                             use_container_width=True
                         )
-                    
-                    else:
-                    
-                        result_img.convert("RGB").save(
-                            img_buffer,
-                            format="PDF"
+                        st.markdown(
+                            '</div>',
+                            unsafe_allow_html=True
                         )
-                    
+            
+                    else:
+            
+                        rgb_img = result_img.convert("RGB")
+            
+                        rgb_img.save(img_buffer, format="PDF")
+            
                         st.download_button(
-                            "📥下載PDF",
-                            img_buffer.getvalue(),
-                            f"{today_str}_AI智能排樁系統.pdf",
+                            label="下載 PDF 圖面",
+                            data=img_buffer.getvalue(),
+                            file_name=f"{today_str}_AI智能排樁系統.pdf",
                             mime="application/pdf",
                             use_container_width=True
                         )
@@ -2175,15 +2175,9 @@ elif mode == "修正當前進度表":
             image = Image.open(
                 uploaded_file
             ).convert("RGB")
-        display_img = st.session_state.result_image.copy()
-        
-        display_img.thumbnail(
-            (850,650)
-        )
-        
-        st.image(
-            display_img
-        )
+        display_img = image.copy()
+
+        display_img.thumbnail((900, 650))
         scale_x = image.width / display_img.width
         scale_y = image.height / display_img.height
 
