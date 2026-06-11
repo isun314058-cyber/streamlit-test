@@ -2043,7 +2043,7 @@ if mode == "新建預定進度表":
                     )
 
                 left_result, right_download = st.columns(
-                    [3,1],
+                    [2.3,1],
                     gap="large"
                 )
                 
@@ -2053,7 +2053,7 @@ if mode == "新建預定進度表":
                 
                     st.image(
                         st.session_state.result_image,
-                        width=1000
+                        use_container_width=True
                     )
                 
                 with right_download:
