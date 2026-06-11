@@ -2929,6 +2929,12 @@ elif mode == "修正當前進度表":
                 try:
         
                     original_df = pd.read_excel(excel_file)
+
+                    original_df["日期顏色"] = (
+                        original_df["日期顏色"]
+                        .fillna("")
+                        .astype(str)
+                    )
         
                     required_cols = [
                         "施工日",
