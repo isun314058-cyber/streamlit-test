@@ -3113,6 +3113,9 @@ elif mode == "修正當前進度表":
                             
                                 st.success("✅ AI續排完成")
                                 
+                                st.markdown("---")
+                                st.subheader("📋 續排施工排程結果")
+                                
                                 repair_df = st.session_state.repair_schedule_df.copy()
                                 
                                 repair_df["施工數量"] = repair_df["施工樁號"].apply(
@@ -3146,16 +3149,26 @@ elif mode == "修正當前進度表":
                                 ]
                                 
                                 st.markdown(
+                                    """
+                                    <div style="
+                                        margin-top:15px;
+                                        margin-bottom:30px;
+                                        padding:15px;
+                                        border-radius:15px;
+                                        background:#071225;
+                                        border:1px solid #334155;
+                                    ">
+                                    """,
+                                    unsafe_allow_html=True
+                                )
+                                
+                                st.markdown(
                                     f"""
                                     <div style="
                                         width:100%;
                                         overflow-x:auto;
                                         overflow-y:auto;
                                         max-height:650px;
-                                        border:1px solid #333;
-                                        border-radius:12px;
-                                        padding:10px;
-                                        background:#071225;
                                     ">
                                         {display_df.to_html(
                                             escape=False,
@@ -3164,6 +3177,11 @@ elif mode == "修正當前進度表":
                                         )}
                                     </div>
                                     """,
+                                    unsafe_allow_html=True
+                                )
+                                
+                                st.markdown(
+                                    "</div>",
                                     unsafe_allow_html=True
                                 )
     
@@ -3332,6 +3350,26 @@ elif mode == "修正當前進度表":
                                 st.session_state.repair_result_image = repair_result_img
     
                                 st.session_state.repair_finished = True
+
+                                st.markdown("---")
+                                st.markdown("""
+                                <div style="
+                                background:#132238;
+                                padding:12px;
+                                border-radius:10px;
+                                font-size:24px;
+                                font-weight:bold;
+                                margin-top:30px;
+                                margin-bottom:10px;
+                                ">
+                                🗺️ 續排施工圖
+                                </div>
+                                """, unsafe_allow_html=True)
+                                
+                                st.image(
+                                    repair_result_img,
+                                    width=900
+                                )
     
                                 st.session_state.repair_schedule_df = new_df
                       
@@ -3340,6 +3378,9 @@ elif mode == "修正當前進度表":
                 st.error(f"Excel讀取失敗：{e}")
                 
             if st.session_state.get("repair_finished", False):
+
+                st.markdown("---")
+                st.subheader("📥 下載成果")
             
                 repair_df = st.session_state.repair_schedule_df
             
