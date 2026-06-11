@@ -3163,7 +3163,7 @@ elif mode == "修正當前進度表":
                                     draw.text(
                                         (
                                             pile_x,
-                                            y - r - 18
+                                            y - r - 20
                                         ),
                                         pile_text,
                                         fill="black",
