@@ -1978,7 +1978,7 @@ if mode == "新建預定進度表":
                         st.download_button(
                             "📊下載Excel",
                             excel_buffer.getvalue(),
-                            file_name=f"{today_str}_AI排樁施工計畫.xlsx",
+                            file_name=f"AI智能排樁系統_{today_str}.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                             use_container_width=True
                         )
@@ -2072,7 +2072,7 @@ if mode == "新建預定進度表":
                         st.download_button(
                             label="下載 PNG 圖面",
                             data=img_buffer.getvalue(),
-                            file_name="pile_schedule.png",
+                            file_name=f"AI智能排樁系統_{today_str}.png",
                             mime="image/png",
                             use_container_width=True
                         )
@@ -2086,7 +2086,7 @@ if mode == "新建預定進度表":
                         st.download_button(
                             label="下載 JPG 圖面",
                             data=img_buffer.getvalue(),
-                            file_name="pile_schedule.jpg",
+                            file_name=f"AI智能排樁系統_{today_str}.jpg",
                             mime="image/jpeg",
                             use_container_width=True
                         )
@@ -2104,7 +2104,7 @@ if mode == "新建預定進度表":
                         st.download_button(
                             label="下載 PDF 圖面",
                             data=img_buffer.getvalue(),
-                            file_name="pile_schedule.pdf",
+                            file_name=f"AI智能排樁系統_{today_str}.pdf",
                             mime="application/pdf",
                             use_container_width=True
                         )
