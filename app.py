@@ -3074,6 +3074,38 @@ elif mode == "修正當前進度表":
                                 )
 
                                 # =====================
+                                # 建立平面圖資料
+                                # =====================
+                                
+                                plot_schedule = []
+                                
+                                for _, row in repair_df.iterrows():
+                                
+                                    pile_text = str(row["施工樁號"]).strip()
+                                
+                                    if pile_text == "":
+                                        continue
+                                
+                                    pile_list = [
+                                        int(x.strip())
+                                        for x in pile_text.split(",")
+                                        if x.strip()
+                                    ]
+                                
+                                    day_no = int(
+                                        str(row["施工日"])
+                                        .replace("Day","")
+                                        .strip()
+                                    )
+                                
+                                    plot_schedule.append({
+                                        "day": day_no,
+                                        "piles": pile_list
+                                    })
+                                
+                                st.write(plot_schedule)
+
+                                # =====================
                                 # 建立施工日顏色
                                 # =====================
                                 
@@ -3203,7 +3235,7 @@ elif mode == "修正當前進度表":
                                 
                                     color = day_color_map[item["day"]]
                                 
-                                    yy = legend_y + day_idx * 30
+                                    yy = legend_y + idx * 30
                                 
                                     draw.rectangle(
                                         (
