@@ -3118,12 +3118,6 @@ elif mode == "修正當前進度表":
                                     repair_result_img
                                 )
 
-                                st.write(
-                                    repair_df[
-                                        ["施工日","日期顏色"]
-                                    ]
-                                )
-
                                 for day_idx, (_, row) in enumerate(repair_df.iterrows()):
                                 
                                     hex_color = str(
