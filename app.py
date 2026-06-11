@@ -2296,7 +2296,7 @@ if mode == "新建預定進度表":
                                     ws[f"C{row}"].fill = fill
                         
                                     # 不顯示色碼
-                                    ws[f"C{row}"].value = hex_color
+                                    ws[f"C{row}"].value = ""
                         today_str = pd.Timestamp.today().strftime("%Y%m%d")
                         st.download_button(
                             "📊下載Excel",
@@ -2935,15 +2935,7 @@ elif mode == "修正當前進度表":
                         .fillna("")
                         .astype(str)
                     )
-
-                    st.write("原始Excel顏色")
-                    
-                    st.dataframe(
-                        original_df[
-                            ["施工日","日期顏色"]
-                        ]
-                    )
-
+        
                     required_cols = [
                         "施工日",
                         "日期",
@@ -2968,7 +2960,10 @@ elif mode == "修正當前進度表":
                                                      
                         st.markdown("---")
                         st.write("✏️ 請於下方修改施工樁號")
-                        editor_df = original_df.copy()
+                        
+                        editor_df = original_df.drop(
+                            columns=["日期顏色"]
+                        )
 
                         editor_df["施工數量"] = (
                             editor_df["施工數量"]
@@ -3409,14 +3404,6 @@ elif mode == "修正當前進度表":
                                 
                                 new_df = original_df.copy()
 
-                                st.write("續排前")
-                                
-                                st.dataframe(
-                                    new_df[
-                                        ["施工日","日期顏色"]
-                                    ]
-                                )
-
                                 new_df["施工樁號"] = edit_df["施工樁號"]
                                 new_df["施工數量"] = edit_df["施工數量"]
                                 
@@ -3438,15 +3425,7 @@ elif mode == "修正當前進度表":
                                 
                                     new_df.at[target_row, "施工樁號"] = pile_text
 
-                                    old_color = str(
-                                        new_df.at[target_row,"日期顏色"]
-                                    ).strip()
-                                    
-                                    if old_color == "":
-                                        new_df.at[
-                                            target_row,
-                                            "日期顏色"
-                                        ] = day_data["日期顏色"]
+                                    new_df.at[target_row, "日期顏色"] = day_data["日期顏色"]
                                 
                                     new_df.at[target_row, "施工數量"] = str(
                                         len(day_data["施工樁號"])
