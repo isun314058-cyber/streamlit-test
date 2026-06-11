@@ -1810,7 +1810,7 @@ if mode == "新建預定進度表":
                             
                             day_x = x - (day_width // 2)
 
-                            day_y = y + 4
+                            day_y = y + 14
 
                             draw.text(
                                 (
@@ -1837,7 +1837,7 @@ if mode == "新建預定進度表":
                             
                             pile_x = x - (pile_width // 2)
 
-                            pile_y = y - r - pile_height - 4
+                            pile_y = y - r - pile_height - 8
                             
                             draw.text(
                                 (
