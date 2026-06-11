@@ -3127,7 +3127,13 @@ elif mode == "修正當前進度表":
                                         for i in (1,3,5)
                                     )
                                 
-                                    for pile_no in row["施工樁號"]:
+                                    pile_list = [
+                                        int(x.strip())
+                                        for x in str(row["施工樁號"]).split(",")
+                                        if x.strip()
+                                    ]
+                                    
+                                    for pile_no in pile_list:
                                 
                                         idx = pile_no - 1
                                 
@@ -3206,7 +3212,7 @@ elif mode == "修正當前進度表":
                                     font=pile_font
                                 )
 
-                                for day_idx,row in enumerate(new_schedule):
+                                for _, row in repair_df.iterrows():
                                 
                                     hex_color = row["日期顏色"]
                                 
