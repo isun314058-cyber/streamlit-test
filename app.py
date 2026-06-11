@@ -3380,16 +3380,11 @@ elif mode == "修正當前進度表":
             if st.session_state.get("repair_finished", False):
 
                 st.markdown("---")
-                st.subheader("📥 下載成果")
+                st.subheader("📥 下載區")
             
                 repair_df = st.session_state.repair_schedule_df
             
                 repair_result_img = st.session_state.repair_result_image
-                
-                st.image(
-                    repair_result_img,
-                    width=900
-                )
 
                 excel_buffer = io.BytesIO()
                 
