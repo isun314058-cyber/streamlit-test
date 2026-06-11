@@ -1770,7 +1770,13 @@ if mode == "新建預定進度表":
                         )
         
                         day_text = row["施工日"].replace("Day ", "D")
-        
+
+                        pile_list = [
+                            int(x.strip())
+                            for x in str(row["施工樁號"]).split(",")
+                            if x.strip()
+                        ]
+                        
                         for pile_no in row["施工樁號"]:
         
                             idx = pile_no - 1
@@ -3121,7 +3127,13 @@ elif mode == "修正當前進度表":
                                         for i in (1,3,5)
                                     )
                                 
-                                    for pile_no in row["施工樁號"]:
+                                    pile_list = [
+                                        int(x.strip())
+                                        for x in str(row["施工樁號"]).split(",")
+                                        if x.strip()
+                                    ]
+                                
+                                    for pile_no in pile_list:
                                 
                                         idx = pile_no - 1
                                 
@@ -3161,7 +3173,7 @@ elif mode == "修正當前進度表":
                                             font=pile_font
                                         )   
 
-                                        day_text = f"D{start_day_no + day_idx}"
+                                        day_text = row["施工日"].replace("Day ","D")
                                         
                                         day_bbox = draw.textbbox(
                                             (0,0),
@@ -3224,7 +3236,7 @@ elif mode == "修正當前進度表":
                                             legend_x+35,
                                             yy
                                         ),
-                                        f"D{start_day_no + day_idx}",
+                                        row["施工日"].replace("Day ","D"),
                                         fill="black",
                                         font=pile_font
                                     )
