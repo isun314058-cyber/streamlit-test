@@ -3096,18 +3096,31 @@ elif mode == "修正當前進度表":
                             
                                 pile_font = ImageFont.load_default()
 
+                            EXPORT_SCALE = 4
+                            
                             LEGEND_WIDTH = 165
                             
-                            new_width = image.width + LEGEND_WIDTH
+                            big_image = image.resize(
+                                (
+                                    image.width * EXPORT_SCALE,
+                                    image.height * EXPORT_SCALE
+                                ),
+                                Image.LANCZOS
+                            )
+                            
+                            new_width = big_image.width + (LEGEND_WIDTH * EXPORT_SCALE)
                             
                             repair_result_img = Image.new(
                                 "RGB",
-                                (new_width, image.height),
+                                (
+                                    new_width,
+                                    big_image.height
+                                ),
                                 (255,255,255)
                             )
                             
                             repair_result_img.paste(
-                                image,
+                                big_image,
                                 (0,0)
                             )
                             
