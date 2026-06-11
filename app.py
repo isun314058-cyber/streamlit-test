@@ -3113,14 +3113,48 @@ elif mode == "修正當前進度表":
                                     if pd.notna(x)
                                     else 0
                                 )
+                                
                                 repair_df = repair_df[
                                     repair_df["施工數量"] > 0
                                 ].reset_index(drop=True)
                                 
-                                st.dataframe(
-                                    repair_df,
-                                    use_container_width=True,
-                                    hide_index=True
+                                display_df = repair_df.copy()
+                                
+                                display_df["日期顏色"] = display_df["日期顏色"].apply(
+                                    lambda c:
+                                    f'<div style="background:{c}; width:80px; height:28px; border-radius:6px;"></div>'
+                                )
+                                
+                                display_df = display_df[
+                                    [
+                                        "施工日",
+                                        "日期",
+                                        "日期顏色",
+                                        "施工數量",
+                                        "施工樁號"
+                                    ]
+                                ]
+                                
+                                st.markdown(
+                                    f"""
+                                    <div style="
+                                        width:100%;
+                                        overflow-x:auto;
+                                        overflow-y:auto;
+                                        max-height:650px;
+                                        border:1px solid #333;
+                                        border-radius:12px;
+                                        padding:10px;
+                                        background:#071225;
+                                    ">
+                                        {display_df.to_html(
+                                            escape=False,
+                                            index=False,
+                                            classes="schedule-table"
+                                        )}
+                                    </div>
+                                    """,
+                                    unsafe_allow_html=True
                                 )
     
                                 repair_result_img = image.copy()
