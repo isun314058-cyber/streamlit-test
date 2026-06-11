@@ -2987,6 +2987,14 @@ elif mode == "修正當前進度表":
                                 progress_text.empty()
                                 
                                 new_schedule = best_schedule
+
+                                st.write("remaining =", len(remaining_piles))
+                                
+                                for d in new_schedule:
+                                    st.write(
+                                        d["施工日"],
+                                        len(d["施工樁號"])
+                                    )
                                 
                                 for day in new_schedule:
                                 
@@ -3015,6 +3023,8 @@ elif mode == "修正當前進度表":
                                     pile_text = ",".join(
                                         map(str, day_data["施工樁號"])
                                     )
+
+                                    st.write(new_df)
                                 
                                     new_df.at[target_row, "施工樁號"] = pile_text
 
