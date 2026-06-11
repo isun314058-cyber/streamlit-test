@@ -2645,20 +2645,9 @@ elif mode == "修正當前進度表":
                         st.success("✅ 更改完成")
                     has_error = len(error_messages) > 0
                     
-                    # 有錯誤直接停止
-                    if has_error:
+                    if not has_error:
                     
-                        st.warning(
-                            "⚠️ 請先修正驗證錯誤後才能重新排程"
-                        )
-                    
-                    else:
-                    
-                        if (
-                            "repair_edit_df" in st.session_state
-                            and
-                            len(error_messages) == 0
-                        ):
+                        if "repair_edit_df" in st.session_state:
                     
                             st.markdown("---")
                     
