@@ -154,7 +154,8 @@ DEFAULT_STATES = {
     "processed": False,
     "original_image": None,
     "points": [],
-    "last_clicked": None
+    "last_clicked": None,
+    "canvas_key": 0
 }
 
 for key, value in DEFAULT_STATES.items():
@@ -1312,10 +1313,6 @@ if mode == "新建預定進度表":
                         )
             
                         st.rerun()
-            
-                else:
-            
-                    st.session_state.click_lock = False
         
             with right_col:
         
