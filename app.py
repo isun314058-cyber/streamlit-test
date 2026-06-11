@@ -1779,11 +1779,15 @@ if mode == "新建預定進度表":
         
                         day_text = row["施工日"].replace("Day ", "D")
 
-                        pile_list = [
-                            int(x.strip())
-                            for x in str(row["施工樁號"]).split(",")
-                            if x.strip()
-                        ]
+                        pile_list = row["施工樁號"]
+                        
+                        if isinstance(pile_list, str):
+                        
+                            pile_list = [
+                                int(x.strip())
+                                for x in pile_list.split(",")
+                                if x.strip()
+                            ]
                         
                         for pile_no in row["施工樁號"]:
         
