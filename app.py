@@ -3084,43 +3084,30 @@ elif mode == "修正當前進度表":
                             
                                 pile_font = ImageFont.truetype(
                                     "DejaVuSans.ttf",
-                                    54
+                                    18
                                 )
 
                                 day_font = ImageFont.truetype(
                                     "DejaVuSans.ttf",
-                                    42
+                                    14
                                 )
                             
                             except:
                             
                                 pile_font = ImageFont.load_default()
 
-                            EXPORT_SCALE = 4
-                            
                             LEGEND_WIDTH = 165
                             
-                            big_image = image.resize(
-                                (
-                                    image.width * EXPORT_SCALE,
-                                    image.height * EXPORT_SCALE
-                                ),
-                                Image.LANCZOS
-                            )
-                            
-                            new_width = big_image.width + (LEGEND_WIDTH * EXPORT_SCALE)
+                            new_width = image.width + LEGEND_WIDTH
                             
                             repair_result_img = Image.new(
                                 "RGB",
-                                (
-                                    new_width,
-                                    big_image.height
-                                ),
+                                (new_width, image.height),
                                 (255,255,255)
                             )
                             
                             repair_result_img.paste(
-                                big_image,
+                                image,
                                 (0,0)
                             )
                             
@@ -3148,10 +3135,6 @@ elif mode == "修正當前進度表":
                                     idx = pile_no - 1
                             
                                     x,y,r = piles[idx]
-
-                                    x *= EXPORT_SCALE
-                                    y *= EXPORT_SCALE
-                                    r *= EXPORT_SCALE
                             
                                     draw.ellipse(
                                         (
@@ -3192,7 +3175,7 @@ elif mode == "修正當前進度表":
                                     day_bbox = draw.textbbox(
                                         (0,0),
                                         day_text,
-                                        font=day_font
+                                        font=pile_font
                                     )
                                     
                                     day_width = day_bbox[2] - day_bbox[0]
@@ -3209,9 +3192,9 @@ elif mode == "修正當前進度表":
                                         stroke_fill="white"
                                     )
 
-                            legend_x = image.width + 80
+                            legend_x = image.width + 25
                             
-                            legend_y = 200
+                            legend_y = 80
 
                             draw.text(
                                 (
