@@ -3192,17 +3192,17 @@ elif mode == "修正當前進度表":
 
                                 TOTAL_SIM = 10
                                 
-                                for sim in range(10):
+                                for sim in range(TOTAL_SIM):
 
-                                        percent = int(
-                                            ((sim + 1) / TOTAL_SIM) * 100
-                                        )
-                                    
-                                        progress_bar.progress(percent)
-                                    
-                                        progress_text.markdown(
-                                            f"🤖 AI 正在重新分析最佳施工排程中，請稍候... {percent}%"
-                                        )
+                                    percent = int(
+                                        ((sim + 1) / TOTAL_SIM) * 100
+                                    )
+                                
+                                    progress_bar.progress(percent)
+                                
+                                    progress_text.markdown(
+                                        f"🤖 AI 正在重新分析最佳施工排程中，請稍候... {percent}%"
+                                    )
                                 
                                     temp_schedule = create_schedule(
                                     
