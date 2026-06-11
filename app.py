@@ -2053,7 +2053,7 @@ if mode == "新建預定進度表":
                 
                     st.image(
                         st.session_state.result_image,
-                        use_container_width=True
+                        width=850
                     )
                 
                 with right_download:
@@ -2176,9 +2176,15 @@ elif mode == "修正當前進度表":
             image = Image.open(
                 uploaded_file
             ).convert("RGB")
-        display_img = image.copy()
-
-        display_img.thumbnail((900, 650))
+        display_img = st.session_state.result_image.copy()
+        
+        display_img.thumbnail(
+            (850,650)
+        )
+        
+        st.image(
+            display_img
+        )
         scale_x = image.width / display_img.width
         scale_y = image.height / display_img.height
 
