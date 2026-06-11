@@ -1770,12 +1770,6 @@ if mode == "新建預定進度表":
                         )
         
                         day_text = row["施工日"].replace("Day ", "D")
-
-                        pile_list = [
-                            int(x.strip())
-                            for x in str(row["施工樁號"]).split(",")
-                            if x.strip()
-                        ]
         
                         for pile_no in row["施工樁號"]:
         
@@ -3004,27 +2998,27 @@ elif mode == "修正當前進度表":
                                 
                                     ]
 
-                                # colors = []
+                                colors = []
 
-                                # for _ in range(len(original_df)):
+                                for _ in range(len(original_df)):
 
-                                #     color = (
-                                #         random.randint(80, 230),
-                                #         random.randint(80, 230),
-                                #         random.randint(80, 230)
-                                #     )
+                                    color = (
+                                        random.randint(80, 230),
+                                        random.randint(80, 230),
+                                        random.randint(80, 230)
+                                    )
 
-                                #     colors.append(
-                                #         "#%02x%02x%02x" % color
-                                #     )
+                                    colors.append(
+                                        "#%02x%02x%02x" % color
+                                    )
 
                                 new_df = original_df.copy()
                                 new_df["施工樁號"] = edit_df["施工樁號"]
                                 new_df["施工數量"] = edit_df["施工數量"]
 
-                                # for idx in range(len(new_df)):
+                                for idx in range(len(new_df)):
                                 
-                                #     new_df.loc[idx, "日期顏色"] = colors[idx]
+                                    new_df.loc[idx, "日期顏色"] = colors[idx]
                                 
                                 for i, day_data in enumerate(new_schedule):
                                 
@@ -3079,6 +3073,40 @@ elif mode == "修正當前進度表":
                                     hide_index=True
                                 )
 
+                                st.subheader("🔍 平面圖輸出陣列檢查")
+                                
+                                plot_schedule = []
+                                
+                                # 已完成部分
+                                for idx,row in edit_df.iterrows():
+                                
+                                    pile_text = str(row["施工樁號"]).strip()
+                                
+                                    if pile_text == "" or pile_text.lower() == "nan":
+                                        break
+                                
+                                    pile_list = [
+                                        int(x.strip())
+                                        for x in pile_text.split(",")
+                                        if x.strip()
+                                    ]
+                                
+                                    plot_schedule.append({
+                                        "day": idx + 1,
+                                        "piles": pile_list
+                                    })
+                                
+                                # AI續排部分
+                                for day_idx,day_data in enumerate(new_schedule):
+                                
+                                    plot_schedule.append({
+                                        "day": start_day_no + day_idx,
+                                        "piles": day_data["施工樁號"]
+                                    })
+                                
+                                st.json(plot_schedule)
+
+                                
                                 repair_result_img = image.copy()
                                 
                                 draw = ImageDraw.Draw(repair_result_img)
@@ -3118,35 +3146,16 @@ elif mode == "修正當前進度表":
                                     repair_result_img
                                 )
 
-                                for day_idx, (_, row) in enumerate(repair_df.iterrows()):
+                                for day_idx,row in enumerate(new_schedule):
                                 
-                                    hex_color = str(
-                                        row["日期顏色"]
-                                    ).strip()
-                                
-                                    if (
-                                        hex_color == ""
-                                        or
-                                        hex_color.lower() == "nan"
-                                        or
-                                        not hex_color.startswith("#")
-                                        or
-                                        len(hex_color) != 7
-                                    ):
-                                        continue
+                                    hex_color = row["日期顏色"]
                                 
                                     color = tuple(
                                         int(hex_color[i:i+2],16)
                                         for i in (1,3,5)
                                     )
                                 
-                                    pile_list = [
-                                        int(x.strip())
-                                        for x in str(row["施工樁號"]).split(",")
-                                        if x.strip()
-                                    ]
-                                    
-                                    for pile_no in pile_list:
+                                    for pile_no in row["施工樁號"]:
                                 
                                         idx = pile_no - 1
                                 
@@ -3186,10 +3195,7 @@ elif mode == "修正當前進度表":
                                             font=pile_font
                                         )   
 
-                                        day_text = row["施工日"].replace(
-                                            "Day ",
-                                            "D"
-                                        )
+                                        day_text = f"D{start_day_no + day_idx}"
                                         
                                         day_bbox = draw.textbbox(
                                             (0,0),
@@ -3225,22 +3231,9 @@ elif mode == "修正當前進度表":
                                     font=pile_font
                                 )
 
-                                for day_idx, (_, row) in enumerate(repair_df.iterrows()):
+                                for day_idx,row in enumerate(new_schedule):
                                 
-                                    hex_color = str(
-                                        row["日期顏色"]
-                                    ).strip()
-                                
-                                    if (
-                                        hex_color == ""
-                                        or
-                                        hex_color.lower() == "nan"
-                                        or
-                                        not hex_color.startswith("#")
-                                        or
-                                        len(hex_color) != 7
-                                    ):
-                                        continue
+                                    hex_color = row["日期顏色"]
                                 
                                     color = tuple(
                                         int(hex_color[i:i+2],16)
