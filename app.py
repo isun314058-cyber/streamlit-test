@@ -1810,7 +1810,7 @@ if mode == "新建預定進度表":
                             
                             day_x = x - (day_width // 2)
 
-                            day_y = y + 8
+                            day_y = y + 4
 
                             draw.text(
                                 (
