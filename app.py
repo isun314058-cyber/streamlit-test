@@ -2053,19 +2053,17 @@ if mode == "新建預定進度表":
                 
                     st.image(
                         st.session_state.result_image,
-                        width=850
+                        use_container_width=True
                     )
                 
                 with right_download:
-                    st.markdown(
-                        '<div class="download-panel">',
-                        unsafe_allow_html=True
-                    )
-                    st.subheader("📥 下載圖面")
+                
+                    st.subheader("📥下載圖面")
                 
                     export_type = st.selectbox(
-                        "選擇匯出格式",
-                        ["PNG","JPG","PDF"]
+                        "格式",
+                        ["PNG","JPG","PDF"],
+                        key="export_type"
                     )
                 
                     img_buffer = io.BytesIO()
@@ -2073,45 +2071,46 @@ if mode == "新建預定進度表":
                     result_img = st.session_state.result_image
             
                     if export_type == "PNG":
-            
-                        result_img.save(img_buffer, format="PNG")
-            
+                    
+                        result_img.save(
+                            img_buffer,
+                            format="PNG"
+                        )
+                    
                         st.download_button(
-                            label="下載 PNG 圖面",
-                            data=img_buffer.getvalue(),
-                            file_name=f"{today_str}_AI智能排樁系統.png",
+                            "📥下載PNG",
+                            img_buffer.getvalue(),
+                            f"{today_str}_AI智能排樁系統.png",
                             mime="image/png",
                             use_container_width=True
                         )
-                        
+                    
                     elif export_type == "JPG":
-            
-                        rgb_img = result_img.convert("RGB")
-            
-                        rgb_img.save(img_buffer, format="JPEG")
-            
+                    
+                        result_img.convert("RGB").save(
+                            img_buffer,
+                            format="JPEG"
+                        )
+                    
                         st.download_button(
-                            label="下載 JPG 圖面",
-                            data=img_buffer.getvalue(),
-                            file_name=f"{today_str}_AI智能排樁系統.jpg",
+                            "📥下載JPG",
+                            img_buffer.getvalue(),
+                            f"{today_str}_AI智能排樁系統.jpg",
                             mime="image/jpeg",
                             use_container_width=True
                         )
-                        st.markdown(
-                            '</div>',
-                            unsafe_allow_html=True
-                        )
-            
+                    
                     else:
-            
-                        rgb_img = result_img.convert("RGB")
-            
-                        rgb_img.save(img_buffer, format="PDF")
-            
+                    
+                        result_img.convert("RGB").save(
+                            img_buffer,
+                            format="PDF"
+                        )
+                    
                         st.download_button(
-                            label="下載 PDF 圖面",
-                            data=img_buffer.getvalue(),
-                            file_name=f"{today_str}_AI智能排樁系統.pdf",
+                            "📥下載PDF",
+                            img_buffer.getvalue(),
+                            f"{today_str}_AI智能排樁系統.pdf",
                             mime="application/pdf",
                             use_container_width=True
                         )
