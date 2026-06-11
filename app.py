@@ -3084,12 +3084,12 @@ elif mode == "修正當前進度表":
                             
                                 pile_font = ImageFont.truetype(
                                     "DejaVuSans.ttf",
-                                    18
+                                    54
                                 )
 
                                 day_font = ImageFont.truetype(
                                     "DejaVuSans.ttf",
-                                    14
+                                    42
                                 )
                             
                             except:
@@ -3148,6 +3148,10 @@ elif mode == "修正當前進度表":
                                     idx = pile_no - 1
                             
                                     x,y,r = piles[idx]
+
+                                    x *= EXPORT_SCALE
+                                    y *= EXPORT_SCALE
+                                    r *= EXPORT_SCALE
                             
                                     draw.ellipse(
                                         (
@@ -3205,9 +3209,9 @@ elif mode == "修正當前進度表":
                                         stroke_fill="white"
                                     )
 
-                            legend_x = image.width + 25
+                            legend_x = image.width + 80
                             
-                            legend_y = 80
+                            legend_y = 200
 
                             draw.text(
                                 (
@@ -3347,7 +3351,7 @@ elif mode == "修正當前進度表":
                 repair_result_img.convert("RGB").save(
                     pdf_buffer,
                     format="PDF",
-                    resolution=600.0
+                    resolution=1200.0
                 )
                 
                 st.download_button(
