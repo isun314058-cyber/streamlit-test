@@ -3073,39 +3073,23 @@ elif mode == "修正當前進度表":
                                     hide_index=True
                                 )
 
-                                st.subheader("🔍 平面圖輸出陣列檢查")
+                                # =====================
+                                # 建立施工日顏色
+                                # =====================
                                 
-                                plot_schedule = []
+                                day_color_map = {}
                                 
-                                # 已完成部分
-                                for idx,row in edit_df.iterrows():
+                                for item in plot_schedule:
                                 
-                                    pile_text = str(row["施工樁號"]).strip()
+                                    color = (
+                                        random.randint(80,230),
+                                        random.randint(80,230),
+                                        random.randint(80,230)
+                                    )
                                 
-                                    if pile_text == "" or pile_text.lower() == "nan":
-                                        break
+                                    day_color_map[item["day"]] = color
                                 
-                                    pile_list = [
-                                        int(x.strip())
-                                        for x in pile_text.split(",")
-                                        if x.strip()
-                                    ]
-                                
-                                    plot_schedule.append({
-                                        "day": idx + 1,
-                                        "piles": pile_list
-                                    })
-                                
-                                # AI續排部分
-                                for day_idx,day_data in enumerate(new_schedule):
-                                
-                                    plot_schedule.append({
-                                        "day": start_day_no + day_idx,
-                                        "piles": day_data["施工樁號"]
-                                    })
-                                
-                                st.json(plot_schedule)
-
+                                st.write(day_color_map)
                                 
                                 repair_result_img = image.copy()
                                 
@@ -3146,18 +3130,18 @@ elif mode == "修正當前進度表":
                                     repair_result_img
                                 )
 
-                                for day_idx,row in enumerate(new_schedule):
+                                for item in plot_schedule:
                                 
-                                    hex_color = row["日期顏色"]
+                                    day_no = item["day"]
                                 
-                                    color = tuple(
-                                        int(hex_color[i:i+2],16)
-                                        for i in (1,3,5)
-                                    )
+                                    color = day_color_map[day_no]
                                 
-                                    for pile_no in row["施工樁號"]:
+                                    for pile_no in item["piles"]:
                                 
                                         idx = pile_no - 1
+                                
+                                        if idx >= len(piles):
+                                            continue
                                 
                                         x,y,r = piles[idx]
                                 
@@ -3176,38 +3160,36 @@ elif mode == "修正當前進度表":
                                         pile_text = str(pile_no)
                                 
                                         pile_bbox = draw.textbbox(
-                                            (0, 0),
+                                            (0,0),
                                             pile_text,
                                             font=pile_font
                                         )
                                 
                                         pile_width = pile_bbox[2] - pile_bbox[0]
                                 
-                                        pile_x = x - (pile_width // 2)
-                                
                                         draw.text(
                                             (
-                                                pile_x,
+                                                x - pile_width//2,
                                                 y - r - 25
                                             ),
                                             pile_text,
                                             fill="black",
                                             font=pile_font
-                                        )   
-
-                                        day_text = f"D{start_day_no + day_idx}"
-                                        
+                                        )
+                                
+                                        day_text = f"D{day_no}"
+                                
                                         day_bbox = draw.textbbox(
                                             (0,0),
                                             day_text,
-                                            font=pile_font
+                                            font=day_font
                                         )
-                                        
+                                
                                         day_width = day_bbox[2] - day_bbox[0]
-                                        
+                                
                                         draw.text(
                                             (
-                                                x - day_width // 2,
+                                                x - day_width//2,
                                                 y + r + 8
                                             ),
                                             day_text,
@@ -3217,28 +3199,9 @@ elif mode == "修正當前進度表":
                                             stroke_fill="white"
                                         )
 
-                                legend_x = image.width + 25
+                                for idx,item in enumerate(plot_schedule):
                                 
-                                legend_y = 80
-
-                                draw.text(
-                                    (
-                                        legend_x,
-                                        legend_y - 35
-                                    ),
-                                    "施工日圖例",
-                                    fill="black",
-                                    font=pile_font
-                                )
-
-                                for day_idx,row in enumerate(new_schedule):
-                                
-                                    hex_color = row["日期顏色"]
-                                
-                                    color = tuple(
-                                        int(hex_color[i:i+2],16)
-                                        for i in (1,3,5)
-                                    )
+                                    color = day_color_map[item["day"]]
                                 
                                     yy = legend_y + day_idx * 30
                                 
@@ -3258,7 +3221,7 @@ elif mode == "修正當前進度表":
                                             legend_x+35,
                                             yy
                                         ),
-                                        f"D{start_day_no + day_idx}",
+                                        f"D{item['day']}",
                                         fill="black",
                                         font=pile_font
                                     )
