@@ -52,6 +52,7 @@ h1,h2,h3,h4,h5,h6,p,span,label{
     color:#ffffff;
     padding:14px;
     text-align:center;
+    vertical-align:middle;
     border:1px solid #2d3b55;
     position:sticky;
     top:0;
@@ -2019,7 +2020,20 @@ if mode == "新建預定進度表":
 
                     display_df["日期顏色"] = display_df["日期顏色"].apply(
                         lambda c:
-                        f'<div style="background:{c}; width:80px; height:28px; border-radius:6px;"></div>'
+                        f'''
+                        <div style="
+                            display:flex;
+                            justify-content:center;
+                            align-items:center;
+                        ">
+                            <div style="
+                                background:{c};
+                                width:80px;
+                                height:28px;
+                                border-radius:6px;
+                            "></div>
+                        </div>
+                        '''
                     )
             
                     display_df = display_df[
