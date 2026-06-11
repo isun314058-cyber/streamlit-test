@@ -3022,9 +3022,9 @@ elif mode == "修正當前進度表":
                                 new_df["施工樁號"] = edit_df["施工樁號"]
                                 new_df["施工數量"] = edit_df["施工數量"]
 
-                                for idx in range(len(new_df)):
+                                # for idx in range(len(new_df)):
                                 
-                                    new_df.loc[idx, "日期顏色"] = colors[idx]
+                                #     new_df.loc[idx, "日期顏色"] = colors[idx]
                                 
                                 for i, day_data in enumerate(new_schedule):
                                 
