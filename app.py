@@ -154,7 +154,8 @@ DEFAULT_STATES = {
     "processed": False,
     "original_image": None,
     "points": [],
-    "last_clicked": None
+    "last_clicked": None,
+    "click_lock": False
 }
 
 for key, value in DEFAULT_STATES.items():
@@ -1209,8 +1210,12 @@ if mode == "新建預定進度表":
         
             left_col, right_col = st.columns([5, 1.3])
         
-            preview_canvas = canvas_bg.copy()
-        
+            if "preview_canvas" not in st.session_state:
+            
+                st.session_state.preview_canvas = canvas_bg.copy()
+            
+            preview_canvas = st.session_state.preview_canvas.copy()
+            
             draw_preview = ImageDraw.Draw(preview_canvas)
         
             for idx, point in enumerate(st.session_state.points):
@@ -1272,42 +1277,54 @@ if mode == "新建預定進度表":
         
                 coords = streamlit_image_coordinates(
                     preview_canvas,
-                    key=f"pile_roi_selector_{len(st.session_state.points)}"
+                    key="pile_roi_selector"
                 )
         
             if coords is not None:
-        
+            
                 clicked_point = (
-                    coords["x"],
-                    coords["y"]
+                    int(coords["x"]),
+                    int(coords["y"])
                 )
-        
-                if st.session_state.last_clicked != clicked_point:
-        
-                    st.session_state.last_clicked = clicked_point
-        
-                    duplicated = False
-        
-                    for old_point in st.session_state.points:
-        
-                        dist = (
-                            (clicked_point[0] - old_point[0]) ** 2
-                            +
-                            (clicked_point[1] - old_point[1]) ** 2
-                        ) ** 0.5
-        
-                        if dist < 10:
-                            duplicated = True
-                            break
-        
-                    if (
-                        not duplicated
-                        and len(st.session_state.points) < 4
-                    ):
-        
-                        st.session_state.points.append(clicked_point)
-        
-                        st.rerun()
+            
+                if not st.session_state.click_lock:
+            
+                    st.session_state.click_lock = True
+            
+                    if st.session_state.last_clicked != clicked_point:
+            
+                        st.session_state.last_clicked = clicked_point
+            
+                        duplicated = False
+            
+                        for old_point in st.session_state.points:
+            
+                            dist = (
+                                (clicked_point[0] - old_point[0]) ** 2
+                                +
+                                (clicked_point[1] - old_point[1]) ** 2
+                            ) ** 0.5
+            
+                            if dist < 10:
+                                duplicated = True
+                                break
+            
+                        if (
+                            not duplicated
+                            and len(st.session_state.points) < 4
+                        ):
+            
+                            st.session_state.points.append(
+                                clicked_point
+                            )
+            
+                            st.toast(
+                                f"已記錄第 {len(st.session_state.points)} 個點"
+                            )
+            
+                else:
+            
+                    st.session_state.click_lock = False
         
             with right_col:
         
