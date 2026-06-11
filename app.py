@@ -2716,6 +2716,11 @@ elif mode == "修正當前進度表":
                                             "施工樁號": pile_list
                                 
                                         })
+
+                                        st.write(
+                                            row["施工日"],
+                                            pile_list
+                                        )
                                 
                                         completed_piles.extend(
                                             pile_list
