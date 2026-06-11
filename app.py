@@ -2653,11 +2653,7 @@ elif mode == "修正當前進度表":
                                 first_empty_index = None
                                 
                                 for idx,row in edit_df.iterrows():
-                                
-                                    pile_text = str(
-                                        row["施工樁號"]
-                                    ).strip()
-                                
+                            
                                     if (
                                         pile_text == ""
                                         or pile_text.lower() == "nan"
@@ -2665,7 +2661,7 @@ elif mode == "修正當前進度表":
                                 
                                         first_empty_index = idx
                                 
-                                        break
+                                        continue
 
                                 if first_empty_index is None:
                                 
