@@ -2052,7 +2052,7 @@ if mode == "新建預定進度表":
                 
                     st.image(
                         st.session_state.result_image,
-                        use_container_width=True
+                        width=1000
                     )
                 
                 with right_download:
