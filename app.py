@@ -2644,13 +2644,6 @@ elif mode == "修正當前進度表":
                                 "🚀重新產出排程",
                                 use_container_width=True
                             ):
-                                progress_text = st.empty()
-                                
-                                progress_bar = st.progress(0)
-                                
-                                progress_text.markdown(
-                                    "🤖 AI 正在重新分析最佳施工排程中，請稍候... 0%"
-                                )
                         
                                 edit_df = st.session_state.repair_edit_df
                                 
@@ -2732,6 +2725,20 @@ elif mode == "修正當前進度表":
                                     for p in remaining_piles
                                     if p not in st.session_state.excluded_piles
                                 ]
+
+                                if len(remaining_piles) == 0:
+                                
+                                    st.error("全部樁號都已排入施工日，沒有可續排的樁號")
+                                
+                                    st.stop()
+
+                                progress_text = st.empty()
+                                
+                                progress_bar = st.progress(0)
+                                
+                                progress_text.markdown(
+                                    "🤖 AI 正在重新分析最佳施工排程中，請稍候... 0%"
+                                )
 
                                 remaining_positions = [
                                     piles[p-1]
