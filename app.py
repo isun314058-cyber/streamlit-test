@@ -2998,27 +2998,7 @@ elif mode == "修正當前進度表":
                                 
                                     ]
 
-                                colors = []
-
-                                for _ in range(len(original_df)):
-
-                                    color = (
-                                        random.randint(80, 230),
-                                        random.randint(80, 230),
-                                        random.randint(80, 230)
-                                    )
-
-                                    colors.append(
-                                        "#%02x%02x%02x" % color
-                                    )
-
                                 new_df = original_df.copy()
-                                new_df["施工樁號"] = edit_df["施工樁號"]
-                                new_df["施工數量"] = edit_df["施工數量"]
-
-                                for idx in range(len(new_df)):
-                                
-                                    new_df.loc[idx, "日期顏色"] = colors[idx]
                                 
                                 for i, day_data in enumerate(new_schedule):
                                 
@@ -3076,6 +3056,34 @@ elif mode == "修正當前進度表":
                                 
                                 draw = ImageDraw.Draw(repair_result_img)
 
+                                full_schedule = repair_df.copy()
+
+                                import random
+                                
+                                new_colors = []
+                                
+                                for _ in range(len(full_schedule)):
+                                
+                                    color = (
+                                        random.randint(80,230),
+                                        random.randint(80,230),
+                                        random.randint(80,230)
+                                    )
+                                
+                                    new_colors.append(
+                                        '#%02x%02x%02x' % color
+                                    )
+                                
+                                full_schedule["日期顏色"] = new_colors
+
+                                st.session_state.repair_schedule_df = full_schedule.copy()
+                                
+                                full_schedule["日期顏色"] = (
+                                    full_schedule["日期顏色"]
+                                    .fillna("")
+                                    .astype(str)
+                                )
+
                                 try:
                                 
                                     pile_font = ImageFont.truetype(
@@ -3111,18 +3119,35 @@ elif mode == "修正當前進度表":
                                     repair_result_img
                                 )
 
-                                for day_idx,row in enumerate(new_schedule):
+                                for _, row in full_schedule.iterrows():
                                 
-                                    hex_color = row["日期顏色"]
+                                    hex_color = str(row["日期顏色"])
+                                
+                                    if hex_color == "":
+                                        continue
                                 
                                     color = tuple(
                                         int(hex_color[i:i+2],16)
                                         for i in (1,3,5)
                                     )
                                 
-                                    for pile_no in row["施工樁號"]:
+                                    pile_list = [
+                                        int(x.strip())
+                                        for x in str(row["施工樁號"]).split(",")
+                                        if x.strip()
+                                    ]
+                                
+                                    day_text = str(row["施工日"]).replace(
+                                        "Day ",
+                                        "D"
+                                    )
+                                
+                                    for pile_no in pile_list:
                                 
                                         idx = pile_no - 1
+                                
+                                        if idx >= len(piles):
+                                            continue
                                 
                                         x,y,r = piles[idx]
                                 
@@ -3141,38 +3166,34 @@ elif mode == "修正當前進度表":
                                         pile_text = str(pile_no)
                                 
                                         pile_bbox = draw.textbbox(
-                                            (0, 0),
+                                            (0,0),
                                             pile_text,
                                             font=pile_font
                                         )
                                 
                                         pile_width = pile_bbox[2] - pile_bbox[0]
                                 
-                                        pile_x = x - (pile_width // 2)
-                                
                                         draw.text(
                                             (
-                                                pile_x,
+                                                x - pile_width//2,
                                                 y - r - 25
                                             ),
                                             pile_text,
                                             fill="black",
                                             font=pile_font
-                                        )   
-
-                                        day_text = f"D{start_day_no + day_idx}"
-                                        
+                                        )
+                                
                                         day_bbox = draw.textbbox(
                                             (0,0),
                                             day_text,
-                                            font=pile_font
+                                            font=day_font
                                         )
-                                        
+                                
                                         day_width = day_bbox[2] - day_bbox[0]
-                                        
+                                
                                         draw.text(
                                             (
-                                                x - day_width // 2,
+                                                x - day_width//2,
                                                 y + r + 8
                                             ),
                                             day_text,
@@ -3186,6 +3207,21 @@ elif mode == "修正當前進度表":
                                 
                                 legend_y = 80
 
+                                legend_height = (
+                                    len(full_schedule) * 32
+                                ) + 10
+                                
+                                draw.rectangle(
+                                    (
+                                        legend_x - 20,
+                                        legend_y - 10,
+                                        legend_x + 125,
+                                        legend_y + legend_height
+                                    ),
+                                    outline="black",
+                                    width=2
+                                )
+
                                 draw.text(
                                     (
                                         legend_x,
@@ -3196,16 +3232,23 @@ elif mode == "修正當前進度表":
                                     font=pile_font
                                 )
 
-                                for day_idx,row in enumerate(new_schedule):
+                                for idx,row in full_schedule.iterrows():
                                 
-                                    hex_color = row["日期顏色"]
-                                
+                                    hex_color = str(row["日期顏色"])
+                                    
+                                    if (
+                                        hex_color == ""
+                                        or
+                                        hex_color.lower() == "nan"
+                                    ):
+                                        continue
+
                                     color = tuple(
                                         int(hex_color[i:i+2],16)
                                         for i in (1,3,5)
                                     )
                                 
-                                    yy = legend_y + day_idx * 30
+                                    yy = legend_y + idx * 30
                                 
                                     draw.rectangle(
                                         (
@@ -3223,7 +3266,10 @@ elif mode == "修正當前進度表":
                                             legend_x+35,
                                             yy
                                         ),
-                                        f"D{start_day_no + day_idx}",
+                                        row["施工日"].replace(
+                                            "Day ",
+                                            "D"
+                                        ),
                                         fill="black",
                                         font=pile_font
                                     )
