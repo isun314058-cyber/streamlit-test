@@ -2999,6 +2999,20 @@ elif mode == "修正當前進度表":
                                 
                                     ]
 
+                                colors = []
+
+                                for _ in range(len(original_df)):
+
+                                    color = (
+                                        random.randint(80, 230),
+                                        random.randint(80, 230),
+                                        random.randint(80, 230)
+                                    )
+
+                                    colors.append(
+                                        "#%02x%02x%02x" % color
+                                    )
+
                                 new_df = original_df.copy()
                                 new_df["施工樁號"] = edit_df["施工樁號"]
                                 new_df["施工數量"] = edit_df["施工數量"]
