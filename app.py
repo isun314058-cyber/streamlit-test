@@ -2644,7 +2644,6 @@ elif mode == "修正當前進度表":
                                 "🚀重新產出排程",
                                 use_container_width=True
                             ):
-                        
                                 edit_df = st.session_state.repair_edit_df
                                 
                                 completed_piles = []
