@@ -3112,7 +3112,7 @@ elif mode == "修正當前進度表":
                                     repair_result_img
                                 )
 
-                                for day_idx,row in enumerate(new_schedule):
+                                for day_idx, (_, row) in enumerate(plot_schedule.iterrows()):
                                 
                                     hex_color = row["日期顏色"]
                                 
@@ -3197,7 +3197,7 @@ elif mode == "修正當前進度表":
                                     font=pile_font
                                 )
 
-                                for day_idx,row in enumerate(new_schedule):
+                                for day_idx, (_, row) in enumerate(plot_schedule.iterrows()):
                                 
                                     hex_color = row["日期顏色"]
                                 
