@@ -3301,7 +3301,7 @@ elif mode == "修正當前進度表":
                     st.download_button(
                         "🖼️下載PNG",
                         png_buffer.getvalue(),
-                        "repair_schedule.png",
+                        f"{today_str}_續排施工計畫.png",
                         use_container_width=True
                     )
     
@@ -3315,7 +3315,7 @@ elif mode == "修正當前進度表":
                     st.download_button(
                         "🖼️下載JPG",
                         jpg_buffer.getvalue(),
-                        "repair_schedule.jpg",
+                         f"{today_str}_續排施工計畫.jpg",
                         use_container_width=True
                     )
     
@@ -3330,6 +3330,6 @@ elif mode == "修正當前進度表":
                     st.download_button(
                         "📄下載PDF",
                         pdf_buffer.getvalue(),
-                        "repair_schedule.pdf",
+                         f"{today_str}_續排施工計畫.pdf",
                         use_container_width=True
                     )
