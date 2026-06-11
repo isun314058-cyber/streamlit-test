@@ -3072,6 +3072,41 @@ elif mode == "修正當前進度表":
                                     use_container_width=True,
                                     hide_index=True
                                 )
+
+                                st.subheader("🔍 平面圖輸出陣列檢查")
+                                
+                                plot_schedule = []
+                                
+                                # 已完成部分
+                                for idx,row in edit_df.iterrows():
+                                
+                                    pile_text = str(row["施工樁號"]).strip()
+                                
+                                    if pile_text == "" or pile_text.lower() == "nan":
+                                        break
+                                
+                                    pile_list = [
+                                        int(x.strip())
+                                        for x in pile_text.split(",")
+                                        if x.strip()
+                                    ]
+                                
+                                    plot_schedule.append({
+                                        "day": idx + 1,
+                                        "piles": pile_list
+                                    })
+                                
+                                # AI續排部分
+                                for day_idx,day_data in enumerate(new_schedule):
+                                
+                                    plot_schedule.append({
+                                        "day": start_day_no + day_idx,
+                                        "piles": day_data["施工樁號"]
+                                    })
+                                
+                                st.json(plot_schedule)
+
+                                
                                 repair_result_img = image.copy()
                                 
                                 draw = ImageDraw.Draw(repair_result_img)
