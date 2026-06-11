@@ -3136,7 +3136,21 @@ elif mode == "修正當前進度表":
                                 
                                 display_df["日期顏色"] = display_df["日期顏色"].apply(
                                     lambda c:
-                                    f'<div style="background:{c}; width:80px; height:28px; border-radius:6px;"></div>'
+                                    f'''
+                                    <div style="
+                                        width:100%;
+                                        text-align:center;
+                                    ">
+                                        <div style="
+                                            background:{c};
+                                            width:80px;
+                                            height:28px;
+                                            border-radius:6px;
+                                            margin:auto;
+                                        ">
+                                        </div>
+                                    </div>
+                                    '''
                                 )
                                 
                                 display_df = display_df[
