@@ -3018,13 +3018,13 @@ elif mode == "修正當前進度表":
                                 #         "#%02x%02x%02x" % color
                                 #     )
 
-                                # new_df = original_df.copy()
-                                # new_df["施工樁號"] = edit_df["施工樁號"]
-                                # new_df["施工數量"] = edit_df["施工數量"]
+                                new_df = original_df.copy()
+                                new_df["施工樁號"] = edit_df["施工樁號"]
+                                new_df["施工數量"] = edit_df["施工數量"]
 
-                                # for idx in range(len(new_df)):
+                                for idx in range(len(new_df)):
                                 
-                                #     new_df.loc[idx, "日期顏色"] = colors[idx]
+                                    new_df.loc[idx, "日期顏色"] = colors[idx]
                                 
                                 for i, day_data in enumerate(new_schedule):
                                 
@@ -3212,7 +3212,7 @@ elif mode == "修正當前進度表":
                                     font=pile_font
                                 )
 
-                                for _, row in repair_df.iterrows():
+                                for day_idx, (_, row) in enumerate(repair_df.iterrows()):
                                 
                                     hex_color = row["日期顏色"]
                                 
