@@ -2685,8 +2685,6 @@ elif mode == "修正當前進度表":
                                     )
                                 
                                     st.stop()
-                                
-                                st.subheader("🚀 重新排程")
                             
                                 edit_df = st.session_state.repair_edit_df
                                 
