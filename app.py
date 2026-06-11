@@ -63,16 +63,18 @@ h1,h2,h3,h4,h5,h6,p,span,label{
     padding:12px;
     border:1px solid #2d3b55;
     vertical-align:middle;
-    .schedule-table td,
-    .schedule-table th{
-        text-align:center;
-    }
-    
-    /* 施工樁號欄位靠左 */
-    .schedule-table td:nth-child(5){
-        text-align:left !important;
-        padding-left:20px;
-    }
+}
+
+/* 全部欄位預設置中 */
+.schedule-table th,
+.schedule-table td{
+    text-align:center;
+}
+
+/* 第5欄(施工樁號)靠左 */
+.schedule-table td:nth-child(5){
+    text-align:left !important;
+    padding-left:20px !important;
 }
 
 .schedule-table tr:nth-child(even){
