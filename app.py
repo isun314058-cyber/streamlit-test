@@ -3053,13 +3053,34 @@ elif mode == "修正當前進度表":
                                 
                                     target_row = first_empty_index + i
                                 
+                                    # 超出原Excel天數
                                     if target_row >= len(new_df):
-                                    
-                                        st.warning(
-                                            "Excel施工日不足，部分續排資料未寫入"
+                                
+                                        last_date = pd.to_datetime(
+                                            new_df.iloc[-1]["日期"]
                                         )
-                                    
-                                        break
+                                
+                                        new_row = {
+                                            "施工日": f"Day {target_row+1}",
+                                            "日期": (
+                                                last_date
+                                                +
+                                                pd.Timedelta(
+                                                    days=target_row-len(new_df)+1
+                                                )
+                                            ).strftime("%Y-%m-%d"),
+                                            "日期顏色": "",
+                                            "施工數量": "",
+                                            "施工樁號": ""
+                                        }
+                                
+                                        new_df = pd.concat(
+                                            [
+                                                new_df,
+                                                pd.DataFrame([new_row])
+                                            ],
+                                            ignore_index=True
+                                        )
                                 
                                     pile_text = ",".join(
                                         map(str, day_data["施工樁號"])
