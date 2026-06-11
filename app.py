@@ -1485,10 +1485,12 @@ if mode == "新建預定進度表":
                     best_total_score = -999999
                     
                     backup_schedule = None
+
+                    TOTAL_SIM = 10
                     
                     # AI 多次模擬
-                    for sim in range(10):
-                        percent = int(((sim + 1) / 10) * 100)
+                    for sim in range(TOTAL_SIM):
+                        percent = int(((sim + 1) / TOTAL_SIM) * 100)
                 
                         progress_bar.progress(percent)
                 
@@ -1754,7 +1756,7 @@ if mode == "新建預定進度表":
                             28
                         )
                     
-                        st.success("✅ 字型載入成功")
+                        with st.spinner("🎨 正在產生施工圖..."):
                     
                     except Exception as e:
                     
@@ -1925,8 +1927,8 @@ if mode == "新建預定進度表":
         
                     st.session_state.result_image = result_img
                     st.session_state.processed = True
-        
-                    st.rerun()
+                    
+                    st.success("✅ AI排程完成")
 
             if st.session_state.processed:
             
@@ -2992,10 +2994,6 @@ elif mode == "修正當前進度表":
                             progress_text.markdown(
                                 "🤖 AI 正在重新分析最佳施工排程中，請稍候... 100%"
                             )
-                            
-                            import time
-                            
-                            time.sleep(0.3)
                             
                             progress_bar.empty()
                             
