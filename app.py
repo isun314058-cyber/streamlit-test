@@ -1375,9 +1375,6 @@ if mode == "新建預定進度表":
                         FONT_NAME,
                         18
                     )
-                
-                    st.success("AI辨識結果字體載入成功")
-                
                 except Exception as e:
                 
                     st.error(f"AI辨識結果字體失敗: {e}")
