@@ -2597,30 +2597,7 @@ elif mode == "修正當前進度表":
                         st.session_state.repair_excel_name = excel_file.name
                     
                         st.session_state.repair_edit_df = editor_df.copy()
-
-                    st.markdown("""
-                    <style>
-                    
-                    /* 修正模式 DataEditor */
-                    
-                    [data-testid="stDataEditor"] table{
-                        text-align:center !important;
-                    }
-                    
-                    [data-testid="stDataEditor"] th{
-                        text-align:center !important;
-                        background:#132238 !important;
-                        color:white !important;
-                        font-weight:bold !important;
-                    }
-                    
-                    [data-testid="stDataEditor"] td{
-                        text-align:center !important;
-                    }
-                    
-                    </style>
-                    """, unsafe_allow_html=True)
-                    
+                        
                     edited_df = st.data_editor(
                     
                         st.session_state.repair_edit_df,
@@ -3122,55 +3099,28 @@ elif mode == "修正當前進度表":
                                 ].reset_index(drop=True)
     
                                 st.session_state.repair_schedule_df = new_df
+                            
+                                st.success("✅ AI續排完成")
                                 
-                                repair_df = new_df.copy()
+                                repair_df = st.session_state.repair_schedule_df.copy()
                                 
-                                display_df = repair_df.copy()
-                                
-                                display_df["日期顏色"] = display_df["日期顏色"].apply(
-                                    lambda c:
-                                    f'''
-                                    <div style="
-                                        background:{c};
-                                        width:80px;
-                                        height:28px;
-                                        border-radius:6px;
-                                        margin:auto;
-                                    ">
-                                    </div>
-                                    '''
+                                repair_df["施工數量"] = repair_df["施工樁號"].apply(
+                                    lambda x:
+                                    len([
+                                        p for p in str(x).split(",")
+                                        if p.strip()
+                                    ])
+                                    if pd.notna(x)
+                                    else 0
                                 )
+                                repair_df = repair_df[
+                                    repair_df["施工數量"] > 0
+                                ].reset_index(drop=True)
                                 
-                                display_df = display_df[
-                                    [
-                                        "施工日",
-                                        "日期",
-                                        "日期顏色",
-                                        "施工數量",
-                                        "施工樁號"
-                                    ]
-                                ]
-                                
-                                st.markdown(
-                                    f"""
-                                    <div style="
-                                        width:100%;
-                                        overflow-x:auto;
-                                        overflow-y:auto;
-                                        max-height:650px;
-                                        border:1px solid #333;
-                                        border-radius:12px;
-                                        padding:10px;
-                                        background:#071225;
-                                    ">
-                                        {display_df.to_html(
-                                            escape=False,
-                                            index=False,
-                                            classes="schedule-table"
-                                        )}
-                                    </div>
-                                    """,
-                                    unsafe_allow_html=True
+                                st.dataframe(
+                                    repair_df,
+                                    use_container_width=True,
+                                    hide_index=True
                                 )
     
                                 repair_result_img = image.copy()
@@ -3346,46 +3296,6 @@ elif mode == "修正當前進度表":
                 st.error(f"Excel讀取失敗：{e}")
                 
             if st.session_state.get("repair_finished", False):
-            
-                repair_df = st.session_state.repair_schedule_df
-            
-                display_df = repair_df.copy()
-                
-                display_df["日期顏色"] = display_df["日期顏色"].apply(
-                    lambda c:
-                    f'''
-                    <div style="
-                        background:{c};
-                        width:80px;
-                        height:28px;
-                        border-radius:6px;
-                        margin:auto;
-                    ">
-                    </div>
-                    '''
-                )
-                
-                st.markdown(
-                    f"""
-                    <div style="
-                        width:100%;
-                        overflow-x:auto;
-                        overflow-y:auto;
-                        max-height:650px;
-                        border:1px solid #333;
-                        border-radius:12px;
-                        padding:10px;
-                        background:#071225;
-                    ">
-                        {display_df.to_html(
-                            escape=False,
-                            index=False,
-                            classes="schedule-table"
-                        )}
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
             
                 repair_df = st.session_state.repair_schedule_df
             
