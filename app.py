@@ -61,7 +61,7 @@ h1,h2,h3,h4,h5,h6,p,span,label{
 .schedule-table td{
     padding:12px;
     border:1px solid #2d3b55;
-    vertical-align:top;
+    vertical-align:middle;
     text-align:center;
 }
 
