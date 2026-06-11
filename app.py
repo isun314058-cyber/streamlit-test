@@ -3189,8 +3189,20 @@ elif mode == "修正當前進度表":
                                 best_total_score = -999999
 
                                 backup_schedule = None
+
+                                TOTAL_SIM = 10
                                 
                                 for sim in range(10):
+
+                                        percent = int(
+                                            ((sim + 1) / TOTAL_SIM) * 100
+                                        )
+                                    
+                                        progress_bar.progress(percent)
+                                    
+                                        progress_text.markdown(
+                                            f"🤖 AI 正在重新分析最佳施工排程中，請稍候... {percent}%"
+                                        )
                                 
                                     temp_schedule = create_schedule(
                                     
@@ -3379,6 +3391,22 @@ elif mode == "修正當前進度表":
                                 if best_schedule is None:
                                 
                                     best_schedule = backup_schedule
+
+                                progress_bar.progress(100)
+                                
+                                progress_text.markdown(
+                                    "🤖 AI 正在重新分析最佳施工排程中，請稍候... 100%"
+                                )
+                                
+                                import time
+                                
+                                time.sleep(0.3)
+                                
+                                progress_bar.empty()
+                                
+                                progress_text.empty()
+                                
+                                st.success("✅ AI續排完成")
                                 
                                 # ==================================
                                 # 轉回原始樁號
