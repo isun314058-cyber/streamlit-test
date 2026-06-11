@@ -1978,7 +1978,7 @@ if mode == "新建預定進度表":
                         st.download_button(
                             "📊下載Excel",
                             excel_buffer.getvalue(),
-                            file_name=f"AI智能排樁系統_{today_str}.xlsx",
+                            file_name=f"{today_str}_AI智能排樁系統.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                             use_container_width=True
                         )
@@ -2072,7 +2072,7 @@ if mode == "新建預定進度表":
                         st.download_button(
                             label="下載 PNG 圖面",
                             data=img_buffer.getvalue(),
-                            file_name=f"AI智能排樁系統_{today_str}.png",
+                            file_name=f"{today_str}_AI智能排樁系統.png",
                             mime="image/png",
                             use_container_width=True
                         )
@@ -2086,7 +2086,7 @@ if mode == "新建預定進度表":
                         st.download_button(
                             label="下載 JPG 圖面",
                             data=img_buffer.getvalue(),
-                            file_name=f"AI智能排樁系統_{today_str}.jpg",
+                            file_name=f"{today_str}_AI智能排樁系統.jpg",
                             mime="image/jpeg",
                             use_container_width=True
                         )
@@ -2104,7 +2104,7 @@ if mode == "新建預定進度表":
                         st.download_button(
                             label="下載 PDF 圖面",
                             data=img_buffer.getvalue(),
-                            file_name=f"AI智能排樁系統_{today_str}.pdf",
+                            file_name=f"{today_str}_AI智能排樁系統.pdf",
                             mime="application/pdf",
                             use_container_width=True
                         )
@@ -3287,7 +3287,7 @@ elif mode == "修正當前進度表":
                     st.download_button(
                         "📊下載續排Excel",
                         excel_buffer.getvalue(),
-                        f"{today_str}_續排施工計畫.xlsx",
+                        f"{today_str}_AI智能排樁系統.xlsx",
                         use_container_width=True
                     )
     
@@ -3301,7 +3301,7 @@ elif mode == "修正當前進度表":
                     st.download_button(
                         "🖼️下載PNG",
                         png_buffer.getvalue(),
-                        f"{today_str}_續排施工計畫.png",
+                        f"{today_str}_AI智能排樁系統.png",
                         use_container_width=True
                     )
     
@@ -3315,7 +3315,7 @@ elif mode == "修正當前進度表":
                     st.download_button(
                         "🖼️下載JPG",
                         jpg_buffer.getvalue(),
-                         f"{today_str}_續排施工計畫.jpg",
+                         f"{today_str}_AI智能排樁系統.jpg",
                         use_container_width=True
                     )
     
@@ -3330,6 +3330,6 @@ elif mode == "修正當前進度表":
                     st.download_button(
                         "📄下載PDF",
                         pdf_buffer.getvalue(),
-                         f"{today_str}_續排施工計畫.pdf",
+                         f"{today_str}_AI智能排樁系統.pdf",
                         use_container_width=True
                     )
