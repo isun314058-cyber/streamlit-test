@@ -61,28 +61,8 @@ h1,h2,h3,h4,h5,h6,p,span,label{
 .schedule-table td{
     padding:12px;
     border:1px solid #2d3b55;
-    vertical-align:middle !important;
-    text-align:center !important;
-    white-space:normal !important;
-}
-
-.schedule-table th{
-    background:#132238;
-    color:#ffffff;
-    padding:14px;
-    text-align:center !important;
-    border:1px solid #2d3b55;
-}
-
-.schedule-table td:nth-child(5){
-    text-align:center !important;
-}
-
-.schedule-table td:nth-child(1),
-.schedule-table td:nth-child(2),
-.schedule-table td:nth-child(3),
-.schedule-table td:nth-child(4){
-    text-align:center !important;
+    vertical-align:top;
+    text-align:center;
 }
 
 .schedule-table tr:nth-child(even){
@@ -2067,8 +2047,7 @@ if mode == "新建預定進度表":
                             {display_df.to_html(
                                 escape=False,
                                 index=False,
-                                classes="schedule-table",
-                                justify="center"
+                                classes="schedule-table"
                             )}
                         </div>
                         """,
