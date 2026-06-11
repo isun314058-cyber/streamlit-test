@@ -2019,21 +2019,7 @@ if mode == "新建預定進度表":
                         display_df = display_df.drop(columns=["RGB"])
 
                     display_df["日期顏色"] = display_df["日期顏色"].apply(
-                        lambda c:
-                        f'''
-                        <div style="
-                            display:flex;
-                            justify-content:center;
-                            align-items:center;
-                        ">
-                            <div style="
-                                background:{c};
-                                width:80px;
-                                height:28px;
-                                border-radius:6px;
-                            "></div>
-                        </div>
-                        '''
+                        lambda c: f'<div style="background:{c};width:80px;height:28px;border-radius:6px;margin:auto;"></div>'
                     )
             
                     display_df = display_df[
@@ -3135,22 +3121,7 @@ elif mode == "修正當前進度表":
                                 display_df = repair_df.copy()
                                 
                                 display_df["日期顏色"] = display_df["日期顏色"].apply(
-                                    lambda c:
-                                    f'''
-                                    <div style="
-                                        width:100%;
-                                        text-align:center;
-                                    ">
-                                        <div style="
-                                            background:{c};
-                                            width:80px;
-                                            height:28px;
-                                            border-radius:6px;
-                                            margin:auto;
-                                        ">
-                                        </div>
-                                    </div>
-                                    '''
+                                    lambda c: f'<div style="background:{c}; width:80px; height:28px; border-radius:6px; margin:auto;"></div>'
                                 )
                                 
                                 display_df = display_df[
