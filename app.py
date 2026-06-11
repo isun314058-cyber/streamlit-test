@@ -3183,7 +3183,7 @@ elif mode == "修正當前進度表":
                                     draw.text(
                                         (
                                             x - day_width // 2,
-                                            y + r + 5
+                                            y + r + 4
                                         ),
                                         day_text,
                                         fill="black",
