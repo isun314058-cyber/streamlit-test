@@ -1756,8 +1756,6 @@ if mode == "新建預定進度表":
                             28
                         )
                     
-                        with st.spinner("🎨 正在產生施工圖..."):
-                    
                     except Exception as e:
                     
                         st.error(f"❌ 字型失敗: {e}")
@@ -1767,168 +1765,168 @@ if mode == "新建預定進度表":
                         pile_font = ImageFont.load_default()
                     
                         legend_font = ImageFont.load_default()
-        
-                    for i, row in df.iterrows():
-        
-                        hex_color = row["日期顏色"]
-        
-                        color = tuple(
-                        
-                            int(hex_color[i:i+2], 16)
-                        
-                            for i in (1, 3, 5)
-                        )
-        
-                        day_text = row["施工日"].replace("Day ", "D")
-
-                        pile_list = row["施工樁號"]
-                        
-                        if isinstance(pile_list, str):
-                        
-                            pile_list = [
-                                int(x.strip())
-                                for x in pile_list.split(",")
-                                if x.strip()
-                            ]
-                        
-                        for pile_no in row["施工樁號"]:
-        
-                            idx = pile_no - 1
-        
-                            if idx >= len(pile_positions):
-                                continue
-        
-                            x, y, r = pile_positions[idx]
-        
-                            rr = int(r * 0.85)
-        
-                            draw.ellipse(
-                                (
-                                    x - rr,
-                                    y - rr,
-                                    x + rr,
-                                    y + rr
-                                ),
-                                fill=color,
-                                outline="black",
-                                width=1
+                    with st.spinner("🎨 正在產生施工圖..."):
+                        for i, row in df.iterrows():
+            
+                            hex_color = row["日期顏色"]
+            
+                            color = tuple(
+                            
+                                int(hex_color[i:i+2], 16)
+                            
+                                for i in (1, 3, 5)
                             )
+            
+                            day_text = row["施工日"].replace("Day ", "D")
+    
+                            pile_list = row["施工樁號"]
                             
-                            day_bbox = draw.textbbox(
-                                (0, 0),
-                                day_text,
-                                font=day_font
-                            )
+                            if isinstance(pile_list, str):
                             
-                            day_width = day_bbox[2] - day_bbox[0]
+                                pile_list = [
+                                    int(x.strip())
+                                    for x in pile_list.split(",")
+                                    if x.strip()
+                                ]
                             
-                            day_x = x - (day_width // 2)
-
-                            day_y = y + 14
-
-                            draw.text(
-                                (
-                                    day_x,
-                                    day_y
-                                ),
-                                day_text,
-                                fill="black",
-                                font=day_font,
-                                stroke_width=2,
-                                stroke_fill="white"
-                            )
-
-                            pile_text = str(pile_no)
-                            
-                            pile_bbox = draw.textbbox(
-                                (0, 0),
-                                pile_text,
-                                font=pile_font
-                            )
-                            
-                            pile_width = pile_bbox[2] - pile_bbox[0]
-                            pile_height = pile_bbox[3] - pile_bbox[1]
-                            
-                            pile_x = x - (pile_width // 2)
-
-                            pile_y = y - r - pile_height - 8
-                            
-                            draw.text(
-                                (
-                                    pile_x,
-                                    pile_y
-                                ),
-                                pile_text,
-                                fill="black",
-                                font=pile_font,
-                                stroke_width=2,
-                                stroke_fill="white"
-                            )
-        
-                    legend_x = image.width + 28
-                    legend_y = 80
-        
-                    draw.text(
-                        (
-                            legend_x,
-                            legend_y - 35
-                        ),
-                        "施工日顏色對照表",
-                        fill="black",
-                        font=legend_font
-                    )
-        
-                    legend_height = (len(df) * 32) + 2
-        
-                    draw.rectangle(
-                        (
-                            legend_x - 20,
-                            legend_y - 10,
-                            legend_x + 125,
-                            legend_y + legend_height
-                        ),
-                        outline="black",
-                        width=2
-                    )
-        
-                    for i, row in df.iterrows():
-        
-                        hex_color = row["日期顏色"]
-        
-                        color = tuple(
-                            int(hex_color[i:i+2], 16)
-                            for i in (1, 3, 5)
-                        )
-        
-                        yy = legend_y + (i * 30)
-        
-                        draw.rectangle(
-                            (
-                                legend_x,
-                                yy,
-                                legend_x + 24,
-                                yy + 20
-                            ),
-                            fill=color,
-                            outline="black"
-                        )
-        
-                        day_no = row["施工日"].replace("Day ", "D")
-                        
+                            for pile_no in row["施工樁號"]:
+            
+                                idx = pile_no - 1
+            
+                                if idx >= len(pile_positions):
+                                    continue
+            
+                                x, y, r = pile_positions[idx]
+            
+                                rr = int(r * 0.85)
+            
+                                draw.ellipse(
+                                    (
+                                        x - rr,
+                                        y - rr,
+                                        x + rr,
+                                        y + rr
+                                    ),
+                                    fill=color,
+                                    outline="black",
+                                    width=1
+                                )
+                                
+                                day_bbox = draw.textbbox(
+                                    (0, 0),
+                                    day_text,
+                                    font=day_font
+                                )
+                                
+                                day_width = day_bbox[2] - day_bbox[0]
+                                
+                                day_x = x - (day_width // 2)
+    
+                                day_y = y + 14
+    
+                                draw.text(
+                                    (
+                                        day_x,
+                                        day_y
+                                    ),
+                                    day_text,
+                                    fill="black",
+                                    font=day_font,
+                                    stroke_width=2,
+                                    stroke_fill="white"
+                                )
+    
+                                pile_text = str(pile_no)
+                                
+                                pile_bbox = draw.textbbox(
+                                    (0, 0),
+                                    pile_text,
+                                    font=pile_font
+                                )
+                                
+                                pile_width = pile_bbox[2] - pile_bbox[0]
+                                pile_height = pile_bbox[3] - pile_bbox[1]
+                                
+                                pile_x = x - (pile_width // 2)
+    
+                                pile_y = y - r - pile_height - 8
+                                
+                                draw.text(
+                                    (
+                                        pile_x,
+                                        pile_y
+                                    ),
+                                    pile_text,
+                                    fill="black",
+                                    font=pile_font,
+                                    stroke_width=2,
+                                    stroke_fill="white"
+                                )
+            
+                        legend_x = image.width + 28
+                        legend_y = 80
+            
                         draw.text(
                             (
-                                legend_x + 35,
-                                yy
+                                legend_x,
+                                legend_y - 35
                             ),
-                            day_no,
+                            "施工日顏色對照表",
                             fill="black",
-                            font=pile_font
+                            font=legend_font
                         )
-        
-                    st.session_state.result_image = result_img
-                    st.session_state.processed = True
-                    
-                    st.success("✅ AI排程完成")
+            
+                        legend_height = (len(df) * 32) + 2
+            
+                        draw.rectangle(
+                            (
+                                legend_x - 20,
+                                legend_y - 10,
+                                legend_x + 125,
+                                legend_y + legend_height
+                            ),
+                            outline="black",
+                            width=2
+                        )
+            
+                        for i, row in df.iterrows():
+            
+                            hex_color = row["日期顏色"]
+            
+                            color = tuple(
+                                int(hex_color[i:i+2], 16)
+                                for i in (1, 3, 5)
+                            )
+            
+                            yy = legend_y + (i * 30)
+            
+                            draw.rectangle(
+                                (
+                                    legend_x,
+                                    yy,
+                                    legend_x + 24,
+                                    yy + 20
+                                ),
+                                fill=color,
+                                outline="black"
+                            )
+            
+                            day_no = row["施工日"].replace("Day ", "D")
+                            
+                            draw.text(
+                                (
+                                    legend_x + 35,
+                                    yy
+                                ),
+                                day_no,
+                                fill="black",
+                                font=pile_font
+                            )
+            
+                        st.session_state.result_image = result_img
+                        st.session_state.processed = True
+                        
+                        st.success("✅ AI排程完成")
 
             if st.session_state.processed:
             
