@@ -3112,7 +3112,7 @@ elif mode == "修正當前進度表":
                                     repair_result_img
                                 )
 
-                                for day_idx, (_, row) in enumerate(plot_schedule.iterrows()):
+                                for day_idx, row in repair_df.iterrows():
                                 
                                     hex_color = row["日期顏色"]
                                 
