@@ -2515,834 +2515,829 @@ elif mode == "修正當前進度表":
             
             with right_result:
             
-                st.subheader("📊 AI辨識結果")
+                st.subheader("📊 上傳原施工排程 Excel")
+            
+                excel_file = st.file_uploader(
+                    "上傳施工排程Excel",
+                    type=["xlsx"],
+                    key="repair_excel"
+                )
+        
+        if excel_file:
+    
+            try:
+    
+                original_df = pd.read_excel(excel_file)
 
-        if len(st.session_state.repair_piles) > 0:
-        
-            st.markdown("---")
-            st.subheader("📊 上傳原施工排程 Excel")
-        
-            excel_file = st.file_uploader(
-                "上傳施工排程Excel",
-                type=["xlsx"],
-                key="repair_excel"
-            )
-        
-            if excel_file:
-        
-                try:
-        
-                    original_df = pd.read_excel(excel_file)
+                original_df["日期顏色"] = (
+                    original_df["日期顏色"]
+                    .fillna("")
+                    .astype(str)
+                )
+    
+                required_cols = [
+                    "施工日",
+                    "日期",
+                    "日期顏色",
+                    "施工數量",
+                    "施工樁號"
+                ]
+    
+                missing_cols = [
+                    c
+                    for c in required_cols
+                    if c not in original_df.columns
+                ]
+    
+                if missing_cols:
+    
+                    st.error(
+                        f"缺少欄位：{','.join(missing_cols)}"
+                    )
+    
+                else:
+                                                 
+                    st.markdown("---")
+                    st.write("✏️ 請於下方修改施工樁號")
+                    
+                    editor_df = original_df.drop(
+                        columns=["日期顏色"]
+                    )
 
-                    original_df["日期顏色"] = (
-                        original_df["日期顏色"]
-                        .fillna("")
+                    editor_df["施工數量"] = (
+                        editor_df["施工數量"]
                         .astype(str)
                     )
-        
-                    required_cols = [
-                        "施工日",
-                        "日期",
-                        "日期顏色",
-                        "施工數量",
-                        "施工樁號"
-                    ]
-        
-                    missing_cols = [
-                        c
-                        for c in required_cols
-                        if c not in original_df.columns
-                    ]
-        
-                    if missing_cols:
-        
+                    if "repair_edit_df" not in st.session_state:
+                    
+                        st.session_state.repair_edit_df = editor_df.copy()
+
+                    if "repair_excel_name" not in st.session_state:
+                        st.session_state.repair_excel_name = ""
+                    
+                    if (
+                        st.session_state.repair_excel_name
+                        != excel_file.name
+                    ):
+                    
+                        st.session_state.repair_excel_name = excel_file.name
+                    
+                        st.session_state.repair_edit_df = editor_df.copy()
+                        
+                    edited_df = st.data_editor(
+                    
+                        st.session_state.repair_edit_df,
+                    
+                        use_container_width=True,
+                    
+                        height=500,
+                    
+                        hide_index=True,
+                    
+                        disabled=[
+                            "施工日",
+                            "日期",
+                            "施工數量"
+                        ],
+                    
+                        key="repair_editor"
+                    )
+
+                    validated_df, error_messages = validate_pile_input(
+                        edited_df,
+                        st.session_state.repair_total_piles
+                    )
+                    
+                    if not validated_df.equals(
+                        st.session_state.repair_edit_df
+                    ):
+                        st.session_state.repair_edit_df = validated_df.copy()
+                        st.rerun()
+                    
+                    st.markdown("### 🔍 驗證結果")
+                    
+                    if error_messages:
+                    
                         st.error(
-                            f"缺少欄位：{','.join(missing_cols)}"
+                            "\n".join(error_messages)
                         )
-        
+                    
                     else:
-                                                     
+                    
+                        if len(error_messages) == 0:
+                        
+                            st.success("✅ 更改完成")
+
+                    if "repair_edit_df" in st.session_state:
+                    
                         st.markdown("---")
-                        st.write("✏️ 請於下方修改施工樁號")
-                        
-                        editor_df = original_df.drop(
-                            columns=["日期顏色"]
+                    
+                        st.subheader("🚀 重新排程")
+                    
+                        daily_count = st.number_input(
+                            "每日施工支數",
+                            min_value=1,
+                            value=14,
+                            key="repair_daily_count"
                         )
-
-                        editor_df["施工數量"] = (
-                            editor_df["施工數量"]
-                            .astype(str)
-                        )
-                        if "repair_edit_df" not in st.session_state:
-                        
-                            st.session_state.repair_edit_df = editor_df.copy()
-
-                        if "repair_excel_name" not in st.session_state:
-                            st.session_state.repair_excel_name = ""
-                        
-                        if (
-                            st.session_state.repair_excel_name
-                            != excel_file.name
+                    
+                        if st.button(
+                            "🚀重新產出排程",
+                            use_container_width=True
                         ):
-                        
-                            st.session_state.repair_excel_name = excel_file.name
-                        
-                            st.session_state.repair_edit_df = editor_df.copy()
+                            edit_df = st.session_state.repair_edit_df
                             
-                        edited_df = st.data_editor(
-                        
-                            st.session_state.repair_edit_df,
-                        
-                            use_container_width=True,
-                        
-                            height=500,
-                        
-                            hide_index=True,
-                        
-                            disabled=[
-                                "施工日",
-                                "日期",
-                                "施工數量"
-                            ],
-                        
-                            key="repair_editor"
-                        )
+                            completed_piles = []
 
-                        validated_df, error_messages = validate_pile_input(
-                            edited_df,
-                            st.session_state.repair_total_piles
-                        )
-                        
-                        if not validated_df.equals(
-                            st.session_state.repair_edit_df
-                        ):
-                            st.session_state.repair_edit_df = validated_df.copy()
-                            st.rerun()
-                        
-                        st.markdown("### 🔍 驗證結果")
-                        
-                        if error_messages:
-                        
-                            st.error(
-                                "\n".join(error_messages)
-                            )
-                        
-                        else:
-                        
-                            if len(error_messages) == 0:
+                            first_empty_index = None
                             
-                                st.success("✅ 更改完成")
+                            for idx,row in edit_df.iterrows():
+                            
+                                pile_text = str(
+                                    row["施工樁號"]
+                                ).strip()
+                            
+                                if (
+                                    pile_text == ""
+                                    or pile_text.lower() == "nan"
+                                ):
+                            
+                                    first_empty_index = idx
+                            
+                                    break
 
-                        if "repair_edit_df" in st.session_state:
-                        
-                            st.markdown("---")
-                        
-                            st.subheader("🚀 重新排程")
-                        
-                            daily_count = st.number_input(
-                                "每日施工支數",
-                                min_value=1,
-                                value=14,
-                                key="repair_daily_count"
+                            if first_empty_index is None:
+                            
+                                st.error("全部施工日都有樁號，沒有可續排的施工日")
+                            
+                                st.stop()
+
+                            start_day_no = first_empty_index + 1
+
+                            start_date = pd.to_datetime(
+                            
+                                edit_df.iloc[first_empty_index]["日期"]
+                            
                             )
-                        
-                            if st.button(
-                                "🚀重新產出排程",
-                                use_container_width=True
-                            ):
-                                edit_df = st.session_state.repair_edit_df
-                                
-                                completed_piles = []
-
-                                first_empty_index = None
-                                
-                                for idx,row in edit_df.iterrows():
-                                
-                                    pile_text = str(
-                                        row["施工樁號"]
-                                    ).strip()
-                                
-                                    if (
-                                        pile_text == ""
-                                        or pile_text.lower() == "nan"
-                                    ):
-                                
-                                        first_empty_index = idx
-                                
-                                        break
-
-                                if first_empty_index is None:
-                                
-                                    st.error("全部施工日都有樁號，沒有可續排的施工日")
-                                
-                                    st.stop()
-
-                                start_day_no = first_empty_index + 1
-  
-                                start_date = pd.to_datetime(
-                                
-                                    edit_df.iloc[first_empty_index]["日期"]
-                                
-                                )
-                                
-                                for idx, row in edit_df.iterrows():
-                                    if idx >= first_empty_index:
-                                        break
-                                    pile_text = str(
-                                        row["施工樁號"]
-                                    ).strip()
-                                
-                                    if (
-                                        pile_text != ""
-                                        and pile_text.lower() != "nan"
-                                    ):
-                                
-                                        pile_list = [
-                                
-                                            int(x.strip())
-                                
-                                            for x in pile_text.split(",")
-                                
-                                            if x.strip().isdigit()
-                                
-                                        ]
-                                
-                                        completed_piles.extend(
-                                            pile_list
-                                        )
-
-                                all_piles = set(
-                                    range(
-                                        1,
-                                        st.session_state.repair_total_piles + 1
-                                    )
-                                )
-                                
-                                remaining_piles = sorted(
-                                    list(
-                                        all_piles
-                                        -
-                                        set(completed_piles)
-                                    )
-                                )
-                                remaining_piles = [
-                                    p
-                                    for p in remaining_piles
-                                    if p not in st.session_state.excluded_piles
-                                ]
-
-                                if len(remaining_piles) == 0:
-                                
-                                    st.error("全部樁號都已排入施工日，沒有可續排的樁號")
-                                
-                                    st.stop()
-
-                                progress_text = st.empty()
-                                
-                                progress_bar = st.progress(0)
-                                
-                                progress_text.markdown(
-                                    "🤖 AI 正在重新分析最佳施工排程中，請稍候... 0%"
-                                )
-
-                                remaining_positions = [
-                                    piles[p-1]
-                                    for p in remaining_piles
-                                ]
-
-                                pile_mapping = {}
-                                
-                                for new_no, old_no in enumerate(remaining_piles, start=1):
-                                
-                                    pile_mapping[new_no] = old_no
-
-                                neighbor_map = {}
-                                
-                                reverse_mapping = {}
-                                
-                                for new_no, old_no in pile_mapping.items():
-                                
-                                    reverse_mapping[old_no] = new_no
-                                
-                                
-                                for old_pile in remaining_piles:
-                                
-                                    new_pile = reverse_mapping[old_pile]
-                                
-                                    neighbor_map[new_pile] = []
-                                
-                                    for n in full_neighbor_map.get(old_pile, []):
-                                
-                                        if n in remaining_piles:
-                                
-                                            neighbor_map[new_pile].append(
-                                                reverse_mapping[n]
-                                            )
-
-                                best_schedule = None
-                                
-                                best_total_score = -999999
-
-                                backup_schedule = None
-
-                                TOTAL_SIM = 10
-                                
-                                for sim in range(TOTAL_SIM):
-
-                                    percent = int(
-                                        ((sim + 1) / TOTAL_SIM) * 100
-                                    )
-                                
-                                    progress_bar.progress(percent)
-                                
-                                    progress_text.markdown(
-                                        f"🤖 AI 正在重新分析最佳施工排程中，請稍候... {percent}%"
-                                    )
-                                
-                                    temp_schedule = create_schedule(
-                                    
-                                        pile_positions=remaining_positions,
-                                    
-                                        total_piles=len(remaining_positions),
-                                    
-                                        daily_count=daily_count,
-                                    
-                                        start_date=start_date,
-                                    
-                                        start_no=random.randint(
-                                            1,
-                                            len(remaining_positions)
-                                        ),
-                                    
-                                        cooldown_days=2,
-                                    
-                                        neighbor_map=neighbor_map
-                                    )
-
-                                    temp_schedule = optimize_tail_days(
-                                        temp_schedule,
-                                        neighbor_map,
-                                        daily_count
-                                    )
-
-                                    if backup_schedule is None:
-                                    
-                                        backup_schedule = temp_schedule
-
-                                    daily_counts = [
-                                    
-                                        len(x["施工樁號"])
-                                    
-                                        for x in temp_schedule
-                                    
-                                    ]
-                                
-                                    schedule_score = 0
-                                    
-                                    daily_counts = [
-                                        len(x["施工樁號"])
-                                        for x in temp_schedule
-                                    ]
-                                    
-                                    full_days = sum(
-                                        1
-                                        for day in temp_schedule[:-3]
-                                        if len(day["施工樁號"]) >= daily_count
-                                    )
-                                    
-                                    first_days_score = 0
-                                    
-                                    for c in daily_counts[:5]:
-                                    
-                                        first_days_score -= abs(
-                                            daily_count - c
-                                        ) * 3000
-                                    
-                                    schedule_score += first_days_score
-                                    schedule_score += full_days * 5000
-                                    
-                                    schedule_score -= len(temp_schedule) * 5000
-
-                                    last_days = temp_schedule[-3:]
-                                    
-                                    last_count = sum(
-                                        len(x["施工樁號"])
-                                        for x in last_days
-                                    )
-                                    
-                                    schedule_score += last_count * 40
-                                    
-                                    avg_daily = np.mean(daily_counts)
-                                    
-                                    schedule_score += avg_daily * 50
-                                    
-                                    variance = np.var(daily_counts)
-                                    
-                                    schedule_score -= variance * 30
-
-                                    tail_days = temp_schedule[-5:]
-                                    
-                                    tail_total = sum(
-                                        len(x["施工樁號"])
-                                        for x in tail_days
-                                    )
-                                    
-                                    if tail_total < daily_count * 4:
-                                        schedule_score -= 200
-                                    
-                                    last_day_count = len(
-                                        temp_schedule[-1]["施工樁號"]
-                                    )
-                                    
-                                    if last_day_count <= 2:
-                                        schedule_score -= 300
-
-                                    tail_counts = [
-                                        len(x["施工樁號"])
-                                        for x in temp_schedule[-5:]
-                                    ]
-
-                                    for count in daily_counts[:-3]:
-                                    
-                                        diff = daily_count - count
-                                    
-                                        if diff > 0:
-                                    
-                                            schedule_score -= diff * 30000
-                                    
-                                    for i in range(len(tail_counts)-1):
-                                    
-                                        if tail_counts[i+1] > tail_counts[i]:
-                                    
-                                            schedule_score -= 20000
-                                    
-                                    
-                                    for i in range(len(tail_counts)-1):
-                                    
-                                        diff = tail_counts[i] - tail_counts[i+1]
-                                    
-                                        if diff > 6:
-                                    
-                                            schedule_score -= 8000
-                                    
-                                    last_day = tail_counts[-1]
-                                    
-                                    if last_day <= 2:
-                                    
-                                        schedule_score -= 5000
-                                    
-                                    elif last_day <= 5:
-                                    
-                                        schedule_score -= 2500
-                                    
-                                    elif last_day <= 8:
-                                    
-                                        schedule_score -= 1000
-                                    
-                                    tail_avg = np.mean(tail_counts)
-                                    
-                                    schedule_score += tail_avg * 200
-                                    
-                                    
-                                    tail_balance_score = 0
-                                    
-                                    for count in tail_counts:
-                                    
-                                        tail_balance_score -= abs(
-                                            count - tail_avg
-                                        ) * 300
-                                    
-                                    schedule_score += tail_balance_score
-                                    
-                                    tail_ok = True
-                                    
-                                    for i in range(len(tail_counts)-1):
-                                    
-                                        if tail_counts[i+1] > tail_counts[i]:
-                                    
-                                            tail_ok = False
-                                    
-                                            break
-                                    
-                                    if not tail_ok:
-                                    
-                                        continue
-                                    
-                                    if schedule_score > best_total_score:
-                                    
-                                        best_total_score = schedule_score
-                                    
-                                        best_schedule = temp_schedule
-
-                                if best_schedule is None:
-                                
-                                    best_schedule = backup_schedule
-
-                                progress_bar.progress(100)
-                                
-                                progress_text.markdown(
-                                    "🤖 AI 正在重新分析最佳施工排程中，請稍候... 100%"
-                                )
-                                
-                                import time
-                                
-                                time.sleep(0.3)
-                                
-                                progress_bar.empty()
-                                
-                                progress_text.empty()
-                                
-                                new_schedule = best_schedule
-                                
-                                for day in new_schedule:
-                                
-                                    day["施工樁號"] = [
-                                
-                                        pile_mapping[p]
-                                
-                                        for p in day["施工樁號"]
-                                
-                                    ]
-
-                                colors = []
-
-                                for _ in range(len(original_df)):
-
-                                    color = (
-                                        random.randint(80, 230),
-                                        random.randint(80, 230),
-                                        random.randint(80, 230)
-                                    )
-
-                                    colors.append(
-                                        "#%02x%02x%02x" % color
-                                    )
-
-                                new_df = original_df.copy()
-                                new_df["施工樁號"] = edit_df["施工樁號"]
-                                new_df["施工數量"] = edit_df["施工數量"]
-
-                                for idx in range(len(new_df)):
-                                
-                                    new_df.loc[idx, "日期顏色"] = colors[idx]
-                                
-                                for i, day_data in enumerate(new_schedule):
-                                
-                                    target_row = first_empty_index + i
-                                
-                                    if target_row >= len(new_df):
-                                    
-                                        st.warning(
-                                            "Excel施工日不足，部分續排資料未寫入"
-                                        )
-                                    
-                                        break
-                                
-                                    pile_text = ",".join(
-                                        map(str, day_data["施工樁號"])
-                                    )
-                                
-                                    new_df.at[target_row, "施工樁號"] = pile_text
-
-                                    new_df.at[target_row, "日期顏色"] = day_data["日期顏色"]
-                                
-                                    new_df.at[target_row, "施工數量"] = str(
-                                        len(day_data["施工樁號"])
-                                    )
-
-                                new_df = new_df[
-                                    new_df["施工數量"].astype(str) != "0"
-                                ].reset_index(drop=True)
-
-                                st.session_state.repair_schedule_df = new_df
-                                
-                                st.success("✅ AI續排完成")
-                                
-                                repair_df = st.session_state.repair_schedule_df.copy()
-                                
-                                repair_df["施工數量"] = repair_df["施工樁號"].apply(
-                                    lambda x:
-                                    len([
-                                        p for p in str(x).split(",")
-                                        if p.strip()
-                                    ])
-                                    if pd.notna(x)
-                                    else 0
-                                )
-                                repair_df = repair_df[
-                                    repair_df["施工數量"] > 0
-                                ].reset_index(drop=True)
-                                
-                                st.dataframe(
-                                    repair_df,
-                                    use_container_width=True,
-                                    hide_index=True
-                                )
-
-                                repair_result_img = image.copy()
-                                
-                                draw = ImageDraw.Draw(repair_result_img)
-
-                                try:
-                                
-                                    pile_font = ImageFont.truetype(
-                                        "DejaVuSans.ttf",
-                                        18
-                                    )
-
-                                    day_font = ImageFont.truetype(
-                                        "DejaVuSans.ttf",
-                                        14
-                                    )
-                                
-                                except:
-                                
-                                    pile_font = ImageFont.load_default()
-
-                                LEGEND_WIDTH = 165
-                                
-                                new_width = image.width + LEGEND_WIDTH
-                                
-                                repair_result_img = Image.new(
-                                    "RGB",
-                                    (new_width, image.height),
-                                    (255,255,255)
-                                )
-                                
-                                repair_result_img.paste(
-                                    image,
-                                    (0,0)
-                                )
-                                
-                                draw = ImageDraw.Draw(
-                                    repair_result_img
-                                )
-
-                                for day_idx, row in repair_df.iterrows():
-                                
-                                    hex_color = row["日期顏色"]
-                                
-                                    color = tuple(
-                                        int(hex_color[i:i+2],16)
-                                        for i in (1,3,5)
-                                    )
-                                
+                            
+                            for idx, row in edit_df.iterrows():
+                                if idx >= first_empty_index:
+                                    break
+                                pile_text = str(
+                                    row["施工樁號"]
+                                ).strip()
+                            
+                                if (
+                                    pile_text != ""
+                                    and pile_text.lower() != "nan"
+                                ):
+                            
                                     pile_list = [
+                            
                                         int(x.strip())
-                                        for x in str(row["施工樁號"]).split(",")
-                                        if x.strip()
+                            
+                                        for x in pile_text.split(",")
+                            
+                                        if x.strip().isdigit()
+                            
                                     ]
-                                
-                                    for pile_no in pile_list:
-                                
-                                        idx = pile_no - 1
-                                
-                                        x,y,r = piles[idx]
-                                
-                                        draw.ellipse(
-                                            (
-                                                x-r,
-                                                y-r,
-                                                x+r,
-                                                y+r
-                                            ),
-                                            fill=color,
-                                            outline="black",
-                                            width=2
-                                        )
-                                
-                                        pile_text = str(pile_no)
-                                
-                                        pile_bbox = draw.textbbox(
-                                            (0, 0),
-                                            pile_text,
-                                            font=pile_font
-                                        )
-                                
-                                        pile_width = pile_bbox[2] - pile_bbox[0]
-                                
-                                        pile_x = x - (pile_width // 2)
-                                
-                                        draw.text(
-                                            (
-                                                pile_x,
-                                                y - r - 25
-                                            ),
-                                            pile_text,
-                                            fill="black",
-                                            font=pile_font
-                                        )   
+                            
+                                    completed_piles.extend(
+                                        pile_list
+                                    )
 
-                                        day_text = row["施工日"].replace("Day ","D")
-                                        
-                                        day_bbox = draw.textbbox(
-                                            (0,0),
-                                            day_text,
-                                            font=pile_font
-                                        )
-                                        
-                                        day_width = day_bbox[2] - day_bbox[0]
-                                        
-                                        draw.text(
-                                            (
-                                                x - day_width // 2,
-                                                y + r + 8
-                                            ),
-                                            day_text,
-                                            fill="black",
-                                            font=day_font,
-                                            stroke_width=2,
-                                            stroke_fill="white"
+                            all_piles = set(
+                                range(
+                                    1,
+                                    st.session_state.repair_total_piles + 1
+                                )
+                            )
+                            
+                            remaining_piles = sorted(
+                                list(
+                                    all_piles
+                                    -
+                                    set(completed_piles)
+                                )
+                            )
+                            remaining_piles = [
+                                p
+                                for p in remaining_piles
+                                if p not in st.session_state.excluded_piles
+                            ]
+
+                            if len(remaining_piles) == 0:
+                            
+                                st.error("全部樁號都已排入施工日，沒有可續排的樁號")
+                            
+                                st.stop()
+
+                            progress_text = st.empty()
+                            
+                            progress_bar = st.progress(0)
+                            
+                            progress_text.markdown(
+                                "🤖 AI 正在重新分析最佳施工排程中，請稍候... 0%"
+                            )
+
+                            remaining_positions = [
+                                piles[p-1]
+                                for p in remaining_piles
+                            ]
+
+                            pile_mapping = {}
+                            
+                            for new_no, old_no in enumerate(remaining_piles, start=1):
+                            
+                                pile_mapping[new_no] = old_no
+
+                            neighbor_map = {}
+                            
+                            reverse_mapping = {}
+                            
+                            for new_no, old_no in pile_mapping.items():
+                            
+                                reverse_mapping[old_no] = new_no
+                            
+                            
+                            for old_pile in remaining_piles:
+                            
+                                new_pile = reverse_mapping[old_pile]
+                            
+                                neighbor_map[new_pile] = []
+                            
+                                for n in full_neighbor_map.get(old_pile, []):
+                            
+                                    if n in remaining_piles:
+                            
+                                        neighbor_map[new_pile].append(
+                                            reverse_mapping[n]
                                         )
 
-                                legend_x = image.width + 25
+                            best_schedule = None
+                            
+                            best_total_score = -999999
+
+                            backup_schedule = None
+
+                            TOTAL_SIM = 10
+                            
+                            for sim in range(TOTAL_SIM):
+
+                                percent = int(
+                                    ((sim + 1) / TOTAL_SIM) * 100
+                                )
+                            
+                                progress_bar.progress(percent)
+                            
+                                progress_text.markdown(
+                                    f"🤖 AI 正在重新分析最佳施工排程中，請稍候... {percent}%"
+                                )
+                            
+                                temp_schedule = create_schedule(
                                 
-                                legend_y = 80
+                                    pile_positions=remaining_positions,
+                                
+                                    total_piles=len(remaining_positions),
+                                
+                                    daily_count=daily_count,
+                                
+                                    start_date=start_date,
+                                
+                                    start_no=random.randint(
+                                        1,
+                                        len(remaining_positions)
+                                    ),
+                                
+                                    cooldown_days=2,
+                                
+                                    neighbor_map=neighbor_map
+                                )
 
-                                draw.text(
+                                temp_schedule = optimize_tail_days(
+                                    temp_schedule,
+                                    neighbor_map,
+                                    daily_count
+                                )
+
+                                if backup_schedule is None:
+                                
+                                    backup_schedule = temp_schedule
+
+                                daily_counts = [
+                                
+                                    len(x["施工樁號"])
+                                
+                                    for x in temp_schedule
+                                
+                                ]
+                            
+                                schedule_score = 0
+                                
+                                daily_counts = [
+                                    len(x["施工樁號"])
+                                    for x in temp_schedule
+                                ]
+                                
+                                full_days = sum(
+                                    1
+                                    for day in temp_schedule[:-3]
+                                    if len(day["施工樁號"]) >= daily_count
+                                )
+                                
+                                first_days_score = 0
+                                
+                                for c in daily_counts[:5]:
+                                
+                                    first_days_score -= abs(
+                                        daily_count - c
+                                    ) * 3000
+                                
+                                schedule_score += first_days_score
+                                schedule_score += full_days * 5000
+                                
+                                schedule_score -= len(temp_schedule) * 5000
+
+                                last_days = temp_schedule[-3:]
+                                
+                                last_count = sum(
+                                    len(x["施工樁號"])
+                                    for x in last_days
+                                )
+                                
+                                schedule_score += last_count * 40
+                                
+                                avg_daily = np.mean(daily_counts)
+                                
+                                schedule_score += avg_daily * 50
+                                
+                                variance = np.var(daily_counts)
+                                
+                                schedule_score -= variance * 30
+
+                                tail_days = temp_schedule[-5:]
+                                
+                                tail_total = sum(
+                                    len(x["施工樁號"])
+                                    for x in tail_days
+                                )
+                                
+                                if tail_total < daily_count * 4:
+                                    schedule_score -= 200
+                                
+                                last_day_count = len(
+                                    temp_schedule[-1]["施工樁號"]
+                                )
+                                
+                                if last_day_count <= 2:
+                                    schedule_score -= 300
+
+                                tail_counts = [
+                                    len(x["施工樁號"])
+                                    for x in temp_schedule[-5:]
+                                ]
+
+                                for count in daily_counts[:-3]:
+                                
+                                    diff = daily_count - count
+                                
+                                    if diff > 0:
+                                
+                                        schedule_score -= diff * 30000
+                                
+                                for i in range(len(tail_counts)-1):
+                                
+                                    if tail_counts[i+1] > tail_counts[i]:
+                                
+                                        schedule_score -= 20000
+                                
+                                
+                                for i in range(len(tail_counts)-1):
+                                
+                                    diff = tail_counts[i] - tail_counts[i+1]
+                                
+                                    if diff > 6:
+                                
+                                        schedule_score -= 8000
+                                
+                                last_day = tail_counts[-1]
+                                
+                                if last_day <= 2:
+                                
+                                    schedule_score -= 5000
+                                
+                                elif last_day <= 5:
+                                
+                                    schedule_score -= 2500
+                                
+                                elif last_day <= 8:
+                                
+                                    schedule_score -= 1000
+                                
+                                tail_avg = np.mean(tail_counts)
+                                
+                                schedule_score += tail_avg * 200
+                                
+                                
+                                tail_balance_score = 0
+                                
+                                for count in tail_counts:
+                                
+                                    tail_balance_score -= abs(
+                                        count - tail_avg
+                                    ) * 300
+                                
+                                schedule_score += tail_balance_score
+                                
+                                tail_ok = True
+                                
+                                for i in range(len(tail_counts)-1):
+                                
+                                    if tail_counts[i+1] > tail_counts[i]:
+                                
+                                        tail_ok = False
+                                
+                                        break
+                                
+                                if not tail_ok:
+                                
+                                    continue
+                                
+                                if schedule_score > best_total_score:
+                                
+                                    best_total_score = schedule_score
+                                
+                                    best_schedule = temp_schedule
+
+                            if best_schedule is None:
+                            
+                                best_schedule = backup_schedule
+
+                            progress_bar.progress(100)
+                            
+                            progress_text.markdown(
+                                "🤖 AI 正在重新分析最佳施工排程中，請稍候... 100%"
+                            )
+                            
+                            import time
+                            
+                            time.sleep(0.3)
+                            
+                            progress_bar.empty()
+                            
+                            progress_text.empty()
+                            
+                            new_schedule = best_schedule
+                            
+                            for day in new_schedule:
+                            
+                                day["施工樁號"] = [
+                            
+                                    pile_mapping[p]
+                            
+                                    for p in day["施工樁號"]
+                            
+                                ]
+
+                            colors = []
+
+                            for _ in range(len(original_df)):
+
+                                color = (
+                                    random.randint(80, 230),
+                                    random.randint(80, 230),
+                                    random.randint(80, 230)
+                                )
+
+                                colors.append(
+                                    "#%02x%02x%02x" % color
+                                )
+
+                            new_df = original_df.copy()
+                            new_df["施工樁號"] = edit_df["施工樁號"]
+                            new_df["施工數量"] = edit_df["施工數量"]
+
+                            for idx in range(len(new_df)):
+                            
+                                new_df.loc[idx, "日期顏色"] = colors[idx]
+                            
+                            for i, day_data in enumerate(new_schedule):
+                            
+                                target_row = first_empty_index + i
+                            
+                                if target_row >= len(new_df):
+                                
+                                    st.warning(
+                                        "Excel施工日不足，部分續排資料未寫入"
+                                    )
+                                
+                                    break
+                            
+                                pile_text = ",".join(
+                                    map(str, day_data["施工樁號"])
+                                )
+                            
+                                new_df.at[target_row, "施工樁號"] = pile_text
+
+                                new_df.at[target_row, "日期顏色"] = day_data["日期顏色"]
+                            
+                                new_df.at[target_row, "施工數量"] = str(
+                                    len(day_data["施工樁號"])
+                                )
+
+                            new_df = new_df[
+                                new_df["施工數量"].astype(str) != "0"
+                            ].reset_index(drop=True)
+
+                            st.session_state.repair_schedule_df = new_df
+                            
+                            st.success("✅ AI續排完成")
+                            
+                            repair_df = st.session_state.repair_schedule_df.copy()
+                            
+                            repair_df["施工數量"] = repair_df["施工樁號"].apply(
+                                lambda x:
+                                len([
+                                    p for p in str(x).split(",")
+                                    if p.strip()
+                                ])
+                                if pd.notna(x)
+                                else 0
+                            )
+                            repair_df = repair_df[
+                                repair_df["施工數量"] > 0
+                            ].reset_index(drop=True)
+                            
+                            st.dataframe(
+                                repair_df,
+                                use_container_width=True,
+                                hide_index=True
+                            )
+
+                            repair_result_img = image.copy()
+                            
+                            draw = ImageDraw.Draw(repair_result_img)
+
+                            try:
+                            
+                                pile_font = ImageFont.truetype(
+                                    "DejaVuSans.ttf",
+                                    18
+                                )
+
+                                day_font = ImageFont.truetype(
+                                    "DejaVuSans.ttf",
+                                    14
+                                )
+                            
+                            except:
+                            
+                                pile_font = ImageFont.load_default()
+
+                            LEGEND_WIDTH = 165
+                            
+                            new_width = image.width + LEGEND_WIDTH
+                            
+                            repair_result_img = Image.new(
+                                "RGB",
+                                (new_width, image.height),
+                                (255,255,255)
+                            )
+                            
+                            repair_result_img.paste(
+                                image,
+                                (0,0)
+                            )
+                            
+                            draw = ImageDraw.Draw(
+                                repair_result_img
+                            )
+
+                            for day_idx, row in repair_df.iterrows():
+                            
+                                hex_color = row["日期顏色"]
+                            
+                                color = tuple(
+                                    int(hex_color[i:i+2],16)
+                                    for i in (1,3,5)
+                                )
+                            
+                                pile_list = [
+                                    int(x.strip())
+                                    for x in str(row["施工樁號"]).split(",")
+                                    if x.strip()
+                                ]
+                            
+                                for pile_no in pile_list:
+                            
+                                    idx = pile_no - 1
+                            
+                                    x,y,r = piles[idx]
+                            
+                                    draw.ellipse(
+                                        (
+                                            x-r,
+                                            y-r,
+                                            x+r,
+                                            y+r
+                                        ),
+                                        fill=color,
+                                        outline="black",
+                                        width=2
+                                    )
+                            
+                                    pile_text = str(pile_no)
+                            
+                                    pile_bbox = draw.textbbox(
+                                        (0, 0),
+                                        pile_text,
+                                        font=pile_font
+                                    )
+                            
+                                    pile_width = pile_bbox[2] - pile_bbox[0]
+                            
+                                    pile_x = x - (pile_width // 2)
+                            
+                                    draw.text(
+                                        (
+                                            pile_x,
+                                            y - r - 25
+                                        ),
+                                        pile_text,
+                                        fill="black",
+                                        font=pile_font
+                                    )   
+
+                                    day_text = row["施工日"].replace("Day ","D")
+                                    
+                                    day_bbox = draw.textbbox(
+                                        (0,0),
+                                        day_text,
+                                        font=pile_font
+                                    )
+                                    
+                                    day_width = day_bbox[2] - day_bbox[0]
+                                    
+                                    draw.text(
+                                        (
+                                            x - day_width // 2,
+                                            y + r + 8
+                                        ),
+                                        day_text,
+                                        fill="black",
+                                        font=day_font,
+                                        stroke_width=2,
+                                        stroke_fill="white"
+                                    )
+
+                            legend_x = image.width + 25
+                            
+                            legend_y = 80
+
+                            draw.text(
+                                (
+                                    legend_x,
+                                    legend_y - 35
+                                ),
+                                "施工日圖例",
+                                fill="black",
+                                font=pile_font
+                            )
+
+                            for day_idx, row in repair_df.iterrows():
+                            
+                                hex_color = row["日期顏色"]
+                            
+                                color = tuple(
+                                    int(hex_color[i:i+2],16)
+                                    for i in (1,3,5)
+                                )
+                            
+                                yy = legend_y + day_idx * 30
+                            
+                                draw.rectangle(
                                     (
                                         legend_x,
-                                        legend_y - 35
+                                        yy,
+                                        legend_x+22,
+                                        yy+22
                                     ),
-                                    "施工日圖例",
+                                    fill=color,
+                                    outline="black"
+                                )
+                            
+                                draw.text(
+                                    (
+                                        legend_x+35,
+                                        yy
+                                    ),
+                                    row["施工日"].replace("Day ","D"),
                                     fill="black",
                                     font=pile_font
                                 )
 
-                                for day_idx, row in repair_df.iterrows():
-                                
-                                    hex_color = row["日期顏色"]
-                                
-                                    color = tuple(
-                                        int(hex_color[i:i+2],16)
-                                        for i in (1,3,5)
-                                    )
-                                
-                                    yy = legend_y + day_idx * 30
-                                
-                                    draw.rectangle(
-                                        (
-                                            legend_x,
-                                            yy,
-                                            legend_x+22,
-                                            yy+22
-                                        ),
-                                        fill=color,
-                                        outline="black"
-                                    )
-                                
-                                    draw.text(
-                                        (
-                                            legend_x+35,
-                                            yy
-                                        ),
-                                        row["施工日"].replace("Day ","D"),
-                                        fill="black",
-                                        font=pile_font
-                                    )
+                            st.session_state.repair_result_image = repair_result_img
 
-                                st.session_state.repair_result_image = repair_result_img
+                            st.session_state.repair_finished = True
 
-                                st.session_state.repair_finished = True
-
-                                st.session_state.repair_schedule_df = new_df
-                          
-                except Exception as e:
-        
-                    st.error(f"Excel讀取失敗：{e}")
-                    
-                if st.session_state.get("repair_finished", False):
+                            st.session_state.repair_schedule_df = new_df
+                      
+            except Exception as e:
+    
+                st.error(f"Excel讀取失敗：{e}")
                 
-                    repair_df = st.session_state.repair_schedule_df
+            if st.session_state.get("repair_finished", False):
+            
+                repair_df = st.session_state.repair_schedule_df
+            
+                repair_result_img = st.session_state.repair_result_image
                 
-                    repair_result_img = st.session_state.repair_result_image
-                    
-                    st.image(
-                        repair_result_img,
-                        width=900
-                    )
-    
-                    excel_buffer = io.BytesIO()
-                    
-                    from openpyxl.styles import PatternFill
+                st.image(
+                    repair_result_img,
+                    width=900
+                )
 
-                    with pd.ExcelWriter(
-                        excel_buffer,
-                        engine="openpyxl"
-                    ) as writer:
-                    
-                        repair_df.to_excel(
-                            writer,
-                            sheet_name="施工排程",
-                            index=False
-                        )
-                    
-                        ws = writer.book["施工排程"]
-                    
-                        for row in range(2, ws.max_row + 1):
-                    
-                            hex_color = ws[f"C{row}"].value
-                    
-                            if hex_color:
-                    
-                                fill = PatternFill(
-                                    fill_type="solid",
-                                    start_color=hex_color.replace("#",""),
-                                    end_color=hex_color.replace("#","")
-                                )
-                    
-                                ws[f"C{row}"].fill = fill
-                    
-                                ws[f"C{row}"].value = ""
-                    
-                    today_str = pd.Timestamp.today().strftime("%Y%m%d")
-                    
-                    st.download_button(
-                        "📊下載續排Excel",
-                        excel_buffer.getvalue(),
-                        f"{today_str}_AI智能排樁系統.xlsx",
-                        use_container_width=True
+                excel_buffer = io.BytesIO()
+                
+                from openpyxl.styles import PatternFill
+
+                with pd.ExcelWriter(
+                    excel_buffer,
+                    engine="openpyxl"
+                ) as writer:
+                
+                    repair_df.to_excel(
+                        writer,
+                        sheet_name="施工排程",
+                        index=False
                     )
-    
-                    png_buffer = io.BytesIO()
-                    
-                    repair_result_img.save(
-                        png_buffer,
-                        format="PNG"
-                    )
-                    
-                    st.download_button(
-                        "🖼️下載PNG",
-                        png_buffer.getvalue(),
-                        f"{today_str}_AI智能排樁系統.png",
-                        use_container_width=True
-                    )
-    
-                    jpg_buffer = io.BytesIO()
-                    
-                    repair_result_img.convert("RGB").save(
-                        jpg_buffer,
-                        format="JPEG"
-                    )
-                    
-                    st.download_button(
-                        "🖼️下載JPG",
-                        jpg_buffer.getvalue(),
-                         f"{today_str}_AI智能排樁系統.jpg",
-                        use_container_width=True
-                    )
-    
-                    pdf_buffer = io.BytesIO()
-                    
-                    repair_result_img.convert("RGB").save(
-                        pdf_buffer,
-                        format="PDF",
-                        resolution=600.0
-                    )
-                    
-                    st.download_button(
-                        "📄下載PDF",
-                        pdf_buffer.getvalue(),
-                         f"{today_str}_AI智能排樁系統.pdf",
-                        use_container_width=True
-                    )
+                
+                    ws = writer.book["施工排程"]
+                
+                    for row in range(2, ws.max_row + 1):
+                
+                        hex_color = ws[f"C{row}"].value
+                
+                        if hex_color:
+                
+                            fill = PatternFill(
+                                fill_type="solid",
+                                start_color=hex_color.replace("#",""),
+                                end_color=hex_color.replace("#","")
+                            )
+                
+                            ws[f"C{row}"].fill = fill
+                
+                            ws[f"C{row}"].value = ""
+                
+                today_str = pd.Timestamp.today().strftime("%Y%m%d")
+                
+                st.download_button(
+                    "📊下載續排Excel",
+                    excel_buffer.getvalue(),
+                    f"{today_str}_AI智能排樁系統.xlsx",
+                    use_container_width=True
+                )
+
+                png_buffer = io.BytesIO()
+                
+                repair_result_img.save(
+                    png_buffer,
+                    format="PNG"
+                )
+                
+                st.download_button(
+                    "🖼️下載PNG",
+                    png_buffer.getvalue(),
+                    f"{today_str}_AI智能排樁系統.png",
+                    use_container_width=True
+                )
+
+                jpg_buffer = io.BytesIO()
+                
+                repair_result_img.convert("RGB").save(
+                    jpg_buffer,
+                    format="JPEG"
+                )
+                
+                st.download_button(
+                    "🖼️下載JPG",
+                    jpg_buffer.getvalue(),
+                     f"{today_str}_AI智能排樁系統.jpg",
+                    use_container_width=True
+                )
+
+                pdf_buffer = io.BytesIO()
+                
+                repair_result_img.convert("RGB").save(
+                    pdf_buffer,
+                    format="PDF",
+                    resolution=600.0
+                )
+                
+                st.download_button(
+                    "📄下載PDF",
+                    pdf_buffer.getvalue(),
+                     f"{today_str}_AI智能排樁系統.pdf",
+                    use_container_width=True
+                )
