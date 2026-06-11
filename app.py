@@ -2296,7 +2296,7 @@ if mode == "新建預定進度表":
                                     ws[f"C{row}"].fill = fill
                         
                                     # 不顯示色碼
-                                    ws[f"C{row}"].value = ""
+                                    ws[f"C{row}"].value = hex_color
                         today_str = pd.Timestamp.today().strftime("%Y%m%d")
                         st.download_button(
                             "📊下載Excel",
