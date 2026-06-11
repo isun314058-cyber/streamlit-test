@@ -3175,7 +3175,7 @@ elif mode == "修正當前進度表":
                                     day_bbox = draw.textbbox(
                                         (0,0),
                                         day_text,
-                                        font=pile_font
+                                        font=day_font
                                     )
                                     
                                     day_width = day_bbox[2] - day_bbox[0]
