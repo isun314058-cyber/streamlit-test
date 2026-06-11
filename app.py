@@ -1770,6 +1770,12 @@ if mode == "新建預定進度表":
                         )
         
                         day_text = row["施工日"].replace("Day ", "D")
+
+                        pile_list = [
+                            int(x.strip())
+                            for x in str(row["施工樁號"]).split(",")
+                            if x.strip()
+                        ]
         
                         for pile_no in row["施工樁號"]:
         
@@ -3112,7 +3118,7 @@ elif mode == "修正當前進度表":
                                     repair_result_img
                                 )
 
-                                for day_idx,row in enumerate(new_schedule):
+                                for _, row in repair_df.iterrows():
                                 
                                     hex_color = row["日期顏色"]
                                 
@@ -3161,7 +3167,10 @@ elif mode == "修正當前進度表":
                                             font=pile_font
                                         )   
 
-                                        day_text = f"D{start_day_no + day_idx}"
+                                        day_text = row["施工日"].replace(
+                                            "Day ",
+                                            "D"
+                                        )
                                         
                                         day_bbox = draw.textbbox(
                                             (0,0),
