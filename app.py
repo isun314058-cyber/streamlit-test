@@ -3118,9 +3118,28 @@ elif mode == "修正當前進度表":
                                     repair_result_img
                                 )
 
+                                st.write(
+                                    repair_df[
+                                        ["施工日","日期顏色"]
+                                    ]
+                                )
+
                                 for day_idx, (_, row) in enumerate(repair_df.iterrows()):
                                 
-                                    hex_color = row["日期顏色"]
+                                    hex_color = str(
+                                        row["日期顏色"]
+                                    ).strip()
+                                
+                                    if (
+                                        hex_color == ""
+                                        or
+                                        hex_color.lower() == "nan"
+                                        or
+                                        not hex_color.startswith("#")
+                                        or
+                                        len(hex_color) != 7
+                                    ):
+                                        continue
                                 
                                     color = tuple(
                                         int(hex_color[i:i+2],16)
@@ -3214,7 +3233,20 @@ elif mode == "修正當前進度表":
 
                                 for day_idx, (_, row) in enumerate(repair_df.iterrows()):
                                 
-                                    hex_color = row["日期顏色"]
+                                    hex_color = str(
+                                        row["日期顏色"]
+                                    ).strip()
+                                
+                                    if (
+                                        hex_color == ""
+                                        or
+                                        hex_color.lower() == "nan"
+                                        or
+                                        not hex_color.startswith("#")
+                                        or
+                                        len(hex_color) != 7
+                                    ):
+                                        continue
                                 
                                     color = tuple(
                                         int(hex_color[i:i+2],16)
