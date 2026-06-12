@@ -834,7 +834,7 @@ def create_schedule(
     result = []
     
     day = 1
-    TAIL_TRIGGER = daily_count * 3
+    TAIL_TRIGGER = daily_count * 8
     
     loop_guard = 0
     while remaining:
@@ -859,29 +859,34 @@ def create_schedule(
                     )
 
         tail_mode = False
+        allow_relax = False
         
-        # if len(remaining) <= TAIL_TRIGGER:
-        #     tail_mode = True
-        #     remaining_days = math.ceil(
-        #         len(remaining)
-        #         /
-        #         daily_count
-        #     )
-            
-        #     target_tail_count = math.ceil(
-        #         len(remaining)
-        #         /
-        #         remaining_days
-        #     )
+        if len(remaining) <= TAIL_TRIGGER:
+        
+            tail_mode = True
+        
+            allow_relax = True
+        
+            remaining_days = math.ceil(
+                len(remaining)
+                /
+                daily_count
+            )
+        
+            target_tail_count = round(
+                len(remaining)
+                /
+                remaining_days
+            )
         
         today_target = daily_count
         
         if day == 1:
             today_target = daily_count
         
-        # if len(remaining) <= TAIL_TRIGGER:
+        if len(remaining) <= TAIL_TRIGGER:
         
-        #     today_target = target_tail_count
+            today_target = target_tail_count
         
         while len(today_piles) < today_target:
             
@@ -907,15 +912,12 @@ def create_schedule(
             )
         
             candidate_piles = []
-
-            allow_relax = False
             
             for p in remaining:
             
                 if p in today_piles:
                     continue
             
-                # 前面天數嚴格遵守冷卻
                 if not allow_relax:
             
                     if (
@@ -926,6 +928,15 @@ def create_schedule(
                         continue
             
                 candidate_piles.append(p)
+            
+            # 尾盤沒料可選時放寬
+            if tail_mode and len(candidate_piles) == 0:
+            
+                candidate_piles = [
+                    p
+                    for p in remaining
+                    if p not in today_piles
+                ]
 
             if len(candidate_piles) == 0:
                 break
@@ -1109,11 +1120,11 @@ def create_schedule(
         
             break
 
-    # result = optimize_tail_days(
-    #     result,
-    #     neighbor_map,
-    #     daily_count
-    # )
+    result = optimize_tail_days(
+        result,
+        neighbor_map,
+        daily_count
+    )
 
     return result
 
@@ -1620,7 +1631,11 @@ if mode == "新建預定進度表":
                         
                             if diff > 6:
                             
-                                schedule_score -= 8000
+                                schedule_score -= 50000
+
+                                tail_variance = np.var(tail_counts)
+                                
+                                schedule_score -= tail_variance * 5000
 
                         last_day = tail_counts[-1]
                         
