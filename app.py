@@ -834,7 +834,7 @@ def create_schedule(
     result = []
     
     day = 1
-    TAIL_TRIGGER = 0
+    TAIL_TRIGGER = int(total_piles * 0.6)
     
     loop_guard = 0
     while remaining:
@@ -858,7 +858,11 @@ def create_schedule(
                         day + cooldown_days
                     )
 
-        tail_mode = False
+        tail_mode = (
+            len(remaining)
+            <=
+            int(total_piles * 0.6)
+        )
         
         if len(remaining) <= TAIL_TRIGGER:
             tail_mode = True
@@ -873,6 +877,13 @@ def create_schedule(
                 /
                 remaining_days
             )
+            if tail_mode:
+            
+                today_target = target_tail_count
+            
+            else:
+            
+                today_target = daily_count
         
         today_target = daily_count
         
@@ -1094,19 +1105,19 @@ def create_schedule(
         
             remaining.remove(first_pile)
 
-        actual_count = len(today_piles)
+        # actual_count = len(today_piles)
         
-        if len(result) > 0:
+        # if len(result) > 0:
         
-            prev_count = len(
-                result[-1]["施工樁號"]
-            )
+        #     prev_count = len(
+        #         result[-1]["施工樁號"]
+        #     )
         
-            if actual_count > prev_count:
+        #     if actual_count > prev_count:
         
-                actual_count = prev_count
+        #         actual_count = prev_count
         
-        today_piles = today_piles[:actual_count]
+        # today_piles = today_piles[:actual_count]
 
         if len(remaining) > daily_count * 3:
         
@@ -1155,11 +1166,13 @@ def create_schedule(
         
             break
 
-    result = optimize_tail_days(
-        result,
-        neighbor_map,
-        daily_count
-    )
+    if len(result) >= 8:
+    
+        result = optimize_tail_days(
+            result,
+            neighbor_map,
+            daily_count
+        )
 
     return result
 
