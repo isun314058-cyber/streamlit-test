@@ -834,7 +834,7 @@ def create_schedule(
     result = []
     
     day = 1
-    TAIL_TRIGGER = daily_count * 8
+    TAIL_TRIGGER = daily_count * 5
     
     loop_guard = 0
     while remaining:
@@ -865,7 +865,7 @@ def create_schedule(
         
             tail_mode = True
         
-            allow_relax = True
+            allow_relax = False
         
             remaining_days = math.ceil(
                 len(remaining)
@@ -884,9 +884,7 @@ def create_schedule(
         if day == 1:
             today_target = daily_count
         
-        if len(remaining) <= TAIL_TRIGGER:
-        
-            today_target = target_tail_count
+        today_target = daily_count
         
         while len(today_piles) < today_target:
             
@@ -930,13 +928,13 @@ def create_schedule(
                 candidate_piles.append(p)
             
             # 尾盤沒料可選時放寬
-            if tail_mode and len(candidate_piles) == 0:
+            # if tail_mode and len(candidate_piles) == 0:
             
-                candidate_piles = [
-                    p
-                    for p in remaining
-                    if p not in today_piles
-                ]
+            #     candidate_piles = [
+            #         p
+            #         for p in remaining
+            #         if p not in today_piles
+            #     ]
 
             if len(candidate_piles) == 0:
                 break
