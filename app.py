@@ -590,11 +590,11 @@ def validate_pile_input(edit_df, total_piles):
 
     return result_df, error_messages
 
-# def optimize_tail_days(
-#     schedule,
-#     neighbor_map,
-#     daily_count
-# ):
+def optimize_tail_days(
+    schedule,
+    neighbor_map,
+    daily_count
+):
 
     if len(schedule) < 3:
         return schedule
@@ -1109,11 +1109,11 @@ def create_schedule(
         
             break
 
-    result = optimize_tail_days(
-        result,
-        neighbor_map,
-        daily_count
-    )
+    # result = optimize_tail_days(
+    #     result,
+    #     neighbor_map,
+    #     daily_count
+    # )
 
     return result
 
