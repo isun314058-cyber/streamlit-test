@@ -834,7 +834,7 @@ def create_schedule(
     result = []
     
     day = 1
-    TAIL_TRIGGER = daily_count * 3
+    TAIL_TRIGGER = 0
     
     loop_guard = 0
     while remaining:
@@ -879,9 +879,7 @@ def create_schedule(
         if day == 1:
             today_target = daily_count
         
-        if len(remaining) <= TAIL_TRIGGER:
-        
-            today_target = target_tail_count
+        today_target = daily_count
         
         while len(today_piles) < today_target:
             
@@ -905,29 +903,20 @@ def create_schedule(
             future_avg = (
                 future_count / future_days
             )
-        
+            
             candidate_piles = []
-
-            allow_relax = (
-                len(remaining)
-                <=
-                daily_count * 2
-            )
             
             for p in remaining:
             
                 if p in today_piles:
                     continue
             
-                # 前面天數嚴格遵守冷卻
-                if not allow_relax:
-            
-                    if (
-                        p in blocked_until
-                        and
-                        day <= blocked_until[p]
-                    ):
-                        continue
+                if (
+                    p in blocked_until
+                    and
+                    day <= blocked_until[p]
+                ):
+                    continue
             
                 candidate_piles.append(p)
 
@@ -941,7 +930,7 @@ def create_schedule(
             )
             
             TOP_K = min(
-                60,
+                120,
                 len(sorted_remaining)
             )
             
@@ -954,14 +943,6 @@ def create_schedule(
             best_pile = None
         
             for pile in sorted_remaining:
-
-                if not allow_relax:
-                
-                    if pile in blocked_until:
-                
-                        if day <= blocked_until[pile]:
-                
-                            continue
                             
                 conflict = False
 
@@ -987,7 +968,7 @@ def create_schedule(
                 
                 score += len(
                     neighbor_map.get(pile, [])
-                ) * 10
+                ) * 200
 
                 if len(today_piles) > 0:
                 
@@ -1112,6 +1093,20 @@ def create_schedule(
             today_piles.append(first_pile)
         
             remaining.remove(first_pile)
+
+        actual_count = len(today_piles)
+        
+        if len(result) > 0:
+        
+            prev_count = len(
+                result[-1]["施工樁號"]
+            )
+        
+            if actual_count > prev_count:
+        
+                actual_count = prev_count
+        
+        today_piles = today_piles[:actual_count]
 
         if len(remaining) > daily_count * 3:
         
@@ -1720,7 +1715,7 @@ if mode == "新建預定進度表":
                         ]
                         
                         strict_ok = True
-                        
+                                                
                         for i in range(len(all_counts)-1):
                         
                             if all_counts[i+1] > all_counts[i]:
