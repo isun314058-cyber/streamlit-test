@@ -834,7 +834,7 @@ def create_schedule(
     result = []
     
     day = 1
-    TAIL_TRIGGER = daily_count * 3
+    TAIL_TRIGGER = int(total_piles * 0.7)
     
     loop_guard = 0
     while remaining:
@@ -2677,15 +2677,7 @@ elif mode == "修正當前進度表":
                         if "repair_edit_df" in st.session_state:
                     
                             st.markdown("---")
-                    
-                            st.subheader("🚀 重新排程")
-                    
-                            daily_count = st.number_input(
-                                "每日施工支數",
-                                min_value=1,
-                                value=14,
-                                key="repair_daily_count"
-                            )
+                                               
                             has_error = len(error_messages) > 0
                             
                             if st.button(
@@ -2729,14 +2721,7 @@ elif mode == "修正當前進度表":
                                 
                                     st.stop()
 
-                                start_day_no = first_empty_index + 1
-    
-                                start_date = pd.to_datetime(
-                                
-                                    edit_df.iloc[first_empty_index]["日期"]
-                                
-                                )
-                                
+                                                                
                                 for idx, row in edit_df.iterrows():
                                     if idx >= first_empty_index:
                                         break
@@ -2777,6 +2762,25 @@ elif mode == "修正當前進度表":
                                         set(completed_piles)
                                     )
                                 )
+                                
+                                remaining_count = len(remaining_piles)
+
+                                remaining_days = (
+                                    len(edit_df)
+                                    -
+                                    first_empty_index
+                                )
+                                
+                                daily_count = math.ceil(
+                                    remaining_count
+                                    /
+                                    max(1, remaining_days)
+                                )
+                                
+                                start_date = pd.to_datetime(
+                                    edit_df.iloc[first_empty_index]["日期"]
+                                )
+                                
                                 remaining_piles = [
                                     p
                                     for p in remaining_piles
@@ -2837,7 +2841,7 @@ elif mode == "修正當前進度表":
     
                                 backup_schedule = None
     
-                                TOTAL_SIM = 10
+                                TOTAL_SIM = 100
                                 
                                 for sim in range(TOTAL_SIM):
     
@@ -2871,11 +2875,11 @@ elif mode == "修正當前進度表":
                                         neighbor_map=neighbor_map
                                     )
     
-                                    temp_schedule = optimize_tail_days(
-                                        temp_schedule,
-                                        neighbor_map,
-                                        daily_count
-                                    )
+                                    # temp_schedule = optimize_tail_days(
+                                    #     temp_schedule,
+                                    #     neighbor_map,
+                                    #     daily_count
+                                    # )
     
                                     if backup_schedule is None:
                                     
@@ -2953,6 +2957,16 @@ elif mode == "修正當前進度表":
                                         len(x["施工樁號"])
                                         for x in temp_schedule[-5:]
                                     ]
+
+                                    for i in range(len(tail_counts)-1):
+                                    
+                                        diff = abs(
+                                            tail_counts[i]
+                                            -
+                                            tail_counts[i+1]
+                                        )
+                                    
+                                        schedule_score -= diff * 5000
     
                                     for count in daily_counts[:-3]:
                                     
