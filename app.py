@@ -590,11 +590,11 @@ def validate_pile_input(edit_df, total_piles):
 
     return result_df, error_messages
 
-def optimize_tail_days(
-    schedule,
-    neighbor_map,
-    daily_count
-):
+# def optimize_tail_days(
+#     schedule,
+#     neighbor_map,
+#     daily_count
+# ):
 
     if len(schedule) < 3:
         return schedule
@@ -834,7 +834,7 @@ def create_schedule(
     result = []
     
     day = 1
-    TAIL_TRIGGER = daily_count
+    TAIL_TRIGGER = daily_count * 3
     
     loop_guard = 0
     while remaining:
@@ -849,47 +849,42 @@ def create_schedule(
 
                 remaining.remove(start_no)
 
-                # blocked_until[start_no] = (
-                #     day + cooldown_days
-                # )
+                blocked_until[start_no] = (
+                    day + cooldown_days
+                )
 
-                # for neighbor in neighbor_map.get(start_no, []):
-                #     blocked_until[neighbor] = (
-                #         day + cooldown_days
-                #     )
+                for neighbor in neighbor_map.get(start_no, []):
+                    blocked_until[neighbor] = (
+                        day + cooldown_days
+                    )
 
         tail_mode = False
         
-        if len(remaining) <= TAIL_TRIGGER:
-            tail_mode = True
-            remaining_days = math.ceil(
-                len(remaining)
-                /
-                daily_count
-            )
+        # if len(remaining) <= TAIL_TRIGGER:
+        #     tail_mode = True
+        #     remaining_days = math.ceil(
+        #         len(remaining)
+        #         /
+        #         daily_count
+        #     )
             
-            target_tail_count = math.ceil(
-                len(remaining)
-                /
-                remaining_days
-            )
+        #     target_tail_count = math.ceil(
+        #         len(remaining)
+        #         /
+        #         remaining_days
+        #     )
         
         today_target = daily_count
         
         if day == 1:
             today_target = daily_count
         
-        if len(remaining) <= TAIL_TRIGGER:
+        # if len(remaining) <= TAIL_TRIGGER:
         
-            today_target = min(
-                daily_count,
-                len(remaining)
-            )
+        #     today_target = target_tail_count
         
         while len(today_piles) < today_target:
-        
-            remaining_can_work = False
-        
+            
             future_count = max(
                 0,
                 len(remaining) - 1
@@ -913,11 +908,7 @@ def create_schedule(
         
             candidate_piles = []
 
-            allow_relax = (
-                len(remaining)
-                <=
-                daily_count * 2
-            )
+            allow_relax = False
             
             for p in remaining:
             
@@ -935,25 +926,9 @@ def create_schedule(
                         continue
             
                 candidate_piles.append(p)
-            
-            for p in remaining:
-            
-                conflict = False
-            
-                for existing in today_piles:
-            
-                    if (
-                        p in neighbor_map.get(existing, [])
-                        or
-                        existing in neighbor_map.get(p, [])
-                    ):
-                        conflict = True
-                        break
-            
-                if not conflict:
-            
-                    remaining_can_work = True
-                    break
+
+            if len(candidate_piles) == 0:
+                break
             
             sorted_remaining = sorted(
                 candidate_piles,
@@ -1059,47 +1034,7 @@ def create_schedule(
 
             if best_pile is None:
             
-                # Day1強制補滿
-                if day == 1:
-            
-                    force_candidates = [
-            
-                        p
-            
-                        for p in remaining
-            
-                        if p not in today_piles
-            
-                    ]
-            
-                    if force_candidates:
-            
-                        best_pile = force_candidates[0]
-            
-                    else:
-            
-                        break
-            
-                else:
-                
-                    relaxed_candidates = []
-                
-                    for p in remaining:
-                
-                        if p in today_piles:
-                            continue
-                
-                        relaxed_candidates.append(p)
-            
-                    if relaxed_candidates:
-            
-                        best_pile = max(
-                            relaxed_candidates,
-                            key=lambda p: neighbor_score[p]
-                        )
-            
-                    else:
-                        break
+                break
 
             today_piles.append(best_pile)
 
@@ -1152,7 +1087,6 @@ def create_schedule(
         color = colors[(day - 1) % len(colors)]
 
         hex_color = '#%02x%02x%02x' % color
-
         
         result.append({
 
@@ -1664,13 +1598,13 @@ if mode == "新建預定進度表":
                         
                         ]
                         
-                        for count in daily_counts[:-3]:
+                        for count in daily_counts:
                         
                             diff = daily_count - count
                         
                             if diff > 0:
                         
-                                schedule_score -= diff * 500000
+                                schedule_score -= diff * 30000
                         
                         tail_counts = daily_counts[-5:]
 
@@ -1742,6 +1676,17 @@ if mode == "新建預定進度表":
                         
                                 strict_ok = False
                                 break
+
+                        for i in range(len(all_counts)-1):
+                        
+                            if (
+                                all_counts[i] < daily_count
+                                and
+                                all_counts[i+1] >= daily_count
+                            ):
+                        
+                                strict_ok = False
+                                break
                         
                         if not strict_ok:
                             continue
@@ -1750,16 +1695,25 @@ if mode == "新建預定進度表":
                         
                             continue
 
-                        front_days = daily_counts[:-1]
+                        # front_days = daily_counts[:-3]
                         
+                        # front_ok = all(
+                        #     c >= daily_count
+                        #     for c in front_days
+                        # )
+
                         front_ok = True
                         
-                        for c in front_days:
+                        for i in range(len(daily_counts)-1):
                         
-                            if c < daily_count:
+                            if daily_counts[i] < daily_count:
                         
-                                front_ok = False
-                                break
+                                for j in range(i+1, len(daily_counts)):
+                        
+                                    if daily_counts[j] > daily_counts[i]:
+                        
+                                        front_ok = False
+                                        break
                         
                         if not front_ok:
                             continue
@@ -3006,7 +2960,7 @@ elif mode == "修正當前進度表":
                                     
                                         if diff > 0:
                                     
-                                            schedule_score -= diff * 500000
+                                            schedule_score -= diff * 100000
                                     
                                     for i in range(len(tail_counts)-1):
                                     
