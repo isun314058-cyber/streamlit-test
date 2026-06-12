@@ -801,7 +801,7 @@ def create_schedule(
                 )
     colors = []
 
-    for _ in range(50):
+    for _ in range(100):
 
         colors.append(
             (
