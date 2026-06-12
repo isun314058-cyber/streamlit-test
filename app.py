@@ -849,14 +849,14 @@ def create_schedule(
 
                 remaining.remove(start_no)
 
-                blocked_until[start_no] = (
-                    day + cooldown_days
-                )
+                # blocked_until[start_no] = (
+                #     day + cooldown_days
+                # )
 
-                for neighbor in neighbor_map.get(start_no, []):
-                    blocked_until[neighbor] = (
-                        day + cooldown_days
-                    )
+                # for neighbor in neighbor_map.get(start_no, []):
+                #     blocked_until[neighbor] = (
+                #         day + cooldown_days
+                #     )
 
         tail_mode = False
         
