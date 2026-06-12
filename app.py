@@ -2674,15 +2674,6 @@ elif mode == "修正當前進度表":
                     
                     if not has_error:
 
-                        st.write("DEBUG")
-                        
-                        for idx,row in edit_df.iterrows():
-                        
-                            st.write(
-                                idx,
-                                str(row["施工樁號"])
-                            )
-                    
                         if "repair_edit_df" in st.session_state:
                     
                             edit_df = st.session_state.repair_edit_df
