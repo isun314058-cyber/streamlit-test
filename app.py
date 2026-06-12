@@ -2764,17 +2764,25 @@ elif mode == "修正當前進度表":
                                 )
                                 
                                 remaining_count = len(remaining_piles)
-
+                                
                                 remaining_days = (
                                     len(edit_df)
                                     -
                                     first_empty_index
                                 )
                                 
-                                daily_count = math.ceil(
+                                default_daily_count = math.ceil(
                                     remaining_count
                                     /
                                     max(1, remaining_days)
+                                )
+                                
+                                daily_count = st.number_input(
+                                    "每日施作數量",
+                                    min_value=1,
+                                    value=int(default_daily_count),
+                                    step=1,
+                                    key="repair_daily_count"
                                 )
                                 
                                 start_date = pd.to_datetime(
