@@ -834,7 +834,7 @@ def create_schedule(
     result = []
     
     day = 1
-    TAIL_TRIGGER = daily_count * 3
+    TAIL_TRIGGER = daily_count
     
     loop_guard = 0
     while remaining:
@@ -881,10 +881,15 @@ def create_schedule(
         
         if len(remaining) <= TAIL_TRIGGER:
         
-            today_target = target_tail_count
+            today_target = min(
+                daily_count,
+                len(remaining)
+            )
         
         while len(today_piles) < today_target:
-            
+        
+            remaining_can_work = False
+        
             future_count = max(
                 0,
                 len(remaining) - 1
@@ -930,9 +935,25 @@ def create_schedule(
                         continue
             
                 candidate_piles.append(p)
-
-            if len(candidate_piles) == 0:
-                break
+            
+            for p in remaining:
+            
+                conflict = False
+            
+                for existing in today_piles:
+            
+                    if (
+                        p in neighbor_map.get(existing, [])
+                        or
+                        existing in neighbor_map.get(p, [])
+                    ):
+                        conflict = True
+                        break
+            
+                if not conflict:
+            
+                    remaining_can_work = True
+                    break
             
             sorted_remaining = sorted(
                 candidate_piles,
@@ -1060,21 +1081,14 @@ def create_schedule(
                         break
             
                 else:
-            
+                
                     relaxed_candidates = []
-            
+                
                     for p in remaining:
-            
+                
                         if p in today_piles:
                             continue
-            
-                        if (
-                            p in blocked_until
-                            and
-                            day <= blocked_until[p]
-                        ):
-                            continue
-            
+                
                         relaxed_candidates.append(p)
             
                     if relaxed_candidates:
@@ -1138,6 +1152,7 @@ def create_schedule(
         color = colors[(day - 1) % len(colors)]
 
         hex_color = '#%02x%02x%02x' % color
+
         
         result.append({
 
@@ -1655,7 +1670,7 @@ if mode == "新建預定進度表":
                         
                             if diff > 0:
                         
-                                schedule_score -= diff * 30000
+                                schedule_score -= diff * 500000
                         
                         tail_counts = daily_counts[-5:]
 
@@ -1735,12 +1750,16 @@ if mode == "新建預定進度表":
                         
                             continue
 
-                        front_days = daily_counts[:-3]
+                        front_days = daily_counts[:-1]
                         
-                        front_ok = all(
-                            c >= daily_count
-                            for c in front_days
-                        )
+                        front_ok = True
+                        
+                        for c in front_days:
+                        
+                            if c < daily_count:
+                        
+                                front_ok = False
+                                break
                         
                         if not front_ok:
                             continue
@@ -2987,7 +3006,7 @@ elif mode == "修正當前進度表":
                                     
                                         if diff > 0:
                                     
-                                            schedule_score -= diff * 100000
+                                            schedule_score -= diff * 500000
                                     
                                     for i in range(len(tail_counts)-1):
                                     
