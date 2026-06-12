@@ -668,7 +668,7 @@ def create_schedule(
 
     start_no=1,
 
-    cooldown_days=2,
+    cooldown_days=1,
 
     neighbor_map=None
 ):
@@ -834,7 +834,7 @@ def create_schedule(
     result = []
     
     day = 1
-    TAIL_TRIGGER = daily_count * 1
+    TAIL_TRIGGER = daily_count * 3
     
     loop_guard = 0
     while remaining:
@@ -875,6 +875,9 @@ def create_schedule(
             )
         
         today_target = daily_count
+        
+        if day == 1:
+            today_target = daily_count
         
         if len(remaining) <= TAIL_TRIGGER:
         
@@ -1034,33 +1037,55 @@ def create_schedule(
                     best_pile = pile
 
             if best_pile is None:
-                
-                
-                relaxed_candidates = []
             
-                for p in remaining:
+                # Day1強制補滿
+                if day == 1:
             
-                    if p in today_piles:
-                        continue
+                    force_candidates = [
             
-                    if (
-                        p in blocked_until
-                        and
-                        day <= blocked_until[p]
-                    ):
-                        continue
+                        p
             
-                    relaxed_candidates.append(p)
+                        for p in remaining
             
-                if relaxed_candidates:
+                        if p not in today_piles
             
-                    best_pile = max(
-                        relaxed_candidates,
-                        key=lambda p: neighbor_score[p]
-                    )
+                    ]
+            
+                    if force_candidates:
+            
+                        best_pile = force_candidates[0]
+            
+                    else:
+            
+                        break
             
                 else:
-                    break
+            
+                    relaxed_candidates = []
+            
+                    for p in remaining:
+            
+                        if p in today_piles:
+                            continue
+            
+                        if (
+                            p in blocked_until
+                            and
+                            day <= blocked_until[p]
+                        ):
+                            continue
+            
+                        relaxed_candidates.append(p)
+            
+                    if relaxed_candidates:
+            
+                        best_pile = max(
+                            relaxed_candidates,
+                            key=lambda p: neighbor_score[p]
+                        )
+            
+                    else:
+                        break
 
             today_piles.append(best_pile)
 
@@ -1522,7 +1547,7 @@ if mode == "新建預定進度表":
                         
                             start_no=start_no,
                         
-                            cooldown_days=2,
+                            cooldown_days=1,
                         
                             neighbor_map=neighbor_map
                         )
@@ -1689,17 +1714,35 @@ if mode == "新建預定進度表":
                             for x in schedule[-5:]
                         ]
                         
-                        for i in range(
-                            len(tail_counts)-1
-                        ):
+                        all_counts = [
+                            len(x["施工樁號"])
+                            for x in schedule
+                        ]
                         
-                            if tail_counts[i+1] > tail_counts[i]:
+                        strict_ok = True
                         
-                                tail_ok = False
+                        for i in range(len(all_counts)-1):
+                        
+                            if all_counts[i+1] > all_counts[i]:
+                        
+                                strict_ok = False
                                 break
+                        
+                        if not strict_ok:
+                            continue
                         
                         if not tail_ok:
                         
+                            continue
+
+                        front_days = daily_counts[:-3]
+                        
+                        front_ok = all(
+                            c >= daily_count
+                            for c in front_days
+                        )
+                        
+                        if not front_ok:
                             continue
                         
                         if schedule_score > best_total_score:
@@ -2850,7 +2893,7 @@ elif mode == "修正當前進度表":
                                             len(remaining_positions)
                                         ),
                                     
-                                        cooldown_days=2,
+                                        cooldown_days=1,
                                     
                                         neighbor_map=neighbor_map
                                     )
@@ -2944,7 +2987,7 @@ elif mode == "修正當前進度表":
                                     
                                         if diff > 0:
                                     
-                                            schedule_score -= diff * 30000
+                                            schedule_score -= diff * 100000
                                     
                                     for i in range(len(tail_counts)-1):
                                     
