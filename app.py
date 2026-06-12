@@ -2673,17 +2673,88 @@ elif mode == "修正當前進度表":
                     has_error = len(error_messages) > 0
                     
                     if not has_error:
+
+                        st.write("DEBUG")
+                        
+                        for idx,row in edit_df.iterrows():
+                        
+                            st.write(
+                                idx,
+                                str(row["施工樁號"])
+                            )
                     
                         if "repair_edit_df" in st.session_state:
                     
-                            st.markdown("---")
-                                               
-                            has_error = len(error_messages) > 0
-                            
+                            edit_df = st.session_state.repair_edit_df
+                    
+                            completed_piles = []
+                    
+                            first_empty_index = None
+                    
+                            for idx,row in edit_df.iterrows():
+                    
+                                pile_text = str(row["施工樁號"]).strip()
+                    
+                                if pile_text == "" or pile_text.lower() == "nan":
+                    
+                                    first_empty_index = idx
+                                    break
+                    
+                            if first_empty_index is not None:
+                    
+                                all_piles = set(
+                                    range(
+                                        1,
+                                        st.session_state.repair_total_piles + 1
+                                    )
+                                )
+                    
+                                completed_piles = []
+                    
+                                for idx,row in edit_df.iterrows():
+                    
+                                    if idx >= first_empty_index:
+                                        break
+                    
+                                    pile_text = str(row["施工樁號"]).strip()
+                    
+                                    if pile_text:
+                    
+                                        completed_piles.extend(
+                                            [
+                                                int(x.strip())
+                                                for x in pile_text.split(",")
+                                                if x.strip().isdigit()
+                                            ]
+                                        )
+                    
+                                remaining_count = len(
+                                    all_piles - set(completed_piles)
+                                )
+                    
+                                remaining_days = (
+                                    len(edit_df)
+                                    -
+                                    first_empty_index
+                                )
+                    
+                                default_daily_count = math.ceil(
+                                    remaining_count
+                                    /
+                                    max(1, remaining_days)
+                                )
+                    
+                                daily_count = st.number_input(
+                                    "每日施作數量",
+                                    min_value=1,
+                                    value=int(default_daily_count),
+                                    step=1,
+                                    key="repair_daily_count"
+                                )
+                    
                             if st.button(
                                 "🚀重新產出排程",
-                                use_container_width=True,
-                                disabled=has_error
+                                use_container_width=True
                             ):
                     
                                 if has_error:
@@ -2762,29 +2833,7 @@ elif mode == "修正當前進度表":
                                         set(completed_piles)
                                     )
                                 )
-                                
-                                remaining_count = len(remaining_piles)
-                                
-                                remaining_days = (
-                                    len(edit_df)
-                                    -
-                                    first_empty_index
-                                )
-                                
-                                default_daily_count = math.ceil(
-                                    remaining_count
-                                    /
-                                    max(1, remaining_days)
-                                )
-                                
-                                daily_count = st.number_input(
-                                    "每日施作數量",
-                                    min_value=1,
-                                    value=int(default_daily_count),
-                                    step=1,
-                                    key="repair_daily_count"
-                                )
-                                
+
                                 start_date = pd.to_datetime(
                                     edit_df.iloc[first_empty_index]["日期"]
                                 )
