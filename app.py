@@ -2889,7 +2889,7 @@ elif mode == "修正當前進度表":
     
                                 backup_schedule = None
     
-                                TOTAL_SIM = 100
+                                TOTAL_SIM = 20
                                 
                                 for sim in range(TOTAL_SIM):
     
