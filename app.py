@@ -1528,7 +1528,7 @@ if mode == "新建預定進度表":
                     
                     backup_schedule = None
 
-                    TOTAL_SIM = 20
+                    TOTAL_SIM = 10
                     
                     # AI 多次模擬
                     for sim in range(TOTAL_SIM):
