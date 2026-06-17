@@ -884,21 +884,6 @@ def create_schedule(
             )
         )
         
-        if len(remaining) <= daily_count * tail_days:
-        
-            remain_days = math.ceil(
-                len(remaining) / daily_count
-            )
-        
-            remain_days = max(
-                tail_days,
-                remain_days
-            )
-        
-            today_target = math.ceil(
-                len(remaining) / remain_days
-            )
-        
         # if len(remaining) <= TAIL_TRIGGER:
         
         #     today_target = target_tail_count
@@ -966,12 +951,11 @@ def create_schedule(
             
             sorted_remaining = sorted(
                 candidate_piles,
-                key=lambda p: neighbor_score[p],
-                reverse=True
+                key=lambda p: neighbor_score[p]
             )
             
             TOP_K = min(
-                60,
+                80,
                 len(sorted_remaining)
             )
             
@@ -1012,12 +996,14 @@ def create_schedule(
 
                 if conflict:
                     continue
-                
+                    
                 score = 0
                 
-                score += len(
+                future_block = len(
                     neighbor_map.get(pile, [])
-                ) * 10
+                )
+                
+                score -= future_block * 500
 
                 if len(today_piles) > 0:
                 
@@ -1159,11 +1145,11 @@ def create_schedule(
         
             break
 
-    # result = optimize_tail_days(
-    #     result,
-    #     neighbor_map,
-    #     daily_count
-    # )
+    result = optimize_tail_days(
+        result,
+        neighbor_map,
+        daily_count
+    )
 
     return result
 
@@ -1532,7 +1518,7 @@ if mode == "新建預定進度表":
                     
                     # AI 多次模擬
                     for sim in range(TOTAL_SIM):
-                        percent = int(((sim + 1) / TOTAL_SIM) * 100)
+                        percent = int(((sim) / TOTAL_SIM) * 100)
                 
                         progress_bar.progress(percent)
                 
