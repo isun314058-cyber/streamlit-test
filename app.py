@@ -1840,28 +1840,32 @@ if mode == "新建預定進度表":
                                     width=1
                                 )
 
-                                nearest_vertical = 99999
-                                nearest_horizontal = 99999
+                                vertical_candidates = []
+                                
+                                median_radius = np.median(
+                                    [rr for _, _, rr in pile_positions]
+                                )
+                                
+                                VERTICAL_CHECK = median_radius * 2.5
                                 
                                 for other_idx, (ox, oy, orr) in enumerate(pile_positions):
                                 
                                     if other_idx == idx:
                                         continue
                                 
-                                    dx = abs(x - ox)
-                                    dy = abs(y - oy)
+                                    if abs(ox - x) < VERTICAL_CHECK:
                                 
-                                    if dx < r * 3:
-                                        nearest_vertical = min(
-                                            nearest_vertical,
-                                            dy
+                                        vertical_candidates.append(
+                                            abs(oy - y)
                                         )
                                 
-                                    if dy < r * 3:
-                                        nearest_horizontal = min(
-                                            nearest_horizontal,
-                                            dx
-                                        )
+                                if len(vertical_candidates) > 0:
+                                
+                                    nearest_vertical = min(vertical_candidates)
+                                
+                                else:
+                                
+                                    nearest_vertical = 99999
 
                                 day_bbox = draw.textbbox(
                                     (0, 0),
@@ -1887,32 +1891,24 @@ if mode == "新建預定進度表":
                                 required_space = (
                                     pile_height
                                     + day_height
-                                    + 40
+                                    + 10
                                 )
 
                                 offset = 3
 
-                                if usable_space < required_space:
+                                print(
+                                    f"Pile:{pile_no} "
+                                    f"Vertical:{nearest_vertical:.1f} "
+                                    f"Usable:{usable_space:.1f} "
+                                    f"Need:{required_space:.1f}"
+                                )
+
+                                day_x = x - (day_width // 2)
+                                day_y = y + 14
                                 
-                                    day_x = x + r + offset
-                                    day_y = y - 8
+                                pile_x = x - (pile_width // 2)
                                 
-                                else:
-                                
-                                    day_x = x - (day_width // 2)
-                                    day_y = y + 14
-                                
-                                if usable_space < required_space:
-                                
-                                    pile_x = x - r - pile_width - offset
-                                
-                                    pile_y = y - (pile_height // 2)
-                                
-                                else:
-                                
-                                    pile_x = x - (pile_width // 2)
-                                
-                                    pile_y = y - r - pile_height - 8
+                                pile_y = y - r - pile_height - 8
 
                                 draw.text(
                                     (
