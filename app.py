@@ -321,113 +321,68 @@ def calculate_distance(p1, p2):
     return ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
 
 def build_neighbor_map(
-    pile_positions,
-    row_tolerance=40
+    pile_positions
 ):
 
     neighbor_map = {}
 
-    pile_data = []
+    positions = {}
 
-    for idx, (x, y, r) in enumerate(pile_positions):
+    for idx,(x,y,r) in enumerate(pile_positions):
 
-        pile_data.append({
-            "pile": idx + 1,
-            "x": x,
-            "y": y
-        })
+        positions[idx+1] = (x,y)
 
-    rows = []
+    all_dist = []
 
-    sorted_piles = sorted(
-        pile_data,
-        key=lambda p: p["y"]
+    for i in positions:
+        for j in positions:
+
+            if i >= j:
+                continue
+
+            x1,y1 = positions[i]
+            x2,y2 = positions[j]
+
+            all_dist.append(
+                ((x1-x2)**2 + (y1-y2)**2)**0.5
+            )
+
+    base_dist = np.percentile(
+        all_dist,
+        8
     )
 
-    for pile in sorted_piles:
+    LIMIT = base_dist * 1.35
 
-        found = False
+    for p1 in positions:
 
-        for row in rows:
+        neighbor_map[p1] = []
 
-            if abs(
-                pile["y"] - row[0]["y"]
-            ) < row_tolerance:
+        x1,y1 = positions[p1]
 
-                row.append(pile)
+        for p2 in positions:
 
-                found = True
+            if p1 == p2:
+                continue
 
-                break
+            x2,y2 = positions[p2]
 
-        if not found:
+            dx = abs(x1-x2)
+            dy = abs(y1-y2)
 
-            rows.append([pile])
-    for row in rows:
+            if (
+                dx < LIMIT
+                and
+                dy < LIMIT*0.6
+            ):
+                neighbor_map[p1].append(p2)
 
-        row.sort(
-            key=lambda p: p["x"]
-        )
-
-    for row_idx, row in enumerate(rows):
-
-        for col_idx, pile in enumerate(row):
-
-            pile_no = pile["pile"]
-
-            neighbor_map[pile_no] = []
-            if col_idx > 0:
-
-                neighbor_map[pile_no].append(
-                    row[col_idx - 1]["pile"]
-                )
-            if col_idx < len(row) - 1:
-
-                neighbor_map[pile_no].append(
-                    row[col_idx + 1]["pile"]
-                )
-            if row_idx > 0:
-            
-                upper_row = rows[row_idx - 1]
-            
-                nearest_upper = min(
-                    upper_row,
-                    key=lambda p:
-                    abs(
-                        p["x"] - pile["x"]
-                    )
-                )
-            
-                if abs(
-                    nearest_upper["x"]
-                    -
-                    pile["x"]
-                ) < row_tolerance:
-                
-                    neighbor_map[pile_no].append(
-                        nearest_upper["pile"]
-                    )
-            if row_idx < len(rows) - 1:
-
-                lower_row = rows[row_idx + 1]
-
-                nearest_lower = min(
-                    lower_row,
-                    key=lambda p:
-                    abs(
-                        p["x"] - pile["x"]
-                    )
-                )
-                
-                if abs(
-                    nearest_lower["x"]
-                    -
-                    pile["x"]
-                ) < row_tolerance:
-                
-                    neighbor_map[pile_no].append(
-                        nearest_lower["pile"]
-                    )
+            elif (
+                dy < LIMIT
+                and
+                dx < LIMIT*0.6
+            ):
+                neighbor_map[p1].append(p2)
 
     return neighbor_map
 
@@ -1019,8 +974,10 @@ def create_schedule(
                         or
                         existing in neighbor_map.get(pile, [])
                     ):
-                        neighbor_conflict += 1
-                    
+                
+                        neighbor_conflict += 1000
+                        score -= neighbor_conflict * 100000
+
                 score = 0
                 
                 future_block = len(
@@ -2667,6 +2624,13 @@ elif mode == "修正當前進度表":
 
             full_neighbor_map = build_neighbor_map(
                 piles
+            )
+
+            for p in [20,35,36,50,51]:
+        
+            print(
+                p,
+                neighbor_map.get(p,[])
             )
 
             st.session_state.repair_total_piles = total_piles
