@@ -1003,7 +1003,7 @@ def create_schedule(
                 
                 if future_avg < safe_daily_count * 0.8:
                 
-                    score -= 5000
+                    score -= 30000
                 
                 if (
                     future_count > 0
@@ -1478,7 +1478,7 @@ if mode == "新建預定進度表":
                     
                     backup_schedule = None
 
-                    TOTAL_SIM = 5
+                    TOTAL_SIM = 20
                     
                     # AI 多次模擬
                     for sim in range(TOTAL_SIM):
@@ -1615,6 +1615,14 @@ if mode == "新建預定進度表":
                         tail_counts = daily_counts[-5:]
 
                         for i in range(len(tail_counts)-1):
+                    
+                        diff = tail_counts[i] - tail_counts[i+1]
+                    
+                        if diff > 2:
+                    
+                            schedule_score -= diff * 50000
+
+                        for i in range(len(tail_counts)-1):
                         
                             if tail_counts[i+1] > tail_counts[i]:
                         
@@ -1624,9 +1632,9 @@ if mode == "新建預定進度表":
                         
                             diff = tail_counts[i] - tail_counts[i+1]
                         
-                            if diff > 6:
+                            if diff > 3:
                             
-                                schedule_score -= 8000
+                                schedule_score -= 30000
 
                         last_day = tail_counts[-1]
                         
@@ -1658,7 +1666,7 @@ if mode == "新建預定進度表":
                         
                             tail_balance_score -= abs(
                                 count - tail_avg
-                            ) * 300
+                            ) * 3000
                         
                         schedule_score += tail_balance_score
 
