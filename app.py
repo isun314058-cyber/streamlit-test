@@ -927,7 +927,11 @@ def create_schedule(
         
             candidate_piles = []
 
-            allow_relax = False
+            remaining_after = len(remaining)
+            
+            allow_relax = (
+                remaining_after <= daily_count * 2
+            )
             
             for p in remaining:
             
@@ -1068,7 +1072,21 @@ def create_schedule(
                 
                     best_pile = pile
 
+            if len(remaining) <= 10:
+            
+                st.write(
+                    f"Day{day}",
+                    "剩餘:",
+                    remaining
+                )
+
             if best_pile is None:
+            
+                if len(remaining) <= daily_count * 2:
+            
+                    allow_relax = True
+            
+                    continue
             
                 break
 
