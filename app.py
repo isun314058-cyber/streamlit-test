@@ -1449,6 +1449,12 @@ if mode == "新建預定進度表":
                     )
         
                 if execute:
+                    st.session_state.processed = False
+                    
+                    st.session_state.schedule_df = None
+                    
+                    st.session_state.result_image = None
+
                     progress_text = st.empty()
                 
                     progress_bar = st.progress(0)
