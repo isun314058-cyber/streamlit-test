@@ -647,6 +647,63 @@ def validate_neighbor_conflict(
 
     return schedule
 
+def swap_conflict_piles(
+    schedule,
+    neighbor_map
+):
+
+    conflicts = validate_neighbor_conflict(
+        schedule,
+        neighbor_map
+    )
+
+    if len(conflicts) == 0:
+        return schedule
+
+    for conflict in conflicts:
+
+        day1 = conflict[0]
+        day2 = conflict[1]
+
+        pile1 = conflict[2]
+        pile2 = conflict[3]
+
+        for future_day in range(
+            day2 + 1,
+            len(schedule)
+        ):
+
+            for candidate in schedule[future_day]["施工樁號"]:
+
+                safe = True
+
+                for existing in schedule[day2]["施工樁號"]:
+
+                    if existing == pile2:
+                        continue
+
+                    if (
+                        candidate in neighbor_map.get(existing, [])
+                        or
+                        existing in neighbor_map.get(candidate, [])
+                    ):
+                        safe = False
+                        break
+
+                if safe:
+
+                    schedule[future_day]["施工樁號"].remove(candidate)
+
+                    schedule[day2]["施工樁號"].remove(pile2)
+
+                    schedule[day2]["施工樁號"].append(candidate)
+
+                    schedule[future_day]["施工樁號"].append(pile2)
+
+                    return schedule
+
+    return schedule
+
 def create_schedule(
 
     pile_positions,
@@ -964,7 +1021,9 @@ def create_schedule(
                         if day <= blocked_until[pile]:
                 
                             continue
-                            
+
+                score = 0
+                
                 neighbor_conflict = 0
                 
                 for existing in today_piles:
@@ -978,8 +1037,6 @@ def create_schedule(
                         neighbor_conflict += 1000
                         score -= neighbor_conflict * 100000
 
-                score = 0
-                
                 future_block = len(
                     neighbor_map.get(pile, [])
                 )
@@ -1159,72 +1216,7 @@ def create_schedule(
     print(
         f"鄰近衝突數量={len(conflicts)}"
     )
-
-    def swap_conflict_piles(
-        schedule,
-        neighbor_map
-    ):
     
-        conflicts = validate_neighbor_conflict(
-            schedule,
-            neighbor_map
-        )
-    
-        if len(conflicts) == 0:
-            return schedule
-    
-        for conflict in conflicts:
-    
-            day1 = conflict[0]
-            day2 = conflict[1]
-    
-            pile1 = conflict[2]
-            pile2 = conflict[3]
-    
-            for future_day in range(
-                day2 + 1,
-                len(schedule)
-            ):
-    
-                for candidate in schedule[future_day]["施工樁號"]:
-    
-                    safe = True
-    
-                    for existing in schedule[day2]["施工樁號"]:
-    
-                        if existing == pile2:
-                            continue
-    
-                        if (
-                            candidate in neighbor_map.get(existing, [])
-                            or
-                            existing in neighbor_map.get(candidate, [])
-                        ):
-                            safe = False
-                            break
-    
-                    if safe:
-    
-                        schedule[future_day]["施工樁號"].remove(
-                            candidate
-                        )
-    
-                        schedule[day2]["施工樁號"].remove(
-                            pile2
-                        )
-    
-                        schedule[day2]["施工樁號"].append(
-                            candidate
-                        )
-    
-                        schedule[future_day]["施工樁號"].append(
-                            pile2
-                        )
-    
-                        return schedule
-    
-        return schedule
-
     tail_counts = [
         len(x["施工樁號"])
         for x in result
@@ -1622,6 +1614,11 @@ if mode == "新建預定進度表":
                         piles,
                         row_tolerance=int(median_radius * 3)
                     )
+
+                    print("20=", neighbor_map.get(20))
+                    print("21=", neighbor_map.get(21))
+                    print("35=", neighbor_map.get(35))
+                    print("36=", neighbor_map.get(36))
 
                     for p in [20,21,22,35,36]:
                 
