@@ -1890,9 +1890,11 @@ if mode == "新建預定進度表":
                                     + 40
                                 )
 
+                                offset = 3
+
                                 if usable_space < required_space:
                                 
-                                    day_x = x + r + 8
+                                    day_x = x + r + offset
                                     day_y = y - 8
                                 
                                 else:
@@ -1902,7 +1904,7 @@ if mode == "新建預定進度表":
                                 
                                 if usable_space < required_space:
                                 
-                                    pile_x = x - r - pile_width - 10
+                                    pile_x = x - r - pile_width - offset
                                 
                                     pile_y = y - (pile_height // 2)
                                 
