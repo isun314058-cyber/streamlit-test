@@ -3402,45 +3402,105 @@ elif mode == "修正當前進度表":
                                         )
                                 
                                         pile_text = str(pile_no)
-                                
+                                        
+                                        day_text = row["施工日"].replace(
+                                            "Day ",
+                                            "D"
+                                        )
+                                        
+                                        vertical_candidates = []
+                                        
+                                        median_radius = np.median(
+                                            [rr for _, _, rr in piles]
+                                        )
+                                        
+                                        VERTICAL_CHECK = median_radius * 2.5
+                                        
+                                        for other_idx, (ox, oy, orr) in enumerate(piles):
+                                        
+                                            if other_idx == idx:
+                                                continue
+                                        
+                                            if abs(ox - x) < VERTICAL_CHECK:
+                                        
+                                                vertical_candidates.append(
+                                                    abs(oy - y)
+                                                )
+                                        
+                                        if len(vertical_candidates) > 0:
+                                        
+                                            nearest_vertical = min(vertical_candidates)
+                                        
+                                        else:
+                                        
+                                            nearest_vertical = 99999
+                                        
+                                        day_bbox = draw.textbbox(
+                                            (0, 0),
+                                            day_text,
+                                            font=day_font
+                                        )
+                                        
+                                        day_height = day_bbox[3] - day_bbox[1]
+                                        day_width = day_bbox[2] - day_bbox[0]
+                                        
                                         pile_bbox = draw.textbbox(
                                             (0, 0),
                                             pile_text,
                                             font=pile_font
                                         )
-                                
-                                        pile_width = pile_bbox[2] - pile_bbox[0]
-                                
-                                        pile_x = x - (pile_width // 2)
-                                
-                                        draw.text(
-                                            (
-                                                pile_x,
-                                                y - r - 20
-                                            ),
-                                            pile_text,
-                                            fill="black",
-                                            font=pile_font
-                                        )   
-    
-                                        day_text = row["施工日"].replace("Day ","D")
                                         
-                                        day_bbox = draw.textbbox(
-                                            (0,0),
-                                            day_text,
-                                            font=pile_font
+                                        pile_width = pile_bbox[2] - pile_bbox[0]
+                                        pile_height = pile_bbox[3] - pile_bbox[1]
+                                        
+                                        usable_space = nearest_vertical - (r * 2)
+                                        
+                                        required_space = (
+                                            pile_height
+                                            + day_height
+                                            + 10
                                         )
                                         
-                                        day_width = day_bbox[2] - day_bbox[0]
+                                        if usable_space > required_space:
+                                        
+                                            # 上下模式
+                                        
+                                            day_x = x - (day_width // 2)
+                                            day_y = y + r + 2
+                                        
+                                            pile_x = x - (pile_width // 2)
+                                            pile_y = y - r - pile_height - 2
+                                        
+                                        else:
+                                        
+                                            # 左右模式
+                                        
+                                            pile_x = x - r - pile_width - 2
+                                            pile_y = y - (pile_height // 2)
+                                        
+                                            day_x = x + r + 2
+                                            day_y = y - (day_height // 2)
                                         
                                         draw.text(
                                             (
-                                                x - day_width // 2,
-                                                y + r + 4
+                                                day_x,
+                                                day_y
                                             ),
                                             day_text,
                                             fill="black",
                                             font=day_font,
+                                            stroke_width=2,
+                                            stroke_fill="white"
+                                        )
+                                        
+                                        draw.text(
+                                            (
+                                                pile_x,
+                                                pile_y
+                                            ),
+                                            pile_text,
+                                            fill="black",
+                                            font=pile_font,
                                             stroke_width=2,
                                             stroke_fill="white"
                                         )
