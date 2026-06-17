@@ -939,8 +939,8 @@ def create_schedule(
                     continue
             
                 # 前面天數嚴格遵守冷卻
-                if not allow_relax:
-            
+                if len(remaining) > daily_count * 2:
+                
                     if (
                         p in blocked_until
                         and
@@ -1081,13 +1081,7 @@ def create_schedule(
                 )
 
             if best_pile is None:
-            
-                if len(remaining) <= daily_count * 2:
-            
-                    allow_relax = True
-            
-                    continue
-            
+        
                 break
 
             today_piles.append(best_pile)
