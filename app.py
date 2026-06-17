@@ -1003,7 +1003,7 @@ def create_schedule(
                     neighbor_map.get(pile, [])
                 )
                 
-                score -= future_block * 500
+                score -= future_block * 300
 
                 if len(today_piles) > 0:
                 
@@ -1150,6 +1150,47 @@ def create_schedule(
         neighbor_map,
         daily_count
     )
+
+    tail_counts = [
+        len(x["施工樁號"])
+        for x in result
+    ]
+    
+    for i in range(len(result)-1):
+    
+        today_count = len(result[i]["施工樁號"])
+        next_count = len(result[i+1]["施工樁號"])
+    
+        if next_count > today_count:
+    
+            need_move = next_count - today_count
+    
+            move_list = result[i+1]["施工樁號"][:]
+    
+            for pile in move_list:
+    
+                conflict = False
+    
+                for existing in result[i]["施工樁號"]:
+    
+                    if (
+                        pile in neighbor_map.get(existing, [])
+                        or
+                        existing in neighbor_map.get(pile, [])
+                    ):
+                        conflict = True
+                        break
+    
+                if conflict:
+                    continue
+    
+                result[i]["施工樁號"].append(pile)
+                result[i+1]["施工樁號"].remove(pile)
+    
+                need_move -= 1
+    
+                if need_move <= 0:
+                    break
 
     return result
 
