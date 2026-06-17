@@ -1839,6 +1839,29 @@ if mode == "新建預定進度表":
                                     outline="black",
                                     width=1
                                 )
+
+                                nearest_vertical = 99999
+                                nearest_horizontal = 99999
+                                
+                                for other_idx, (ox, oy, orr) in enumerate(pile_positions):
+                                
+                                    if other_idx == idx:
+                                        continue
+                                
+                                    dx = abs(x - ox)
+                                    dy = abs(y - oy)
+                                
+                                    if dx < r * 3:
+                                        nearest_vertical = min(
+                                            nearest_vertical,
+                                            dy
+                                        )
+                                
+                                    if dy < r * 3:
+                                        nearest_horizontal = min(
+                                            nearest_horizontal,
+                                            dx
+                                        )
                                 
                                 day_bbox = draw.textbbox(
                                     (0, 0),
@@ -1848,9 +1871,17 @@ if mode == "新建預定進度表":
                                 
                                 day_width = day_bbox[2] - day_bbox[0]
                                 
-                                day_x = x - (day_width // 2)
-    
-                                day_y = y + 14
+                                if nearest_vertical < r * 4:
+                                
+                                    day_x = x + r + 8
+                                
+                                    day_y = y - 8
+                                
+                                else:
+                                
+                                    day_x = x - (day_width // 2)
+                                
+                                    day_y = y + 14
     
                                 draw.text(
                                     (
@@ -1863,7 +1894,7 @@ if mode == "新建預定進度表":
                                     stroke_width=2,
                                     stroke_fill="white"
                                 )
-    
+
                                 pile_text = str(pile_no)
                                 
                                 pile_bbox = draw.textbbox(
@@ -1875,9 +1906,17 @@ if mode == "新建預定進度表":
                                 pile_width = pile_bbox[2] - pile_bbox[0]
                                 pile_height = pile_bbox[3] - pile_bbox[1]
                                 
-                                pile_x = x - (pile_width // 2)
-    
-                                pile_y = y - r - pile_height - 8
+                                if nearest_vertical < r * 4:
+                                
+                                    pile_x = x - r - pile_width - 10
+                                
+                                    pile_y = y - (pile_height // 2)
+                                
+                                else:
+                                
+                                    pile_x = x - (pile_width // 2)
+                                
+                                    pile_y = y - r - pile_height - 8
                                 
                                 draw.text(
                                     (
