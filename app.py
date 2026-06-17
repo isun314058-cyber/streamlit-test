@@ -1665,6 +1665,12 @@ if mode == "新建預定進度表":
                         piles,
                         row_tolerance=int(median_radius * 3)
                     )
+
+                    for p in [20,21,22,35,36]:
+                
+                    print(
+                        f"{p} -> {neighbor_map.get(p,[])}"
+                    )
         
                     best_schedule = None
                     
