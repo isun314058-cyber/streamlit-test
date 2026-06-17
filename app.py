@@ -876,8 +876,20 @@ def create_schedule(
         
         today_target = daily_count
         
-        if day == 1:
-            today_target = daily_count
+        if len(remaining) <= daily_count * 5:
+        
+            remain_days = math.ceil(
+                len(remaining) / daily_count
+            )
+        
+            remain_days = max(
+                1,
+                remain_days
+            )
+        
+            today_target = math.ceil(
+                len(remaining) / remain_days
+            )
         
         # if len(remaining) <= TAIL_TRIGGER:
         
