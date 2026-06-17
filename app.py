@@ -1610,9 +1610,15 @@ if mode == "新建預定進度表":
                         
                             if diff > 0:
                         
-                                schedule_score -= diff * 30000
+                                schedule_score -= diff * 3000
                         
                         tail_counts = daily_counts[-5:]
+
+                        tail_avg = np.mean(tail_counts)
+                        
+                        for c in tail_counts:
+                        
+                            schedule_score -= abs(c - tail_avg) * 5000
 
                         for i in range(len(tail_counts)-1):
                     
@@ -1620,7 +1626,7 @@ if mode == "新建預定進度表":
                         
                             if diff > 2:
                         
-                                schedule_score -= diff * 50000
+                                schedule_score -= diff * 8000
 
                         for i in range(len(tail_counts)-1):
                         
@@ -1682,29 +1688,7 @@ if mode == "新建預定進度表":
                             for x in schedule
                         ]
                         
-                        strict_ok = True
-                        
-                        for i in range(len(all_counts)-1):
-                        
-                            if all_counts[i+1] > all_counts[i]:
-                        
-                                strict_ok = False
-                                break
-
-                        for i in range(len(all_counts)-1):
-                        
-                            if (
-                                all_counts[i] < daily_count
-                                and
-                                all_counts[i+1] >= daily_count
-                            ):
-                        
-                                strict_ok = False
-                                break
-                        
-                        if not strict_ok:
-                            continue
-                        
+                                               
                         if not tail_ok:
                         
                             continue
