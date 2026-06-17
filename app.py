@@ -1072,14 +1072,6 @@ def create_schedule(
                 
                     best_pile = pile
 
-            if len(remaining) <= 10:
-            
-                st.write(
-                    f"Day{day}",
-                    "剩餘:",
-                    remaining
-                )
-
             if best_pile is None:
         
                 break
