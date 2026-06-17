@@ -1862,18 +1862,6 @@ if mode == "新建預定進度表":
                                             nearest_horizontal,
                                             dx
                                         )
-    
-                                draw.text(
-                                    (
-                                        day_x,
-                                        day_y
-                                    ),
-                                    day_text,
-                                    fill="black",
-                                    font=day_font,
-                                    stroke_width=2,
-                                    stroke_fill="white"
-                                )
 
                                 day_bbox = draw.textbbox(
                                     (0, 0),
@@ -1899,7 +1887,7 @@ if mode == "新建預定進度表":
                                 required_space = (
                                     pile_height
                                     + day_height
-                                    + 10
+                                    + 40
                                 )
 
                                 if usable_space < required_space:
@@ -1923,6 +1911,30 @@ if mode == "新建預定進度表":
                                     pile_x = x - (pile_width // 2)
                                 
                                     pile_y = y - r - pile_height - 8
+
+                                draw.text(
+                                    (
+                                        day_x,
+                                        day_y
+                                    ),
+                                    day_text,
+                                    fill="black",
+                                    font=day_font,
+                                    stroke_width=2,
+                                    stroke_fill="white"
+                                )
+                                
+                                draw.text(
+                                    (
+                                        pile_x,
+                                        pile_y
+                                    ),
+                                    pile_text,
+                                    fill="black",
+                                    font=pile_font,
+                                    stroke_width=2,
+                                    stroke_fill="white"
+                                )
                                 
                                 draw.text(
                                     (
