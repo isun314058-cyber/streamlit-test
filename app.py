@@ -1863,15 +1863,9 @@ if mode == "新建預定進度表":
                                             dx
                                         )
                                 
-                                day_bbox = draw.textbbox(
-                                    (0, 0),
-                                    day_text,
-                                    font=day_font
-                                )
                                 
-                                day_width = day_bbox[2] - day_bbox[0]
                                 
-                                if nearest_vertical < r * 4:
+                                if usable_space < required_space:
                                 
                                     day_x = x + r + 8
                                 
@@ -1895,6 +1889,14 @@ if mode == "新建預定進度表":
                                     stroke_fill="white"
                                 )
 
+                                day_bbox = draw.textbbox(
+                                    (0, 0),
+                                    day_text,
+                                    font=day_font
+                                )
+                                day_height = day_bbox[3] - day_bbox[1]
+                                day_width = day_bbox[2] - day_bbox[0]
+
                                 pile_text = str(pile_no)
                                 
                                 pile_bbox = draw.textbbox(
@@ -1905,8 +1907,16 @@ if mode == "新建預定進度表":
                                 
                                 pile_width = pile_bbox[2] - pile_bbox[0]
                                 pile_height = pile_bbox[3] - pile_bbox[1]
+
+                                usable_space = nearest_vertical - (r * 2)
                                 
-                                if nearest_vertical < r * 4:
+                                required_space = (
+                                    pile_height
+                                    + day_height
+                                    + 10
+                                )
+                                
+                                if usable_space < required_space:
                                 
                                     pile_x = x - r - pile_width - 10
                                 
