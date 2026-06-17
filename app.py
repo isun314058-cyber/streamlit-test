@@ -551,6 +551,64 @@ def optimize_tail_days(
     daily_count
 ):
 
+    if len(schedule) < 3:
+        return schedule
+
+    max_loop = 20
+
+    for _ in range(max_loop):
+
+        changed = False
+
+        for i in range(len(schedule)-2):
+
+            today = schedule[i]
+            last_day = schedule[-1]
+
+            if len(last_day["施工樁號"]) >= daily_count * 0.5:
+                return schedule
+
+            if len(today["施工樁號"]) <= 3:
+                continue
+
+            if len(today["施工樁號"]) <= daily_count * 0.7:
+                continue
+
+            move_candidate = None
+
+            for pile in reversed(today["施工樁號"]):
+
+                conflict = False
+
+                for existing in last_day["施工樁號"]:
+
+                    if (
+                        pile in neighbor_map.get(existing, [])
+                        or
+                        existing in neighbor_map.get(pile, [])
+                    ):
+                        conflict = True
+                        break
+
+                if not conflict:
+                    move_candidate = pile
+                    break
+
+            if move_candidate:
+
+                today["施工樁號"].remove(move_candidate)
+
+                last_day["施工樁號"].append(move_candidate)
+
+                last_day["施工樁號"].sort()
+
+                changed = True
+
+        if not changed:
+            break
+
+    return schedule
+
 def validate_neighbor_conflict(
     schedule,
     neighbor_map
@@ -676,31 +734,51 @@ def swap_conflict_piles(
             for candidate in schedule[future_day]["施工樁號"]:
 
                 safe = True
-
-                for existing in schedule[day2]["施工樁號"]:
-
-                    if existing == pile2:
-                        continue
-
-                    if (
-                        candidate in neighbor_map.get(existing, [])
-                        or
-                        existing in neighbor_map.get(candidate, [])
-                    ):
-                        safe = False
+                
+                check_days = []
+                
+                if day2 > 0:
+                    check_days.append(day2 - 1)
+                
+                check_days.append(day2)
+                
+                if day2 < len(schedule)-1:
+                    check_days.append(day2 + 1)
+                
+                for check_day in check_days:
+                
+                    for existing in schedule[check_day]["施工樁號"]:
+                
+                        if (
+                            check_day == day2
+                            and
+                            existing == pile2
+                        ):
+                            continue
+                
+                        if (
+                            candidate in neighbor_map.get(existing, [])
+                            or
+                            existing in neighbor_map.get(candidate, [])
+                        ):
+                
+                            safe = False
+                            break
+                
+                    if not safe:
                         break
 
                 if safe:
-
+                
                     schedule[future_day]["施工樁號"].remove(candidate)
-
+                
                     schedule[day2]["施工樁號"].remove(pile2)
-
+                
                     schedule[day2]["施工樁號"].append(candidate)
-
+                
                     schedule[future_day]["施工樁號"].append(pile2)
-
-                    return schedule
+                
+                    break
 
     return schedule
 
@@ -1034,12 +1112,13 @@ def create_schedule(
                         existing in neighbor_map.get(pile, [])
                     ):
                 
-                        neighbor_conflict += 1000
-                        score -= neighbor_conflict * 100000
-
+                        neighbor_conflict += 1
+                        
                 future_block = len(
                     neighbor_map.get(pile, [])
                 )
+
+                score -= neighbor_conflict * 100000
                 
                 score -= future_block * 300
 
@@ -1611,8 +1690,7 @@ if mode == "新建預定進度表":
                     )
                     
                     neighbor_map = build_neighbor_map(
-                        piles,
-                        row_tolerance=int(median_radius * 3)
+                        piles
                     )
 
                     print("20=", neighbor_map.get(20))
@@ -1622,9 +1700,9 @@ if mode == "新建預定進度表":
 
                     for p in [20,21,22,35,36]:
                 
-                    print(
-                        f"{p} -> {neighbor_map.get(p,[])}"
-                    )
+                        print(
+                            f"{p} -> {neighbor_map.get(p,[])}"
+                        )
         
                     best_schedule = None
                     
@@ -2625,10 +2703,10 @@ elif mode == "修正當前進度表":
 
             for p in [20,35,36,50,51]:
         
-            print(
-                p,
-                neighbor_map.get(p,[])
-            )
+                print(
+                    p,
+                    full_neighbor_map.get(p,[])
+                )
 
             st.session_state.repair_total_piles = total_piles
 
