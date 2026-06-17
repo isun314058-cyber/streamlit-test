@@ -1862,20 +1862,6 @@ if mode == "新建預定進度表":
                                             nearest_horizontal,
                                             dx
                                         )
-                                
-                                
-                                
-                                if usable_space < required_space:
-                                
-                                    day_x = x + r + 8
-                                
-                                    day_y = y - 8
-                                
-                                else:
-                                
-                                    day_x = x - (day_width // 2)
-                                
-                                    day_y = y + 14
     
                                 draw.text(
                                     (
@@ -1915,6 +1901,16 @@ if mode == "新建預定進度表":
                                     + day_height
                                     + 10
                                 )
+
+                                if usable_space < required_space:
+                                
+                                    day_x = x + r + 8
+                                    day_y = y - 8
+                                
+                                else:
+                                
+                                    day_x = x - (day_width // 2)
+                                    day_y = y + 14
                                 
                                 if usable_space < required_space:
                                 
