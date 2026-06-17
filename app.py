@@ -876,14 +876,22 @@ def create_schedule(
         
         today_target = daily_count
         
-        if len(remaining) <= daily_count * 5:
+        tail_days = max(
+            3,
+            math.ceil(
+                math.ceil(total_piles / daily_count)
+                * 0.2
+            )
+        )
+        
+        if len(remaining) <= daily_count * tail_days:
         
             remain_days = math.ceil(
                 len(remaining) / daily_count
             )
         
             remain_days = max(
-                1,
+                tail_days,
                 remain_days
             )
         
@@ -900,6 +908,20 @@ def create_schedule(
             future_count = max(
                 0,
                 len(remaining) - 1
+            )
+
+            total_days = math.ceil(
+                total_piles / daily_count
+            )
+            
+            tail_days = max(
+                2,
+                math.ceil(total_days * 0.2)
+            )
+            
+            front_days = max(
+                1,
+                total_days - tail_days
             )
             
             safe_daily_count = max(
@@ -1012,10 +1034,26 @@ def create_schedule(
                     score += min_dist * 0.2
             
                 score += future_avg * 500
+
+                future_after_pick = len(remaining) - 1
+                
+                expected_front_capacity = (
+                    front_days * daily_count
+                )
+                
+                if future_after_pick < expected_front_capacity:
+                
+                    shortage = (
+                        expected_front_capacity
+                        -
+                        future_after_pick
+                    )
+                
+                    score -= shortage * 100
                 
                 if future_avg < safe_daily_count * 0.8:
                 
-                    score -= 30000
+                    score -= 3000
                 
                 if (
                     future_count > 0
