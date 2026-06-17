@@ -1616,11 +1616,11 @@ if mode == "新建預定進度表":
 
                         for i in range(len(tail_counts)-1):
                     
-                        diff = tail_counts[i] - tail_counts[i+1]
-                    
-                        if diff > 2:
-                    
-                            schedule_score -= diff * 50000
+                            diff = tail_counts[i] - tail_counts[i+1]
+                        
+                            if diff > 2:
+                        
+                                schedule_score -= diff * 50000
 
                         for i in range(len(tail_counts)-1):
                         
