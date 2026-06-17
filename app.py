@@ -1903,12 +1903,25 @@ if mode == "新建預定進度表":
                                     f"Need:{required_space:.1f}"
                                 )
 
-                                day_x = x - (day_width // 2)
-                                day_y = y + 14
+                                if usable_space > required_space:
                                 
-                                pile_x = x - (pile_width // 2)
+                                    # 上下模式
                                 
-                                pile_y = y - r - pile_height - 8
+                                    day_x = x - (day_width // 2)
+                                    day_y = y + r + 2
+                                
+                                    pile_x = x - (pile_width // 2)
+                                    pile_y = y - r - pile_height - 2
+                                
+                                else:
+                                
+                                    # 左右模式
+                                
+                                    pile_x = x - r - pile_width - 2
+                                    pile_y = y - (pile_height // 2)
+                                
+                                    day_x = x + r + 2
+                                    day_y = y - (day_height // 2)
 
                                 draw.text(
                                     (
