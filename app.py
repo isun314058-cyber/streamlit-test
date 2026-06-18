@@ -971,117 +971,121 @@ def create_schedule(
             if len(candidate_piles) == 0:
             
                 break
+
+            if len(candidate_piles) >= (today_target - len(today_piles)):
             
-            sorted_remaining = sorted(
-                candidate_piles,
-                key=lambda p: neighbor_score[p]
-            )
+                random.shuffle(candidate_piles)
             
-            TOP_K = min(
-                80,
-                len(sorted_remaining)
-            )
+                best_pile = candidate_piles[0]
             
-            sorted_remaining = sorted_remaining[:TOP_K]
+            else:
             
-            random.shuffle(sorted_remaining)
-        
-            best_score = -999999
-        
-            best_pile = None
-        
-            for pile in sorted_remaining:
-            
-                illegal = False
-            
-                for existing in today_piles:
-            
-                    if (
-                        pile in neighbor_map.get(existing, [])
-                        or
-                        existing in neighbor_map.get(pile, [])
-                    ):
-            
-                        illegal = True
-                        break
-            
-                if illegal:
-                    continue
-            
-                score = 0
-                                    
-                future_block = len(
-                    neighbor_map.get(pile, [])
+                # 走原本評分邏輯
+                
+                sorted_remaining = sorted(
+                    candidate_piles,
+                    key=lambda p: neighbor_score[p],
+                    reverse=True
                 )
                 
-                score -= future_block * 300
-
-                if len(today_piles) > 0:
-                
-                    min_dist = min(
-                
-                        distance_cache.get(
-                            (pile,p2),
-                            999999
-                        )
-                
-                        for p2 in today_piles
-                    )
-                
-                    score += min_dist * 0.2
-            
-                score += future_avg * 500
-
-                future_after_pick = len(remaining) - 1
-                
-                expected_front_capacity = (
-                    front_days * daily_count
+                TOP_K = min(
+                    20,
+                    len(sorted_remaining)
                 )
                 
-                if future_after_pick < expected_front_capacity:
+                sorted_remaining = sorted_remaining[:TOP_K]
                 
-                    shortage = (
-                        expected_front_capacity
-                        -
-                        future_after_pick
-                    )
+                random.shuffle(sorted_remaining)
+            
+                best_score = -999999
+            
+                best_pile = None
+            
+                for pile in sorted_remaining:
                 
-                    score -= shortage * 100
-                
-                if future_avg < safe_daily_count * 0.8:
-                
-                    score -= 3000
-                
-                if (
-                    future_count > 0
-                    and
-                    future_count < safe_daily_count * 0.5
-                ):
-                
-                    score -= 150
-                
-                if len(today_piles) > 0:
-                
-                    cluster_score = 0
+                    illegal = False
                 
                     for existing in today_piles:
                 
-                        cluster_score += distance_cache.get(
-                            (pile, existing),
-                            0
+                        if (
+                            pile in neighbor_map.get(existing, [])
+                            or
+                            existing in neighbor_map.get(pile, [])
+                        ):
+                
+                            illegal = True
+                            break
+                
+                    if illegal:
+                        continue
+                
+                    score = 0
+                                        
+                    future_block = len(
+                        neighbor_map.get(pile, [])
+                    )
+                    
+                    score -= future_block * 300
+    
+                    if len(today_piles) > 0:
+                    
+                        min_dist = min(
+                    
+                            distance_cache.get(
+                                (pile,p2),
+                                999999
+                            )
+                    
+                            for p2 in today_piles
                         )
+                    
+                        score += min_dist * 0.2
                 
-                    score -= cluster_score * 0.08
-                
-                if score > best_score:
-                
-                    best_score = score
-                
-                    best_pile = pile
+                    score += future_avg * 3000
+    
+                    future_after_pick = len(remaining) - 1
+                    
+                    expected_front_capacity = (
+                        front_days * daily_count
+                    )
+                    
+                    if future_after_pick < expected_front_capacity:
+                    
+                        shortage = (
+                            expected_front_capacity
+                            -
+                            future_after_pick
+                        )
+                    
+                        score -= shortage * 100
+                    
+                    if future_avg < safe_daily_count * 0.8:
+                    
+                        score -= 20000
+                    
+                    if (
+                        future_count > 0
+                        and
+                        future_count < safe_daily_count * 0.5
+                    ):
+                    
+                        score -= 150
+                    
+                    if score > best_score:
+                    
+                        best_score = score
+                    
+                        best_pile = pile
 
             if best_pile is None:
-        
-                break
+            
+                if candidate_piles:
+            
+                    best_pile = random.choice(candidate_piles)
+            
+                else:
+            
+                    break
 
             today_piles.append(best_pile)
             
