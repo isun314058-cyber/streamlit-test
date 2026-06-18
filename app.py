@@ -560,27 +560,54 @@ def validate_neighbor_conflict(
 
     conflicts = []
 
+    # 同一天檢查
     for day_idx in range(len(schedule)):
-    
+
         today = schedule[day_idx]["施工樁號"]
-    
+
         for i in range(len(today)):
-    
-            for j in range(i+1,len(today)):
-    
+
+            for j in range(i+1, len(today)):
+
                 p1 = today[i]
                 p2 = today[j]
-    
+
                 if (
-                    p2 in neighbor_map.get(p1,[])
+                    p2 in neighbor_map.get(p1, [])
                     or
-                    p1 in neighbor_map.get(p2,[])
+                    p1 in neighbor_map.get(p2, [])
                 ):
-    
+
                     conflicts.append(
                         (
                             day_idx,
                             day_idx,
+                            p1,
+                            p2
+                        )
+                    )
+
+    # DayN → DayN+1 檢查
+    for day_idx in range(len(schedule)-1):
+
+        today = schedule[day_idx]["施工樁號"]
+
+        tomorrow = schedule[day_idx+1]["施工樁號"]
+
+        for p1 in today:
+
+            for p2 in tomorrow:
+
+                if (
+                    p2 in neighbor_map.get(p1, [])
+                    or
+                    p1 in neighbor_map.get(p2, [])
+                ):
+
+                    conflicts.append(
+                        (
+                            day_idx,
+                            day_idx+1,
                             p1,
                             p2
                         )
@@ -882,6 +909,22 @@ def create_schedule(
         tail_mode = False
 
         today_target = daily_count
+
+        available_today = []
+        
+        for p in remaining:
+        
+            if p in blocked_until:
+        
+                if day <= blocked_until[p]:
+                    continue
+        
+            available_today.append(p)
+        
+        today_target = min(
+            daily_count,
+            len(available_today)
+        )
         
         tail_days = max(
             3,
@@ -953,10 +996,25 @@ def create_schedule(
             if len(candidate_piles) == 0:
                 break
                 
+            center_x = np.mean(
+                [x for x,_,_ in pile_positions]
+            )
+            
+            center_y = np.mean(
+                [y for _,y,_ in pile_positions]
+            )
+            
             sorted_remaining = sorted(
+            
                 candidate_piles,
-                key=lambda p: neighbor_score[p],
-                reverse=True
+            
+                key=lambda p:
+            
+                (
+                    (pile_positions[p-1][0]-center_x)**2
+                    +
+                    (pile_positions[p-1][1]-center_y)**2
+                )
             )
             
             TOP_K = min(
@@ -1148,6 +1206,18 @@ def create_schedule(
         len(x["施工樁號"])
         for x in result
     ]
+
+    counts = [
+        len(x["施工樁號"])
+        for x in result
+    ]
+    
+    for i in range(len(counts)-1):
+    
+        if counts[i+1] > counts[i]:
+    
+            return []
+    
     return result
 
 if mode == "新建預定進度表":
