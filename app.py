@@ -1009,12 +1009,10 @@ def create_schedule(
                     continue
             
                 score = 0
-                        
+                                    
                 future_block = len(
                     neighbor_map.get(pile, [])
                 )
-
-                score -= neighbor_conflict * 100000
                 
                 score -= future_block * 300
 
