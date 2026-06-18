@@ -1215,7 +1215,12 @@ def create_schedule(
     for i in range(len(counts)-1):
     
         if counts[i+1] > counts[i]:
-    
+        
+            print(
+                f"數量遞增失敗: "
+                f"{counts[i]} -> {counts[i+1]}"
+            )
+        
             return []
     
     return result
@@ -1619,9 +1624,10 @@ if mode == "新建預定進度表":
                         
                             neighbor_map=neighbor_map
                         )
+                        
                         if not schedule:
-                            st.error("AI排程失敗")
-                            st.stop()
+                            continue
+                            
                         if backup_schedule is None:
                             backup_schedule = schedule
 
