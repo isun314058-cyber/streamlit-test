@@ -88,7 +88,7 @@ h1,h2,h3,h4,h5,h6,p,span,label{
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🏗️ AI 排樁施工系統")
+st.title("🏗️ AI 基礎工程排程分析系統")
 
 mode = st.radio(
     "請選擇功能模式",
