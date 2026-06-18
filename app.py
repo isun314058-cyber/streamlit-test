@@ -1165,11 +1165,11 @@ def create_schedule(
     
     if len(conflicts) > 0:
 
-    st.error(
-        f"仍有{len(conflicts)}個鄰近衝突"
-    )
-
-    return []
+        st.error(
+            f"仍有{len(conflicts)}個鄰近衝突"
+        )
+    
+        return []
     
     tail_counts = [
         len(x["施工樁號"])
