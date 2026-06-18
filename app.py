@@ -718,67 +718,83 @@ def swap_conflict_piles(
     if len(conflicts) == 0:
         return schedule
 
-    for conflict in conflicts:
+    # 只處理第一個衝突
+    conflict = conflicts[0]
 
-        day1 = conflict[0]
-        day2 = conflict[1]
+    day1 = conflict[0]
+    day2 = conflict[1]
 
-        pile1 = conflict[2]
-        pile2 = conflict[3]
+    pile1 = conflict[2]
+    pile2 = conflict[3]
 
-        for future_day in range(
-            day2 + 1,
-            len(schedule)
-        ):
+    for future_day in range(
+        day2 + 1,
+        len(schedule)
+    ):
 
-            for candidate in schedule[future_day]["施工樁號"]:
+        for candidate in schedule[future_day]["施工樁號"]:
 
-                safe = True
-                
-                check_days = []
-                
-                if day2 > 0:
-                    check_days.append(day2 - 1)
-                
-                check_days.append(day2)
-                
-                if day2 < len(schedule)-1:
-                    check_days.append(day2 + 1)
-                
-                for check_day in check_days:
-                
-                    for existing in schedule[check_day]["施工樁號"]:
-                
-                        if (
-                            check_day == day2
-                            and
-                            existing == pile2
-                        ):
-                            continue
-                
-                        if (
-                            candidate in neighbor_map.get(existing, [])
-                            or
-                            existing in neighbor_map.get(candidate, [])
-                        ):
-                
-                            safe = False
-                            break
-                
-                    if not safe:
+            safe = True
+
+            check_days = []
+
+            if day2 > 0:
+                check_days.append(day2 - 1)
+
+            check_days.append(day2)
+
+            if day2 < len(schedule) - 1:
+                check_days.append(day2 + 1)
+
+            for check_day in check_days:
+
+                for existing in schedule[check_day]["施工樁號"]:
+
+                    # 被換掉的樁不用檢查
+                    if (
+                        check_day == day2
+                        and
+                        existing == pile2
+                    ):
+                        continue
+
+                    if (
+                        candidate in neighbor_map.get(existing, [])
+                        or
+                        existing in neighbor_map.get(candidate, [])
+                    ):
+
+                        safe = False
                         break
 
-                if safe:
-                
-                    schedule[future_day]["施工樁號"].remove(candidate)
-                
-                    schedule[day2]["施工樁號"].remove(pile2)
-                
-                    schedule[day2]["施工樁號"].append(candidate)
-                
-                    schedule[future_day]["施工樁號"].append(pile2)
-                
+                if not safe:
                     break
+
+            if safe:
+
+                # 執行交換
+                schedule[future_day]["施工樁號"].remove(
+                    candidate
+                )
+
+                schedule[day2]["施工樁號"].remove(
+                    pile2
+                )
+
+                schedule[day2]["施工樁號"].append(
+                    candidate
+                )
+
+                schedule[future_day]["施工樁號"].append(
+                    pile2
+                )
+
+                schedule[day2]["施工樁號"].sort()
+
+                schedule[future_day]["施工樁號"].sort()
+
+                # 修完一個衝突就返回
+                return schedule
 
     return schedule
 
