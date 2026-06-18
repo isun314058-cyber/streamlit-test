@@ -448,13 +448,27 @@ def validate_pile_input(edit_df, total_piles):
         pile_text = str(
             row["施工樁號"]
         ).strip()
-
+        
+        if pile_text.lower() == "none":
+            pile_text = ""
+        
+        if pile_text.lower() == "nan":
+            pile_text = ""
+        
         pile_text = pile_text.replace("，", ",")
 
-        if pile_text == "":
-
+        if (
+            pile_text == ""
+            or
+            pile_text.lower() == "none"
+            or
+            pile_text.lower() == "nan"
+        ):
+        
             result_df.at[idx, "施工數量"] = "0"
-
+        
+            result_df.at[idx, "施工樁號"] = ""
+        
             continue
 
         if not re.fullmatch(
@@ -2643,6 +2657,33 @@ elif mode == "修正當前進度表":
             try:
     
                 original_df = pd.read_excel(excel_file)
+
+                original_df["施工樁號"] = (
+                    original_df["施工樁號"]
+                    .fillna("")
+                    .astype(str)
+                )
+                
+                original_df.loc[
+                    original_df["施工樁號"].str.lower() == "none",
+                    "施工樁號"
+                ] = ""
+                
+                original_df.loc[
+                    original_df["施工樁號"].str.lower() == "nan",
+                    "施工樁號"
+                ] = ""
+
+                original_df["施工數量"] = original_df["施工樁號"].apply(
+                    lambda x:
+                    len(
+                        [
+                            p
+                            for p in str(x).split(",")
+                            if p.strip()
+                        ]
+                    )
+                )
 
                 original_df["日期顏色"] = (
                     original_df["日期顏色"]
