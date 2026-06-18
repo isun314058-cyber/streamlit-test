@@ -354,35 +354,41 @@ def build_neighbor_map(
 
     LIMIT = base_dist * 1.35
 
+    neighbor_map = {}
+    
     for p1 in positions:
-
-        neighbor_map[p1] = []
-
+    
         x1,y1 = positions[p1]
-
+    
+        distance_list = []
+    
         for p2 in positions:
-
+    
             if p1 == p2:
                 continue
-
+    
             x2,y2 = positions[p2]
-
-            dx = abs(x1-x2)
-            dy = abs(y1-y2)
-
-            if (
-                dx < LIMIT
-                and
-                dy < LIMIT*0.6
-            ):
-                neighbor_map[p1].append(p2)
-
-            elif (
-                dy < LIMIT
-                and
-                dx < LIMIT*0.6
-            ):
-                neighbor_map[p1].append(p2)
+    
+            dist = (
+                (x1-x2)**2 +
+                (y1-y2)**2
+            ) ** 0.5
+    
+            distance_list.append(
+                (dist,p2)
+            )
+    
+        distance_list.sort()
+    
+        neighbor_map[p1] = [
+    
+            pile
+    
+            for _,pile
+    
+            in distance_list[:4]
+    
+        ]
 
     return neighbor_map
 
