@@ -545,70 +545,6 @@ def validate_pile_input(edit_df, total_piles):
 
     return result_df, error_messages
 
-def optimize_tail_days(
-    schedule,
-    neighbor_map,
-    daily_count
-):
-
-    if len(schedule) < 3:
-        return schedule
-
-    max_loop = 20
-
-    for _ in range(max_loop):
-
-        changed = False
-
-        for i in range(len(schedule)-2):
-
-            today = schedule[i]
-            last_day = schedule[-1]
-
-            if len(last_day["施工樁號"]) >= daily_count * 0.5:
-                return schedule
-
-            if len(today["施工樁號"]) <= 3:
-                continue
-
-            if len(today["施工樁號"]) <= daily_count * 0.7:
-                continue
-
-            move_candidate = None
-
-            for pile in reversed(today["施工樁號"]):
-
-                conflict = False
-
-                for existing in last_day["施工樁號"]:
-
-                    if (
-                        pile in neighbor_map.get(existing, [])
-                        or
-                        existing in neighbor_map.get(pile, [])
-                    ):
-                        conflict = True
-                        break
-
-                if not conflict:
-                    move_candidate = pile
-                    break
-
-            if move_candidate:
-
-                today["施工樁號"].remove(move_candidate)
-
-                last_day["施工樁號"].append(move_candidate)
-
-                last_day["施工樁號"].sort()
-
-                changed = True
-
-        if not changed:
-            break
-
-    return schedule
-
 def validate_neighbor_conflict(
     schedule,
     neighbor_map
@@ -641,69 +577,6 @@ def validate_neighbor_conflict(
                     )
 
     return conflicts
-
-    if len(schedule) < 3:
-        return schedule
-
-    max_loop = 20
-
-    for _ in range(max_loop):
-
-        changed = False
-
-        for i in range(len(schedule)-2):
-
-            today = schedule[i]
-            last_day = schedule[-1]
-
-            if len(last_day["施工樁號"]) >= daily_count * 0.5:
-                return schedule
-
-            if len(today["施工樁號"]) <= 3:
-                continue
-
-            move_candidate = None
-
-            if len(today["施工樁號"]) <= daily_count * 0.7:
-            
-                continue
-
-            for pile in reversed(today["施工樁號"]):
-
-                conflict = False
-
-                for existing in last_day["施工樁號"]:
-
-                    if (
-                        pile in neighbor_map.get(existing, [])
-                        or
-                        existing in neighbor_map.get(pile, [])
-                    ):
-                        conflict = True
-                        break
-
-                if not conflict:
-                    move_candidate = pile
-                    break
-
-            if move_candidate:
-
-                today["施工樁號"].remove(
-                    move_candidate
-                )
-
-                last_day["施工樁號"].append(
-                    move_candidate
-                )
-
-                last_day["施工樁號"].sort()
-
-                changed = True
-
-        if not changed:
-            break
-
-    return schedule
 
 def swap_conflict_piles(
     schedule,
@@ -940,7 +813,7 @@ def create_schedule(
                 )
     colors = []
 
-    for _ in range(100):
+    for _ in range(1000):
 
         colors.append(
             (
@@ -967,11 +840,9 @@ def create_schedule(
         neighbor_score[p] = len(
             neighbor_map.get(p, [])
         )
-    
-    blocked_until = {}
-    
+
     result = []
-    
+    blocked_until = {}
     day = 1
     TAIL_TRIGGER = int(total_piles * 0.7)
     
@@ -979,23 +850,22 @@ def create_schedule(
     while remaining:
     
         today_piles = []
-
+    
+        today_blocked = set()
+        
         if day == 1:
-
+        
             if start_no in remaining:
-
+        
                 today_piles.append(start_no)
-
+        
                 remaining.remove(start_no)
-
-                blocked_until[start_no] = (
-                    day + cooldown_days
-                )
-
+        
+                today_blocked.add(start_no)
+        
                 for neighbor in neighbor_map.get(start_no, []):
-                    blocked_until[neighbor] = (
-                        day + cooldown_days
-                    )
+        
+                    today_blocked.add(neighbor)
 
         tail_mode = False
         
@@ -1075,18 +945,20 @@ def create_schedule(
                 if p in today_piles:
                     continue
             
-                # 前面天數嚴格遵守冷卻
-                if (
-                    p in blocked_until
-                    and
-                    day <= blocked_until[p]
-                ):
+                if p in today_blocked:
                     continue
+            
+                # 隔日冷卻
+                if p in blocked_until:
+            
+                    if day <= blocked_until[p]:
+                        continue
             
                 candidate_piles.append(p)
 
             if len(candidate_piles) == 0:
-                break
+            
+                candidate_piles = remaining[:]
             
             sorted_remaining = sorted(
                 candidate_piles,
@@ -1107,14 +979,6 @@ def create_schedule(
             best_pile = None
         
             for pile in sorted_remaining:
-
-                if not allow_relax:
-                
-                    if pile in blocked_until:
-                
-                        if day <= blocked_until[pile]:
-                
-                            continue
 
                 score = 0
                 
@@ -1206,44 +1070,21 @@ def create_schedule(
                 break
 
             today_piles.append(best_pile)
-
+            
             if best_pile in remaining:
-
+            
                 remaining.remove(best_pile)
-
-            blocked_until[best_pile] = day + cooldown_days
             
-            for neighbor in neighbor_map.get(best_pile, []):
+            for n in neighbor_map.get(best_pile, []):
             
-                blocked_until[neighbor] = (
-                    day + cooldown_days
-                )
+                today_blocked.add(n)
+            
+                # 隔日禁止施工
+                blocked_until[n] = day + cooldown_days
+            
 
         if len(today_piles) == 0:
-        
-            if len(remaining) == 0:
-        
-                break
-        
-            first_pile = remaining[0]
-        
-            today_piles.append(first_pile)
-        
-            remaining.remove(first_pile)
-
-        if len(remaining) > daily_count * 3:
-        
-            for pile in today_piles:
-        
-                blocked_until[pile] = (
-                    day + cooldown_days
-                )
-        
-                for neighbor in neighbor_map.get(pile, []):
-        
-                    blocked_until[neighbor] = (
-                        day + cooldown_days
-                    )
+            break
 
         current_date = (
 
@@ -1277,14 +1118,8 @@ def create_schedule(
             st.warning("AI 排程過久，已自動停止")
         
             break
-
-    result = optimize_tail_days(
-        result,
-        neighbor_map,
-        daily_count
-    )
     
-    for _ in range(100):
+    for _ in range(1000):
     
         conflicts = validate_neighbor_conflict(
             result,
@@ -1316,44 +1151,6 @@ def create_schedule(
         len(x["施工樁號"])
         for x in result
     ]
-    
-    for i in range(len(result)-1):
-    
-        today_count = len(result[i]["施工樁號"])
-        next_count = len(result[i+1]["施工樁號"])
-    
-        if next_count > today_count:
-    
-            need_move = next_count - today_count
-    
-            move_list = result[i+1]["施工樁號"][:]
-    
-            for pile in move_list:
-    
-                conflict = False
-    
-                for existing in result[i]["施工樁號"]:
-    
-                    if (
-                        pile in neighbor_map.get(existing, [])
-                        or
-                        existing in neighbor_map.get(pile, [])
-                    ):
-                        conflict = True
-                        break
-    
-                if conflict:
-                    continue
-    
-                result[i]["施工樁號"].append(pile)
-                result[i+1]["施工樁號"].remove(pile)
-    
-                need_move -= 1
-    
-                if need_move <= 0:
-                    break
-
-    return result
 
 if mode == "新建預定進度表":
 
@@ -1940,26 +1737,8 @@ if mode == "新建預定進度表":
                         if not tail_ok:
                         
                             continue
-
-                        # front_days = daily_counts[:-3]
-                        
-                        # front_ok = all(
-                        #     c >= daily_count
-                        #     for c in front_days
-                        # )
-
+                            
                         front_ok = True
-                        
-                        for i in range(len(daily_counts)-1):
-                        
-                            if daily_counts[i] < daily_count:
-                        
-                                for j in range(i+1, len(daily_counts)):
-                        
-                                    if daily_counts[j] > daily_counts[i]:
-                        
-                                        front_ok = False
-                                        break
                         
                         if not front_ok:
                             continue
