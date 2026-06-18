@@ -352,7 +352,7 @@ def build_neighbor_map(
         8
     )
 
-    LIMIT = base_dist * 1.35
+    LIMIT = base_dist * 1.10
 
     neighbor_map = {}
     
@@ -880,21 +880,7 @@ def create_schedule(
                     blocked_until[neighbor] = day + cooldown_days
 
         tail_mode = False
-        
-        # if len(remaining) <= TAIL_TRIGGER:
-        #     tail_mode = True
-        #     remaining_days = math.ceil(
-        #         len(remaining)
-        #         /
-        #         daily_count
-        #     )
-            
-        #     target_tail_count = math.ceil(
-        #         len(remaining)
-        #         /
-        #         remaining_days
-        #     )
-        
+
         today_target = daily_count
         
         tail_days = max(
@@ -904,10 +890,6 @@ def create_schedule(
                 * 0.2
             )
         )
-        
-        # if len(remaining) <= TAIL_TRIGGER:
-        
-        #     today_target = target_tail_count
         
         while len(today_piles) < today_target:
             
@@ -969,113 +951,102 @@ def create_schedule(
                 candidate_piles.append(p)
 
             if len(candidate_piles) == 0:
-            
                 break
-
-            if len(candidate_piles) >= (today_target - len(today_piles)):
+                
+            sorted_remaining = sorted(
+                candidate_piles,
+                key=lambda p: neighbor_score[p],
+                reverse=True
+            )
             
-                random.shuffle(candidate_piles)
+            TOP_K = min(
+                80,
+                len(sorted_remaining)
+            )
             
-                best_pile = candidate_piles[0]
+            sorted_remaining = sorted_remaining[:TOP_K]
             
-            else:
+            if len(sorted_remaining) > 20:
+                random.shuffle(sorted_remaining[:20])
+            best_score = -999999
+        
+            best_pile = None
+        
+            for pile in sorted_remaining:
             
-                # 走原本評分邏輯
-                
-                sorted_remaining = sorted(
-                    candidate_piles,
-                    key=lambda p: neighbor_score[p],
-                    reverse=True
-                )
-                
-                TOP_K = min(
-                    20,
-                    len(sorted_remaining)
-                )
-                
-                sorted_remaining = sorted_remaining[:TOP_K]
-                
-                random.shuffle(sorted_remaining)
+                illegal = False
             
-                best_score = -999999
+                for existing in today_piles:
             
-                best_pile = None
-            
-                for pile in sorted_remaining:
-                
-                    illegal = False
-                
-                    for existing in today_piles:
-                
-                        if (
-                            pile in neighbor_map.get(existing, [])
-                            or
-                            existing in neighbor_map.get(pile, [])
-                        ):
-                
-                            illegal = True
-                            break
-                
-                    if illegal:
-                        continue
-                
-                    score = 0
-                                        
-                    future_block = len(
-                        neighbor_map.get(pile, [])
-                    )
-                    
-                    score -= future_block * 300
-    
-                    if len(today_piles) > 0:
-                    
-                        min_dist = min(
-                    
-                            distance_cache.get(
-                                (pile,p2),
-                                999999
-                            )
-                    
-                            for p2 in today_piles
-                        )
-                    
-                        score += min_dist * 0.2
-                
-                    score += future_avg * 3000
-    
-                    future_after_pick = len(remaining) - 1
-                    
-                    expected_front_capacity = (
-                        front_days * daily_count
-                    )
-                    
-                    if future_after_pick < expected_front_capacity:
-                    
-                        shortage = (
-                            expected_front_capacity
-                            -
-                            future_after_pick
-                        )
-                    
-                        score -= shortage * 100
-                    
-                    if future_avg < safe_daily_count * 0.8:
-                    
-                        score -= 20000
-                    
                     if (
-                        future_count > 0
-                        and
-                        future_count < safe_daily_count * 0.5
+                        pile in neighbor_map.get(existing, [])
+                        or
+                        existing in neighbor_map.get(pile, [])
                     ):
-                    
-                        score -= 150
-                    
-                    if score > best_score:
-                    
-                        best_score = score
-                    
-                        best_pile = pile
+            
+                        illegal = True
+                        break
+            
+                if illegal:
+                    continue
+            
+                score = 0
+                                    
+                future_block = len(
+                    neighbor_map.get(pile, [])
+                )
+                
+                score -= future_block * 80
+
+                if len(today_piles) > 0:
+                
+                    min_dist = min(
+                
+                        distance_cache.get(
+                            (pile,p2),
+                            999999
+                        )
+                
+                        for p2 in today_piles
+                    )
+                
+                    score += min_dist * 8
+            
+                score += future_avg * 200
+
+                future_after_pick = len(remaining) - 1
+                
+                expected_front_capacity = (
+                    front_days * daily_count
+                )
+                
+                if future_after_pick < expected_front_capacity:
+                
+                    shortage = (
+                        expected_front_capacity
+                        -
+                        future_after_pick
+                    )
+                
+                    score -= shortage * 30
+                
+                if future_avg < safe_daily_count * 0.8:
+                
+                    score -= 3000
+                
+                if (
+                    future_count > 0
+                    and
+                    future_count < safe_daily_count * 0.5
+                ):
+                
+                    score -= 150
+                
+                if score > best_score:
+                
+                    best_score = score
+                
+                    best_pile = pile
 
             if best_pile is None:
             
@@ -1550,7 +1521,7 @@ if mode == "新建預定進度表":
                     
                     backup_schedule = None
 
-                    TOTAL_SIM = 10
+                    TOTAL_SIM = 30
                     
                     # AI 多次模擬
                     for sim in range(TOTAL_SIM):
@@ -1707,7 +1678,7 @@ if mode == "新建預定進度表":
                         
                             if tail_counts[i+1] > tail_counts[i]:
                         
-                                schedule_score -= 20000
+                                schedule_score -= 5000
 
                         for i in range(len(tail_counts)-1):
                         
@@ -1715,7 +1686,7 @@ if mode == "新建預定進度表":
                         
                             if diff > 3:
                             
-                                schedule_score -= 30000
+                                schedule_score -= diff * 3000
 
                         last_day = tail_counts[-1]
                         
@@ -1730,12 +1701,6 @@ if mode == "新建預定進度表":
                         elif last_day <= 8:
                         
                             schedule_score -= 1000
-
-                        for i in range(len(tail_counts)-1):
-                        
-                            if tail_counts[i] < tail_counts[i+1]:
-                        
-                                schedule_score -= 2000
 
                         tail_avg = np.mean(tail_counts)
                         
