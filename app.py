@@ -867,6 +867,8 @@ def create_schedule(
         
                     today_blocked.add(neighbor)
 
+                    blocked_until[neighbor] = day + cooldown_days
+
         tail_mode = False
         
         # if len(remaining) <= TAIL_TRIGGER:
@@ -1151,6 +1153,7 @@ def create_schedule(
         len(x["施工樁號"])
         for x in result
     ]
+    return result
 
 if mode == "新建預定進度表":
 
@@ -1551,6 +1554,9 @@ if mode == "新建預定進度表":
                         
                             neighbor_map=neighbor_map
                         )
+                        if not schedule:
+                            st.error("AI排程失敗")
+                            st.stop()
                         if backup_schedule is None:
                             backup_schedule = schedule
 
