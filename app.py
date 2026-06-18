@@ -11,7 +11,7 @@ import cv2
 from streamlit_image_coordinates import streamlit_image_coordinates
 
 st.set_page_config(
-    page_title="AI 排樁施工系統",
+    page_title="AI 基礎工程排程分析系統",
     layout="wide"
 )
 
