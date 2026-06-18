@@ -1482,7 +1482,7 @@ if mode == "新建預定進度表":
                     
                     # AI 多次模擬
                     for sim in range(TOTAL_SIM):
-                        percent = int(((sim + 1) / TOTAL_SIM) * 100)
+                        percent = int(((sim) / TOTAL_SIM) * 100)
                 
                         progress_bar.progress(percent)
                 
