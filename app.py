@@ -381,13 +381,15 @@ def build_neighbor_map(
         distance_list.sort()
     
         neighbor_map[p1] = [
-    
+        
             pile
-    
-            for _,pile
-    
-            in distance_list[:4]
-    
+        
+            for dist,pile
+        
+            in distance_list
+        
+            if dist <= LIMIT
+        
         ]
 
     return neighbor_map
@@ -558,27 +560,29 @@ def validate_neighbor_conflict(
 
     conflicts = []
 
-    for day_idx in range(len(schedule)-1):
-
+    for day_idx in range(len(schedule)):
+    
         today = schedule[day_idx]["施工樁號"]
-        nextday = schedule[day_idx+1]["施工樁號"]
-
-        for pile1 in today:
-
-            for pile2 in nextday:
-
+    
+        for i in range(len(today)):
+    
+            for j in range(i+1,len(today)):
+    
+                p1 = today[i]
+                p2 = today[j]
+    
                 if (
-                    pile2 in neighbor_map.get(pile1, [])
+                    p2 in neighbor_map.get(p1,[])
                     or
-                    pile1 in neighbor_map.get(pile2, [])
+                    p1 in neighbor_map.get(p2,[])
                 ):
-
+    
                     conflicts.append(
                         (
                             day_idx,
-                            day_idx + 1,
-                            pile1,
-                            pile2
+                            day_idx,
+                            p1,
+                            p2
                         )
                     )
 
@@ -966,7 +970,7 @@ def create_schedule(
 
             if len(candidate_piles) == 0:
             
-                candidate_piles = remaining[:]
+                break
             
             sorted_remaining = sorted(
                 candidate_piles,
@@ -987,20 +991,24 @@ def create_schedule(
             best_pile = None
         
             for pile in sorted_remaining:
-
-                score = 0
-                
-                neighbor_conflict = 0
-                
+            
+                illegal = False
+            
                 for existing in today_piles:
-                
+            
                     if (
                         pile in neighbor_map.get(existing, [])
                         or
                         existing in neighbor_map.get(pile, [])
                     ):
-                
-                        neighbor_conflict += 1
+            
+                        illegal = True
+                        break
+            
+                if illegal:
+                    continue
+            
+                score = 0
                         
                 future_block = len(
                     neighbor_map.get(pile, [])
@@ -1154,6 +1162,14 @@ def create_schedule(
     print(
         f"鄰近衝突數量={len(conflicts)}"
     )
+    
+    if len(conflicts) > 0:
+
+    st.error(
+        f"仍有{len(conflicts)}個鄰近衝突"
+    )
+
+    return []
     
     tail_counts = [
         len(x["施工樁號"])
