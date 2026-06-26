@@ -11,7 +11,7 @@ import cv2
 from streamlit_image_coordinates import streamlit_image_coordinates
 
 st.set_page_config(
-    page_title="AI 基礎工程排程分析系統",
+    page_title="AI 排樁時程分析系統",
     layout="wide"
 )
 
@@ -88,7 +88,7 @@ h1,h2,h3,h4,h5,h6,p,span,label{
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🏗️ AI 基礎工程排程分析系統")
+st.title("🏗️ AI 排樁時程分析系統")
 
 mode = st.radio(
     "請選擇功能模式",
